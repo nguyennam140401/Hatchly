@@ -10,7 +10,7 @@ import type { BossDatabase } from './boss-loader';
 
 /** IDatabase chạy trên một kết nối cụ thể (giao dịch của tenantTx/systemTx hoặc của bể điều khiển). */
 export function clientDatabase(client: PoolClient): BossDatabase {
-  return { executeSql: (text, values) => client.query(text, values as unknown[] | undefined) };
+  return { executeSql: (text, values) => client.query(text, values) };
 }
 
 /** Giao dịch đang mở; ngoài giao dịch → `QUEUE_TX_REQUIRED` (FR-007). */

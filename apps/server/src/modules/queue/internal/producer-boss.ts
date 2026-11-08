@@ -8,7 +8,7 @@ import {
   createQueuePool,
   type PgBoss,
 } from './pgboss/boss-loader';
-import { setProducer } from './producer';
+import { clearProducer, setProducer } from './producer';
 
 export interface ProducerHandle {
   boss: PgBoss;
@@ -46,7 +46,7 @@ export async function startProducer(options: {
       boss,
       pool,
       stop: async () => {
-        setProducer(undefined);
+        clearProducer(boss);
         await boss.stop({ graceful: false, close: false });
         await pool.end();
       },

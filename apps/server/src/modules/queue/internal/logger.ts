@@ -26,8 +26,8 @@ export function nestQueueLogger(logger: {
 }): QueueLogger {
   return {
     debug: (e) => logger.debug?.({ msg: e.event, ...e }),
-    info: (e) => logger.log({ msg: e.event, ...e }),
-    warn: (e) => logger.warn({ msg: e.event, ...e }),
-    error: (e) => logger.error({ msg: e.event, ...e }),
+    info: (e) => { logger.log({ msg: e.event, ...e }); },
+    warn: (e) => { logger.warn({ msg: e.event, ...e }); },
+    error: (e) => { logger.error({ msg: e.event, ...e }); },
   };
 }

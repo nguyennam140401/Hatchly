@@ -72,7 +72,11 @@ export class SchedulerService implements RuntimeService {
             .onConflictDoNothing()
             .returning({ name: scheduleSlots.name });
           if (inserted.length === 0) return 'taken' as const;
-          const result = await enqueue(schedule.jobType, {}, { dedupeKey: `scheduled:${schedule.name}` });
+          const result = await enqueue(
+            schedule.jobType,
+            {},
+            { dedupeKey: `scheduled:${schedule.name}` },
+          );
           const where = and(eq(scheduleSlots.name, schedule.name), eq(scheduleSlots.slot, slot));
           if (result.status === 'created') {
             await db.update(scheduleSlots).set({ job_id: result.jobId }).where(where);

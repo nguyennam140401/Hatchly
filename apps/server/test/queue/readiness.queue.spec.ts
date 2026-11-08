@@ -5,7 +5,14 @@ import { WorkerHealthServer } from '../../src/core/health/worker-health-server';
 import { ReadinessRegistry } from '../../src/core/health/readiness';
 import { queueReadinessCheck } from '../../src/modules/queue/internal/readiness';
 import { startTestWorkers, type TestWorkers } from '../support/queue-test-kit';
-import { asAdmin, asOwner, describeDb, makeDatabase, waitFor, type TestDatabase } from './helpers/queue-db';
+import {
+  asAdmin,
+  asOwner,
+  describeDb,
+  makeDatabase,
+  waitFor,
+  type TestDatabase,
+} from './helpers/queue-db';
 
 describeDb('Worker /readyz – kiểm tra queue', () => {
   let database: TestDatabase;
@@ -54,7 +61,12 @@ describeDb('Worker /readyz – kiểm tra queue', () => {
 
   it('phiên bản schema pgboss lệch → 503 + queue.schema_version_mismatch; sửa lại → 200', async () => {
     await asOwner((c) => c.query('UPDATE pgboss.version SET version = 45'));
-    await waitFor(async () => (await status()) === 503, 30_000, 500, '/readyz 503 do lệch phiên bản');
+    await waitFor(
+      async () => (await status()) === 503,
+      30_000,
+      500,
+      '/readyz 503 do lệch phiên bản',
+    );
     expect(workers.logs.of('queue.schema_version_mismatch')[0]).toMatchObject({
       expected: 46,
       actual: 45,

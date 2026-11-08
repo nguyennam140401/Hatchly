@@ -17,7 +17,13 @@ import {
 } from './helpers/queue-db';
 
 const P = z.strictObject({ refId: z.uuid() });
-const longMedia = defineJobType({ name: 'sandbox.media_long', queue: 'media', scope: 'tenant', version: 1, payload: P });
+const longMedia = defineJobType({
+  name: 'sandbox.media_long',
+  queue: 'media',
+  scope: 'tenant',
+  version: 1,
+  payload: P,
+});
 const quickPublish = defineJobType({
   name: 'sandbox.publish_quick',
   queue: 'publish',
@@ -80,7 +86,7 @@ describeDb('SC-003 – ưu tiên publish khi media đầy', () => {
 
     const refId = crypto.randomUUID();
     const sentAt = Date.now();
-    await withAccount(accounts[0]!, () => tenantTx(() => enqueue(quickPublish, { refId })));
+    await withAccount(accounts[0], () => tenantTx(() => enqueue(quickPublish, { refId })));
     await waitFor(() => publishStarted.has(refId), 30_000, 20, 'publish bắt đầu');
     const latency = publishStarted.get(refId)! - sentAt;
     expect(latency).toBeLessThanOrEqual(30_000);

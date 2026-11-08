@@ -7,7 +7,14 @@
 import type { z } from 'zod';
 
 /** 6 hàng chờ nghiệp vụ (FR-004). */
-export const QUEUE_NAMES = ['publish', 'media', 'ai_batch', 'trends', 'notify', 'scheduled'] as const;
+export const QUEUE_NAMES = [
+  'publish',
+  'media',
+  'ai_batch',
+  'trends',
+  'notify',
+  'scheduled',
+] as const;
 export type QueueName = (typeof QUEUE_NAMES)[number];
 
 export type JobScope = 'tenant' | 'system';
@@ -41,8 +48,7 @@ export interface EnqueueOptions {
 export type PendingState = 'pending' | 'retry_wait' | 'running';
 
 export type EnqueueResult =
-  | { status: 'created'; jobId: string }
-  | { status: 'exists'; jobId: string; state: PendingState };
+  { status: 'created'; jobId: string } | { status: 'exists'; jobId: string; state: PendingState };
 
 export type JobRef = { jobId: string } | { queue: QueueName; dedupeKey: string };
 
@@ -86,11 +92,7 @@ export type JobHandlerResult = void | RetryAfter | NoRetry;
 export type JobHandler<P> = (payload: P, ctx: JobContext) => Promise<JobHandlerResult>;
 
 export type DeadJobCause =
-  | 'RETRIES_EXHAUSTED'
-  | 'PERMANENT_ERROR'
-  | 'NO_HANDLER'
-  | 'PAYLOAD_INVALID'
-  | 'EXPIRED';
+  'RETRIES_EXHAUSTED' | 'PERMANENT_ERROR' | 'NO_HANDLER' | 'PAYLOAD_INVALID' | 'EXPIRED';
 
 export interface FinalFailureInfo {
   deadJobId: string;
@@ -148,10 +150,7 @@ export interface DeadJobDetail extends DeadJobSummary {
 }
 
 export type DeadJobRetryRequestResult =
-  | 'requested'
-  | 'rejected_not_allowed'
-  | 'rejected_already_active'
-  | 'not_found';
+  'requested' | 'rejected_not_allowed' | 'rejected_already_active' | 'not_found';
 
 /** Việc định kỳ đã khai báo bằng `defineSchedule`. */
 export interface ScheduleDefinition {

@@ -3,7 +3,12 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { z } from 'zod';
 import { tenantTx } from '../../src/core/db/transaction';
-import { defineJobType, enqueueMany, registerJobHandler, type JobTypeDefinition } from '../../src/modules/queue';
+import {
+  defineJobType,
+  enqueueMany,
+  registerJobHandler,
+  type JobTypeDefinition,
+} from '../../src/modules/queue';
 import { startTestWorkers, type TestWorkers } from '../support/queue-test-kit';
 import {
   createAccount,
@@ -68,7 +73,10 @@ describeDb('SC-002 – không chạy trùng trên 2 bản', () => {
         const account = accounts[(i * 5 + batch) % accounts.length]!;
         const r = await withAccount(account, () =>
           tenantTx(() =>
-            enqueueMany(def as JobTypeDefinition<{ n: number }>, Array.from({ length: 25 }, () => ({ payload: { n: n++ } }))),
+            enqueueMany(
+              def as JobTypeDefinition<{ n: number }>,
+              Array.from({ length: 25 }, () => ({ payload: { n: n++ } })),
+            ),
           ),
         );
         ids.push(...r.jobIds);

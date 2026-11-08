@@ -87,12 +87,13 @@ describeDb('Quyền và RLS trên schema pgboss', () => {
     const affected = await withAccount(a, () =>
       tenantTx(async (db) => {
         const u = await db.$client.query(
-          "UPDATE pgboss.job_common SET priority = 99 WHERE id = ANY($1::uuid[])",
+          'UPDATE pgboss.job_common SET priority = 99 WHERE id = ANY($1::uuid[])',
           [[jobB, jobSys]],
         );
-        const d = await db.$client.query('DELETE FROM pgboss.job_common WHERE id = ANY($1::uuid[])', [
-          [jobB, jobSys],
-        ]);
+        const d = await db.$client.query(
+          'DELETE FROM pgboss.job_common WHERE id = ANY($1::uuid[])',
+          [[jobB, jobSys]],
+        );
         return [u.rowCount, d.rowCount];
       }),
     );

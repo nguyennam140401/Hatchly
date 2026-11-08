@@ -33,7 +33,11 @@ describeDb('US2 – tắt có kiểm soát', () => {
     database = makeDatabase();
     stopProducer = await startTestProducer();
     a = await createAccount();
-    await setQueueSettings('ai_batch', { heartbeat_seconds: 10, retry_delays_seconds: [1], poll_interval_ms: 200 });
+    await setQueueSettings('ai_batch', {
+      heartbeat_seconds: 10,
+      retry_delays_seconds: [1],
+      poll_interval_ms: 200,
+    });
   });
   afterAll(async () => {
     await stopProducer();

@@ -25,7 +25,7 @@
     "db:generate:dev": "drizzle-kit generate --config drizzle.dev.config.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
     "test:queue": "vitest run --config vitest.queue.config.mts",
-    "test:queue-soak": "vitest run --config vitest.queue.config.mts --dir test/queue/soak",
+    "test:queue-soak": "vitest run --config vitest.queue.config.mts test/queue/soak",
     "queue:sql": "tsx src/db/queue-sql.ts"
   },
   "dependencies": {

@@ -38,7 +38,11 @@ describeDb('US2 – Worker chết giữa chừng', () => {
     a = await createAccount();
     await resetQueues();
     // Heartbeat tối thiểu 10 giây; thử lại ngay (1 giây) sau khi monitor trả việc.
-    await setQueueSettings('ai_batch', { heartbeat_seconds: 10, retry_delays_seconds: [1], poll_interval_ms: 200 });
+    await setQueueSettings('ai_batch', {
+      heartbeat_seconds: 10,
+      retry_delays_seconds: [1],
+      poll_interval_ms: 200,
+    });
   });
   afterAll(async () => {
     await workers?.stop();

@@ -11,7 +11,11 @@ export interface ChildMessage {
 export interface WorkerChild {
   child: ChildProcess;
   messages: ChildMessage[];
-  waitFor(event: string, timeoutMs?: number, match?: (m: ChildMessage) => boolean): Promise<ChildMessage>;
+  waitFor(
+    event: string,
+    timeoutMs?: number,
+    match?: (m: ChildMessage) => boolean,
+  ): Promise<ChildMessage>;
   exited: Promise<{ code: number | null; signal: string | null; at: number }>;
   stop(): void;
   kill(): void;
@@ -31,7 +35,11 @@ export function startWorkerChild(env: Record<string, string> = {}): WorkerChild 
     stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
   });
   const messages: ChildMessage[] = [];
-  const waiters: { event: string; match: (m: ChildMessage) => boolean; resolve: (m: ChildMessage) => void }[] = [];
+  const waiters: {
+    event: string;
+    match: (m: ChildMessage) => boolean;
+    resolve: (m: ChildMessage) => void;
+  }[] = [];
   child.on('message', (raw) => {
     const m = raw as ChildMessage;
     messages.push(m);
@@ -45,11 +53,13 @@ export function startWorkerChild(env: Record<string, string> = {}): WorkerChild 
   let stderr = '';
   child.stderr?.setEncoding('utf8');
   child.stderr?.on('data', (c: string) => (stderr += c));
-  const exited = new Promise<{ code: number | null; signal: string | null; at: number }>((resolve) => {
-    child.on('exit', (code, signal) => {
-      resolve({ code, signal, at: Date.now() });
-    });
-  });
+  const exited = new Promise<{ code: number | null; signal: string | null; at: number }>(
+    (resolve) => {
+      child.on('exit', (code, signal) => {
+        resolve({ code, signal, at: Date.now() });
+      });
+    },
+  );
   return {
     child,
     messages,
@@ -59,7 +69,9 @@ export function startWorkerChild(env: Record<string, string> = {}): WorkerChild 
       if (found) return Promise.resolve(found);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
-          reject(new Error(`Tiến trình con: hết thời gian chờ ${event}. stderr: ${stderr.slice(-2000)}`));
+          reject(
+            new Error(`Tiến trình con: hết thời gian chờ ${event}. stderr: ${stderr.slice(-2000)}`),
+          );
         }, timeoutMs);
         waiters.push({
           event,

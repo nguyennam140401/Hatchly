@@ -271,7 +271,9 @@ export async function sweepFailed(deps: BuryDeps): Promise<{ buried: number; ren
       attempts: job.retry_count + 1,
       jobCreatedAt: job.created_on,
       cause: EXPIRED_MESSAGES.has(text) ? 'EXPIRED' : 'RETRIES_EXHAUSTED',
-      error: Object.assign(new Error(text), { code: EXPIRED_MESSAGES.has(text) ? 'JOB_EXPIRED' : 'JOB_FAILED' }),
+      error: Object.assign(new Error(text), {
+        code: EXPIRED_MESSAGES.has(text) ? 'JOB_EXPIRED' : 'JOB_FAILED',
+      }),
     });
     buried++;
   }

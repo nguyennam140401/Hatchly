@@ -24,7 +24,7 @@ import type { QueueRuntime } from './runtime/queue-runtime';
 const MAX_LIMIT = 100;
 const MIN_REASON = 5;
 
-type SearchRow = {
+interface SearchRow {
   id: string;
   account_id: string | null;
   queue: QueueName;
@@ -34,7 +34,7 @@ type SearchRow = {
   failed_at: Date;
   retry_status: DeadJobRetryStatus;
   retried_at: Date | null;
-};
+}
 
 const toSummary = (r: SearchRow): DeadJobSummary => ({
   id: r.id,

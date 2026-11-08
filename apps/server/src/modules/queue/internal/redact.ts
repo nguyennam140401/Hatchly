@@ -59,7 +59,8 @@ export function redactError(err: unknown): RedactedError {
   } else if (typeof err === 'string' && err !== '') {
     message = err;
   }
-  const head: RedactedError = code === undefined ? { name, message: '' } : { name, code, message: '' };
+  const head: RedactedError =
+    code === undefined ? { name, message: '' } : { name, code, message: '' };
   const budget = MAX_BYTES - Buffer.byteLength(JSON.stringify(head), 'utf8');
   // JSON có thể phình ký tự thoát; chừa thêm biên.
   head.message = truncateUtf8(redactText(message), Math.max(64, Math.floor(budget * 0.9)));

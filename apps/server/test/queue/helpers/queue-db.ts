@@ -73,14 +73,15 @@ export async function setQueueSettings(
 
 /** Khôi phục thông số khởi tạo của migration 0006. */
 export async function resetQueueSettings(): Promise<void> {
-  const seed: [string, number, number | null, number, number, string, number, number[], number][] = [
-    ['publish', 10, 3, 120, 30, 'handler', 5, [60], 1000],
-    ['media', 2, 1, 900, 30, 'schedule', 3, [60, 300, 900], 5000],
-    ['ai_batch', 5, 3, 180, 30, 'schedule', 2, [30, 120], 2000],
-    ['trends', 2, 1, 600, 30, 'schedule', 3, [3600, 14400], 5000],
-    ['notify', 5, null, 60, 30, 'schedule', 5, [30, 60, 120, 300, 600], 2000],
-    ['scheduled', 2, null, 600, 30, 'none', 0, [60], 2000],
-  ];
+  const seed: [string, number, number | null, number, number, string, number, number[], number][] =
+    [
+      ['publish', 10, 3, 120, 30, 'handler', 5, [60], 1000],
+      ['media', 2, 1, 900, 30, 'schedule', 3, [60, 300, 900], 5000],
+      ['ai_batch', 5, 3, 180, 30, 'schedule', 2, [30, 120], 2000],
+      ['trends', 2, 1, 600, 30, 'schedule', 3, [3600, 14400], 5000],
+      ['notify', 5, null, 60, 30, 'schedule', 5, [30, 60, 120, 300, 600], 2000],
+      ['scheduled', 2, null, 600, 30, 'none', 0, [60], 2000],
+    ];
   await asOwner(async (c) => {
     for (const [q, conc, mpt, lock, hb, mode, maxr, delays, poll] of seed) {
       await c.query(

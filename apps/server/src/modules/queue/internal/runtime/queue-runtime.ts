@@ -291,7 +291,11 @@ export class QueueRuntime {
           continue;
         }
       }
-      this.logger.info({ event: 'queue.settings_applied', queue: change.queue, fields: change.fields });
+      this.logger.info({
+        event: 'queue.settings_applied',
+        queue: change.queue,
+        fields: change.fields,
+      });
     }
   }
 
@@ -349,9 +353,12 @@ export class QueueRuntime {
     this.stopping = true;
     const timeout = this.options.shutdownTimeoutMs;
     if (timeout !== undefined) {
-      const timer = setTimeout(() => {
-        this.abortAll('shutdown');
-      }, Math.max(0, timeout - 2000));
+      const timer = setTimeout(
+        () => {
+          this.abortAll('shutdown');
+        },
+        Math.max(0, timeout - 2000),
+      );
       timer.unref();
       this.timers.push(timer);
     }

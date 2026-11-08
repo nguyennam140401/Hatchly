@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 // Kiểm thử tích hợp hàng chờ (003, research R17): PostgreSQL THẬT, dùng chung globalSetup của 002 (CSDL
 // tạm app_test_<ngẫu nhiên>). Chạy tuần tự. Bộ chịu tải `test/queue/soak/**` chỉ chạy khi truyền
-// `--dir test/queue/soak` (pnpm test:queue-soak).
+// đường dẫn `test/queue/soak` (pnpm test:queue-soak).
 const soak = process.argv.some((arg) => arg.includes('soak'));
 
 export default defineConfig({

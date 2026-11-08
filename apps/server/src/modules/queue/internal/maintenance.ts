@@ -38,7 +38,11 @@ export async function runPartitions(): Promise<{ table: string; dropped: number 
     await systemTx(async (db) => {
       await db.execute(sql`SELECT ${sql.raw(log.ensureFunction)}(${log.monthsAhead})`);
       let dropped = 0;
-      if (log.dropFunction !== undefined && log.retentionMonths !== undefined && SQL_NAME.test(log.dropFunction)) {
+      if (
+        log.dropFunction !== undefined &&
+        log.retentionMonths !== undefined &&
+        SQL_NAME.test(log.dropFunction)
+      ) {
         const r = await db.execute<{ n: number }>(
           sql`SELECT ${sql.raw(log.dropFunction)}(${log.retentionMonths}) AS n`,
         );
@@ -61,7 +65,11 @@ export function registerInternalHandlers(): void {
   if (getHandler(cleanupJob.name) !== undefined) return;
   registerJobHandler(cleanupJob, async () => {
     const r = await runCleanup();
-    requireRuntime().logger.info({ event: 'queue.cleanup_done', dead_jobs: r.deadJobs, slots: r.slots });
+    requireRuntime().logger.info({
+      event: 'queue.cleanup_done',
+      dead_jobs: r.deadJobs,
+      slots: r.slots,
+    });
   });
   registerJobHandler(partitionsJob, async () => {
     const r = await runPartitions();
@@ -76,14 +84,22 @@ export function registerInternalHandlers(): void {
       metrics: runtime.metrics,
     });
     if (r.buried + r.renotified > 0) {
-      runtime.logger.info({ event: 'queue.sweep_failed_done', buried: r.buried, renotified: r.renotified });
+      runtime.logger.info({
+        event: 'queue.sweep_failed_done',
+        buried: r.buried,
+        renotified: r.renotified,
+      });
     }
   });
   registerJobHandler(deadJobRetriesJob, async () => {
     const runtime = requireRuntime();
     const r = await processDeadJobRetries(runtime);
     if (r.retried + r.rejected > 0) {
-      runtime.logger.info({ event: 'queue.dead_job_retries_done', retried: r.retried, rejected: r.rejected });
+      runtime.logger.info({
+        event: 'queue.dead_job_retries_done',
+        retried: r.retried,
+        rejected: r.rejected,
+      });
     }
   });
 }

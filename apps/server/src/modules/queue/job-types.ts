@@ -70,7 +70,10 @@ function fail(name: string, detail: string): never {
 function inspectSchema(jobName: string, schema: AnySchema, path: string): void {
   const type = schema.def.type;
   if (OPAQUE_TYPES.has(type)) {
-    fail(jobName, `trường ${path || '(gốc)'} có kiểu "${type}" không kiểm được tên trường/kích thước`);
+    fail(
+      jobName,
+      `trường ${path || '(gốc)'} có kiểu "${type}" không kiểm được tên trường/kích thước`,
+    );
   }
   switch (type) {
     case 'object': {
@@ -95,11 +98,7 @@ function inspectSchema(jobName: string, schema: AnySchema, path: string): void {
     case 'default':
     case 'readonly':
     case 'nonoptional':
-      inspectSchema(
-        jobName,
-        (schema as unknown as { unwrap: () => AnySchema }).unwrap(),
-        path,
-      );
+      inspectSchema(jobName, (schema as unknown as { unwrap: () => AnySchema }).unwrap(), path);
       return;
     case 'union':
       for (const option of (schema as unknown as z.ZodUnion).options) {
@@ -123,7 +122,7 @@ function inspectSchema(jobName: string, schema: AnySchema, path: string): void {
   }
 }
 
-const registry = new Map<string, JobTypeDefinition<unknown>>();
+const registry = new Map<string, JobTypeDefinition>();
 
 export interface DefineJobTypeInput<P extends z.ZodObject> {
   name: string;
@@ -160,7 +159,11 @@ export function defineJobType<P extends z.ZodObject>(
   inspectSchema(name, schema, '');
 
   const maxPayloadBytes = def.maxPayloadBytes ?? MAX_ENVELOPE_BYTES;
-  if (!Number.isInteger(maxPayloadBytes) || maxPayloadBytes < 256 || maxPayloadBytes > MAX_ENVELOPE_BYTES) {
+  if (
+    !Number.isInteger(maxPayloadBytes) ||
+    maxPayloadBytes < 256 ||
+    maxPayloadBytes > MAX_ENVELOPE_BYTES
+  ) {
     fail(name, `maxPayloadBytes phải trong khoảng 256–${MAX_ENVELOPE_BYTES}`);
   }
   // Clarifications Q1: việc đăng bài chỉ được "Đăng lại" qua luồng lượt đăng (đối soát trước).
@@ -174,7 +177,10 @@ export function defineJobType<P extends z.ZodObject>(
       maxRetries !== undefined &&
       (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > ceiling)
     ) {
-      fail(name, `retry.maxRetries phải trong khoảng 0–${ceiling} (mặc định của hàng chờ ${def.queue})`);
+      fail(
+        name,
+        `retry.maxRetries phải trong khoảng 0–${ceiling} (mặc định của hàng chờ ${def.queue})`,
+      );
     }
     if (
       delaysSeconds !== undefined &&
@@ -196,17 +202,17 @@ export function defineJobType<P extends z.ZodObject>(
     allowGenericRetry: def.allowGenericRetry ?? true,
     retry: def.retry === undefined ? undefined : Object.freeze({ ...def.retry }),
   });
-  registry.set(name, definition as JobTypeDefinition<unknown>);
+  registry.set(name, definition);
   return definition;
 }
 
 /** Loại việc theo tên (Worker giải phong bì); undefined khi chưa khai báo trong tiến trình này. */
-export function getJobType(name: string): JobTypeDefinition<unknown> | undefined {
+export function getJobType(name: string): JobTypeDefinition | undefined {
   return registry.get(name);
 }
 
 /** Mọi loại việc đã khai báo (kiểm thử, tài liệu). */
-export function listJobTypes(): JobTypeDefinition<unknown>[] {
+export function listJobTypes(): JobTypeDefinition[] {
   return [...registry.values()];
 }
 
@@ -218,8 +224,13 @@ export function validatePayload<P>(def: JobTypeDefinition<P>, payload: unknown):
 }
 
 /** Nâng dữ liệu phiên bản cũ (`v` < version) bằng `migrate` của loại việc rồi kiểm khuôn (R13). */
-export function upgradePayload<P>(def: JobTypeDefinition<P>, payload: unknown, fromVersion: number): P {
+export function upgradePayload<P>(
+  def: JobTypeDefinition<P>,
+  payload: unknown,
+  fromVersion: number,
+): P {
   let value = payload;
-  if (fromVersion < def.version && def.migrate !== undefined) value = def.migrate(payload, fromVersion);
+  if (fromVersion < def.version && def.migrate !== undefined)
+    value = def.migrate(payload, fromVersion);
   return validatePayload(def, value);
 }

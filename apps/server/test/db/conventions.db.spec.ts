@@ -115,9 +115,10 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
       ),
     );
     const result = await check(name);
-    expect(
-      result.violations.map((v) => `${v.rule}:${v.schema}.${v.table}`).sort(),
-    ).toEqual(['a-rls-missing:pgboss.job_common', 'g-app-privileges:pgboss.-']);
+    expect(result.violations.map((v) => `${v.rule}:${v.schema}.${v.table}`).sort()).toEqual([
+      'a-rls-missing:pgboss.job_common',
+      'g-app-privileges:pgboss.-',
+    ]);
   });
 
   it('cấu trúc sạch sau migration → 0 vi phạm (SC-003: 0 báo sai)', async () => {

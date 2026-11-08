@@ -1,0 +1,124 @@
+# Quy tắc cảnh báo của lớp hàng chờ (003 FR-032, contracts/queue-observability.md mục 3, kiến trúc mục 9).
+# Nạp vào Prometheus ở WBS 1.5/1.6. Ngưỡng nằm trong tệp này – đổi không cần sửa mã.
+#
+# Tên chỉ số Prometheus suy từ chỉ số OpenTelemetry (meter `app.queue`): dấu chấm → gạch dưới, bộ đếm
+# thêm `_total`, histogram thêm `_bucket`/`_sum`/`_count`. Mọi bản Worker xuất cùng giá trị gauge nên
+# dùng `max by (queue)` (không cần chọn bản thu). KHÔNG có nhãn account_id (FR-031).
+groups:
+  - name: queue
+    rules:
+      - alert: QueuePublishOldestWaitHigh
+        expr: max by (queue) (queue_jobs_oldest_wait_seconds{queue="publish"}) > 300
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Việc đăng bài đến giờ chờ quá 5 phút chưa được lấy'
+          description: >-
+            Hiến pháp VIII: việc `publish` quá hạn > 5 phút. Kiểm tra số bản Worker sống
+            (QueueWorkersLow), /readyz của Worker, kết nối CSDL; xem nhật ký queue.fetch_failed.
+            Có thể tăng concurrency_per_worker của publish trong infra.queue_settings.
+
+      - alert: QueueMediaOldestWaitHigh
+        expr: max by (queue) (queue_jobs_oldest_wait_seconds{queue="media"}) > 600
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Việc media chờ quá 10 phút'
+          description: >-
+            Hàng chờ media đầy (video dài). Xem queue_jobs_waiting{queue="media"}, việc chạy lâu
+            (QueueMediaVideoP95High); cân nhắc tăng concurrency_per_worker hoặc thêm bản Worker.
+
+      - alert: QueueNotifyOldestWaitHigh
+        expr: max by (queue) (queue_jobs_oldest_wait_seconds{queue="notify"}) > 300
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Thông báo chờ quá 5 phút chưa gửi'
+          description: >-
+            Báo lỗi cho người dùng phải ≤ 5 phút (chỉ số thành công). Kiểm tra dịch vụ email (SMTP),
+            nhật ký queue.job_finished outcome=retry của hàng chờ notify.
+
+      - alert: QueuePublishDeadJob
+        expr: increase(queue_dead_jobs_created_total{queue="publish"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Có việc đăng bài vào việc hỏng'
+          description: >-
+            Việc publish KHÔNG chạy lại chung được (Q1) – lượt đăng phải đối soát rồi "Đăng lại" trong
+            màn hình lượt đăng. Tra cứu bằng searchDeadJobs({ queue: 'publish' }), xem cause/last_error.
+
+      - alert: QueueDeadJobsHigh
+        expr: max by (queue) (queue_dead_jobs_last_24h{queue!="publish"}) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hơn 10 việc hỏng trong 24 giờ trên một hàng chờ'
+          description: >-
+            Tra cứu việc hỏng theo hàng chờ (màn hình hỗ trợ), gom theo job_type và cause; sửa nguyên nhân
+            rồi yêu cầu chạy lại (requestDeadJobRetry) từng việc.
+
+      - alert: QueueErrorRateHigh
+        expr: >-
+          sum by (queue) (rate(queue_jobs_finished_total{outcome!="completed"}[15m]))
+          / sum by (queue) (rate(queue_jobs_finished_total[15m])) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Tỷ lệ lượt việc không thành công > 5% trong 15 phút'
+          description: >-
+            Hiến pháp VIII: tỷ lệ lỗi > 5%/15 phút. Xem nhật ký queue.job_finished (error_code) theo
+            job_type; lỗi từ nền tảng/nhà cung cấp → kiểm tra trang trạng thái của họ.
+
+      - alert: QueueBacklogGrowing
+        expr: >-
+          deriv(max by (queue) (queue_jobs_waiting)[30m:1m]) > 0
+          and max by (queue) (queue_jobs_waiting) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hàng chờ tồn đọng tăng liên tục 30 phút'
+          description: >-
+            Việc tạo ra nhanh hơn xử lý. Tăng concurrency_per_worker (infra.queue_settings, có hiệu lực
+            ≤ 60 giây) hoặc thêm bản Worker; kiểm tra việc chạy lâu bất thường.
+
+      - alert: QueueMediaVideoP95High
+        expr: >-
+          histogram_quantile(0.95, sum by (le) (rate(queue_job_duration_bucket{queue="media",job_type=~"media\\..*video.*"}[15m]))) > 480
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Xử lý video p95 > 8 phút'
+          description: >-
+            Mục tiêu gán nhãn video ≤ 10 phút. Kiểm tra tài nguyên Worker, độ dài video, thời gian gọi
+            dịch vụ chuyển giọng nói/AI (qua Cổng AI).
+
+      - alert: QueueWorkersLow
+        expr: max(queue_workers_live) < 2
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Ít hơn 2 bản Worker đang sống'
+          description: >-
+            Mất dự phòng: một bản chết là dừng xử lý việc. Kiểm tra Deployment worker trên Kubernetes
+            (CrashLoopBackOff, OOMKilled), /healthz và /readyz.
+
+      - alert: QueueSettingsInvalid
+        expr: increase(queue_settings_invalid_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'infra.queue_settings có dòng không hợp lệ – Worker đang giữ giá trị cũ'
+          description: >-
+            Xem nhật ký queue.settings_invalid (trường issues); sửa dòng trong infra.queue_settings
+            (vd heartbeat_seconds × 2 phải ≤ lock_seconds).

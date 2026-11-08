@@ -75,13 +75,19 @@ describeDb('US1 – quy tắc dữ liệu việc', () => {
   });
 
   it('loại việc chưa khai báo trong tiến trình → QUEUE_JOB_TYPE_UNKNOWN, hoàn tác', async () => {
-    const fake = { ...mediaJob, name: 'sandbox.not_registered' } as JobTypeDefinition<unknown>;
-    await expectRolledBack('QUEUE_JOB_TYPE_UNKNOWN', () => enqueue(fake, { mediaId: crypto.randomUUID() }));
+    const fake = { ...mediaJob, name: 'sandbox.not_registered' } as JobTypeDefinition;
+    await expectRolledBack('QUEUE_JOB_TYPE_UNKNOWN', () =>
+      enqueue(fake, { mediaId: crypto.randomUUID() }),
+    );
   });
 
   it('khóa chống trùng rỗng hoặc > 200 ký tự → QUEUE_DEDUPE_KEY_INVALID', async () => {
     await expectRolledBack('QUEUE_DEDUPE_KEY_INVALID', () =>
-      enqueue(mediaJob, { mediaId: crypto.randomUUID(), labels: [] }, { dedupeKey: 'k'.repeat(201) }),
+      enqueue(
+        mediaJob,
+        { mediaId: crypto.randomUUID(), labels: [] },
+        { dedupeKey: 'k'.repeat(201) },
+      ),
     );
   });
 

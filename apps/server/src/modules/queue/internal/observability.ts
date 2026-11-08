@@ -32,10 +32,13 @@ export class QueueMetrics {
 
   constructor(provider?: MeterProvider) {
     const meter = (provider ?? metrics.getMeterProvider()).getMeter('app.queue');
+    // Đơn vị giây ghi trong mô tả, KHÔNG đặt `unit` – tên Prometheus giữ đúng `queue_job_duration_bucket`
+    // như quy tắc cảnh báo (ops/alerts/queue.rules.yml), không thêm hậu tố `_seconds`.
     this.duration = meter.createHistogram('queue.job.duration', {
-      unit: 's',
-      description: 'Thời gian xử lý một lượt việc',
-      advice: { explicitBucketBoundaries: [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 480, 600, 900] },
+      description: 'Thời gian xử lý một lượt việc (giây)',
+      advice: {
+        explicitBucketBoundaries: [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 480, 600, 900],
+      },
     });
     this.finished = meter.createCounter('queue.jobs.finished', {
       description: 'Số lượt việc kết thúc theo kết quả',
@@ -46,11 +49,12 @@ export class QueueMetrics {
     this.settingsInvalidCounter = meter.createCounter('queue.settings.invalid', {
       description: 'Số lần đọc được dòng infra.queue_settings không hợp lệ',
     });
-    const perQueue = (pick: (s: Snapshot) => Map<QueueName, number>) => (result: {
-      observe: (value: number, attributes?: Attributes) => void;
-    }) => {
-      for (const queue of QUEUE_NAMES) result.observe(pick(this.snapshot).get(queue) ?? 0, { queue });
-    };
+    const perQueue =
+      (pick: (s: Snapshot) => Map<QueueName, number>) =>
+      (result: { observe: (value: number, attributes?: Attributes) => void }) => {
+        for (const queue of QUEUE_NAMES)
+          result.observe(pick(this.snapshot).get(queue) ?? 0, { queue });
+      };
     meter
       .createObservableGauge('queue.jobs.waiting', { description: 'Việc đến giờ đang chờ lấy' })
       .addCallback(perQueue((s) => s.waiting));

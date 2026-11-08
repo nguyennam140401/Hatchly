@@ -48,7 +48,8 @@ export function removeSchedule(name: string): void {
  */
 export function registerPartitionedLog(def: PartitionedLogDefinition): void {
   if (partitionedLogs.has(def.table)) throw new Error(`Bảng ${def.table} đã được đăng ký`);
-  if (!SQL_FUNCTION.test(def.ensureFunction)) throw new Error('ensureFunction phải dạng schema.hàm');
+  if (!SQL_FUNCTION.test(def.ensureFunction))
+    throw new Error('ensureFunction phải dạng schema.hàm');
   if (def.dropFunction !== undefined && !SQL_FUNCTION.test(def.dropFunction)) {
     throw new Error('dropFunction phải dạng schema.hàm');
   }

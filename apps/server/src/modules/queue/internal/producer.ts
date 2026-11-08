@@ -35,25 +35,31 @@ export interface JobEnvelope {
   retriedFrom?: { deadJobId: string; traceId: string };
 }
 
-let producer: PgBoss | undefined;
+/**
+ * Các thể hiện pg-boss tạo được việc trong tiến trình (API: bể `app`; Worker: bể điều khiển). Dùng thể
+ * hiện đăng ký sau cùng; đóng một thể hiện không làm mất thể hiện khác (vd hai bản Worker kiểm thử).
+ * pg-boss chỉ dùng thể hiện này để đọc bộ nhớ đệm hàng chờ – lệnh ghi chạy trên kết nối của giao dịch.
+ */
+const producers: PgBoss[] = [];
 
-/** Thể hiện pg-boss dùng để tạo việc (API: bể `app`; Worker: bể điều khiển). */
-export function setProducer(boss: PgBoss | undefined): void {
-  producer = boss;
+export function setProducer(boss: PgBoss): void {
+  if (!producers.includes(boss)) producers.push(boss);
 }
 
-/** Gỡ thể hiện tạo việc nếu đó đúng là `boss` (khi bộ chạy đóng). */
+/** Gỡ một thể hiện tạo việc (khi bộ chạy / bộ tạo việc đóng). */
 export function clearProducer(boss: PgBoss): void {
-  if (producer === boss) producer = undefined;
+  const i = producers.indexOf(boss);
+  if (i >= 0) producers.splice(i, 1);
 }
 
 function requireProducer(): PgBoss {
+  const producer = producers[producers.length - 1];
   if (producer === undefined) throw queueError('QUEUE_NOT_STARTED');
   return producer;
 }
 
 /** Kiểm loại việc đã đăng ký và phạm vi khớp ngữ cảnh giao dịch. */
-function checkContext(def: JobTypeDefinition<unknown>, tx: TxContext): string | null {
+function checkContext(def: JobTypeDefinition, tx: TxContext): string | null {
   if (getJobType(def.name) !== def) throw queueError('QUEUE_JOB_TYPE_UNKNOWN');
   if (def.scope === 'tenant' && tx.accountId === null) {
     throw queueError('QUEUE_TENANT_CONTEXT_REQUIRED');
@@ -72,7 +78,7 @@ interface PreparedJob {
 }
 
 function prepare(
-  def: JobTypeDefinition<unknown>,
+  def: JobTypeDefinition,
   accountId: string | null,
   payload: unknown,
   opts: EnqueueOptions | undefined,
@@ -98,7 +104,7 @@ function prepare(
   return { id, dedupeKey, envelope, startAfter: opts?.runAfter };
 }
 
-function jobOptions(def: JobTypeDefinition<unknown>, job: PreparedJob, accountId: string | null) {
+function jobOptions(def: JobTypeDefinition, job: PreparedJob, accountId: string | null) {
   return {
     id: job.id,
     singletonKey: job.dedupeKey,
@@ -134,7 +140,7 @@ async function findLiveByKey(
 
 /** Gửi một việc đã chuẩn bị (dùng chung cho enqueue và chạy lại việc hỏng). */
 export async function sendPrepared(
-  def: JobTypeDefinition<unknown>,
+  def: JobTypeDefinition,
   job: PreparedJob,
   accountId: string | null,
   db: BossDatabase,
@@ -160,7 +166,7 @@ export async function enqueue<P>(
   opts?: EnqueueOptions,
 ): Promise<EnqueueResult> {
   const tx = requireCurrentTx();
-  const generic = def as JobTypeDefinition<unknown>;
+  const generic = def as JobTypeDefinition;
   const accountId = checkContext(generic, tx);
   const job = prepare(generic, accountId, payload, opts);
   return sendPrepared(generic, job, accountId, txDatabase(tx));
@@ -168,7 +174,7 @@ export async function enqueue<P>(
 
 /** Tạo việc với phong bì đặt sẵn (chạy lại việc hỏng – R14). Chỉ nội bộ module. */
 export async function enqueueRetried(
-  def: JobTypeDefinition<unknown>,
+  def: JobTypeDefinition,
   payload: unknown,
   opts: { dedupeKey: string; traceId: string; retriedFrom: { deadJobId: string; traceId: string } },
 ): Promise<EnqueueResult> {
@@ -184,7 +190,7 @@ export async function enqueueMany<P>(
   items: { payload: P; opts?: EnqueueOptions }[],
 ): Promise<{ jobIds: string[] }> {
   const tx = requireCurrentTx();
-  const generic = def as JobTypeDefinition<unknown>;
+  const generic = def as JobTypeDefinition;
   const accountId = checkContext(generic, tx);
   if (items.length > MAX_BATCH) throw queueError('QUEUE_BATCH_TOO_LARGE');
   if (items.length === 0) return { jobIds: [] };
@@ -212,13 +218,15 @@ export async function enqueueMany<P>(
 
 type AnyState = LiveState | 'completed' | 'cancelled' | 'failed';
 
-const NOT_PENDING_STATE: Record<Exclude<AnyState, 'created' | 'retry'>, 'running' | 'completed' | 'cancelled' | 'failed'> =
-  {
-    active: 'running',
-    completed: 'completed',
-    cancelled: 'cancelled',
-    failed: 'failed',
-  };
+const NOT_PENDING_STATE: Record<
+  Exclude<AnyState, 'created' | 'retry'>,
+  'running' | 'completed' | 'cancelled' | 'failed'
+> = {
+  active: 'running',
+  completed: 'completed',
+  cancelled: 'cancelled',
+  failed: 'failed',
+};
 
 /**
  * Khóa dòng việc (FOR UPDATE) trên kết nối của giao dịch: vòng lấy việc dùng SKIP LOCKED nên không thể

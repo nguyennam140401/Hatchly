@@ -50,7 +50,7 @@ export function createQueuePool(options: QueuePoolOptions): Pool {
 /** Bộ nối IDatabase của pg-boss trên một bể `pg` do lớp hàng chờ quản lý. */
 export function poolDatabase(pool: Pool): BossDatabase {
   return {
-    executeSql: (text, values) => pool.query(text, values as unknown[] | undefined),
+    executeSql: (text, values) => pool.query(text, values),
     poolCounts: () => ({
       max: pool.options.max,
       total: pool.totalCount,
@@ -85,7 +85,10 @@ export interface WorkerBossOptions {
  * pg-boss của Worker trên bể điều khiển: giám sát (supervise) bật, KHÔNG tự hẹn giờ (bộ hẹn giờ riêng –
  * R9), KHÔNG sửa cấu trúc (migrate: false), ghi sổ bản tên `worker` (chỉ số số bản đang sống).
  */
-export async function createWorkerBoss(pool: Pool, options: WorkerBossOptions = {}): Promise<PgBoss> {
+export async function createWorkerBoss(
+  pool: Pool,
+  options: WorkerBossOptions = {},
+): Promise<PgBoss> {
   const { PgBoss } = await loadPgBoss();
   return new PgBoss({
     db: poolDatabase(pool),

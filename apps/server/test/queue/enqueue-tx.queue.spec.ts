@@ -74,7 +74,10 @@ describeDb('US1 – tạo việc trong giao dịch', () => {
     const result = await withAccount(a, () =>
       tenantTx(async (db) => {
         traceId = getExecutionContext()!.traceId;
-        const [note] = await db.insert(tenantNotes).values({ account_id: a, title: 'ok' }).returning();
+        const [note] = await db
+          .insert(tenantNotes)
+          .values({ account_id: a, title: 'ok' })
+          .returning();
         return enqueue(noteJob, { noteId: note!.id });
       }),
     );
@@ -98,9 +101,9 @@ describeDb('US1 – tạo việc trong giao dịch', () => {
   });
 
   it('loại tenant trong systemTx không tenant → QUEUE_TENANT_CONTEXT_REQUIRED', async () => {
-    await expect(
-      systemTx(() => enqueue(noteJob, { noteId: crypto.randomUUID() })),
-    ).rejects.toEqual(detail('QUEUE_TENANT_CONTEXT_REQUIRED'));
+    await expect(systemTx(() => enqueue(noteJob, { noteId: crypto.randomUUID() }))).rejects.toEqual(
+      detail('QUEUE_TENANT_CONTEXT_REQUIRED'),
+    );
   });
 
   it('loại system trong tenantTx → QUEUE_SYSTEM_CONTEXT_REQUIRED; trong systemTx → không nhóm', async () => {
@@ -122,7 +125,8 @@ describeDb('US1 – tạo việc trong giao dịch', () => {
   });
 
   it('enqueueMany 10 việc rồi hoàn tác → 0; xác nhận → 10 việc một lô', async () => {
-    const items = () => Array.from({ length: 10 }, () => ({ payload: { noteId: crypto.randomUUID() } }));
+    const items = () =>
+      Array.from({ length: 10 }, () => ({ payload: { noteId: crypto.randomUUID() } }));
     await expect(
       withAccount(a, () =>
         tenantTx(async () => {

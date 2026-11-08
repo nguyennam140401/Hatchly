@@ -54,7 +54,14 @@ describe('redactError', () => {
 describe('payloadRef', () => {
   it('chỉ giữ trường có tên kết thúc bằng Id', () => {
     expect(
-      payloadRef({ attemptId: 'a1', mediaId: 'm1', title: 'bí mật', note: 'x', id: 'no', userid: 'no' }),
+      payloadRef({
+        attemptId: 'a1',
+        mediaId: 'm1',
+        title: 'bí mật',
+        note: 'x',
+        id: 'no',
+        userid: 'no',
+      }),
     ).toEqual({ attemptId: 'a1', mediaId: 'm1' });
     expect(payloadRef(null)).toEqual({});
   });

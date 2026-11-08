@@ -74,9 +74,14 @@ async function failWithDelay(
   try {
     await client.query('BEGIN');
     const db = clientDatabase(client);
-    const failed = (await deps.boss.fail(queue, { id: job.id, retryCount: job.retryCount }, output, {
-      db,
-    })) as { affected?: number };
+    const failed = (await deps.boss.fail(
+      queue,
+      { id: job.id, retryCount: job.retryCount },
+      output,
+      {
+        db,
+      },
+    )) as { affected?: number };
     if (failed.affected === 0) {
       await client.query('ROLLBACK');
       return false;
@@ -93,7 +98,11 @@ async function failWithDelay(
 }
 
 /** Chạy một việc đã lấy (`active`, lượt `job.retryCount`). Không bao giờ ném. */
-export async function runJob(deps: RunnerDeps, queue: QueueName, job: BossJob): Promise<RunOutcome> {
+export async function runJob(
+  deps: RunnerDeps,
+  queue: QueueName,
+  job: BossJob,
+): Promise<RunOutcome> {
   const started = Date.now();
   const env = readEnvelope(job.data);
   const settings = deps.settings.get(queue);
@@ -139,7 +148,10 @@ export async function runJob(deps: RunnerDeps, queue: QueueName, job: BossJob): 
       { traceId: env.traceId, accountId: env.accountId ?? undefined },
       async () => {
         if (registered === undefined || def === undefined) {
-          throw new TransientQueueError('NO_HANDLER', `Không có bộ xử lý cho loại việc ${env.type}`);
+          throw new TransientQueueError(
+            'NO_HANDLER',
+            `Không có bộ xử lý cho loại việc ${env.type}`,
+          );
         }
         let payload: unknown;
         try {
@@ -256,7 +268,8 @@ export async function runJob(deps: RunnerDeps, queue: QueueName, job: BossJob): 
       deps.onControlSuccess?.();
       return finish({ outcome: isNoRetry(handlerResult) ? 'no_retry' : 'completed' });
     }
-    if (handlerError instanceof PermanentJobError) return await bury('PERMANENT_ERROR', handlerError);
+    if (handlerError instanceof PermanentJobError)
+      return await bury('PERMANENT_ERROR', handlerError);
     const exhausted: DeadJobCause =
       handlerError instanceof TransientQueueError ? handlerError.code : 'RETRIES_EXHAUSTED';
     const delays = def?.retry?.delaysSeconds ?? settings.retryDelaysSeconds;

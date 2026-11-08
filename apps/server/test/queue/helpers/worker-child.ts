@@ -34,7 +34,11 @@ registerJobHandler(longJob, async ({ durationMs }, ctx) => {
     const timer = setTimeout(resolve, durationMs);
     ctx.signal.addEventListener('abort', () => {
       clearTimeout(timer);
-      send({ event: 'aborted', jobId: ctx.jobId, reason: String((ctx.signal.reason as Error).message) });
+      send({
+        event: 'aborted',
+        jobId: ctx.jobId,
+        reason: String((ctx.signal.reason as Error).message),
+      });
       resolve();
     });
   });

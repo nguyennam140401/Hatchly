@@ -92,7 +92,9 @@ export function parseSettingsRow(
   if (!r.success) {
     return {
       ok: false,
-      issues: r.error.issues.map((i) => (i.path.length > 0 ? `${i.path.join('.')}: ` : '') + i.message),
+      issues: r.error.issues.map(
+        (i) => (i.path.length > 0 ? `${i.path.join('.')}: ` : '') + i.message,
+      ),
     };
   }
   const row = r.data;
@@ -112,13 +114,13 @@ export function parseSettingsRow(
   };
 }
 
-export type SettingsChange = {
+export interface SettingsChange {
   queue: QueueName;
   previous: QueueSettings;
   next: QueueSettings;
   /** Tên trường đã đổi. */
   fields: (keyof QueueSettings)[];
-};
+}
 
 export interface SettingsCacheOptions {
   load: () => Promise<unknown[]>;

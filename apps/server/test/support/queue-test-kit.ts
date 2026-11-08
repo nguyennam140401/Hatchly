@@ -12,7 +12,11 @@ import type {
   QueueName,
 } from '../../src/modules/queue/public-api';
 import { getHandler } from '../../src/modules/queue/internal/handlers';
-import { silentLogger, type QueueLogEntry, type QueueLogger } from '../../src/modules/queue/internal/logger';
+import {
+  silentLogger,
+  type QueueLogEntry,
+  type QueueLogger,
+} from '../../src/modules/queue/internal/logger';
 import { startProducer } from '../../src/modules/queue/internal/producer-boss';
 import type { WorkerBossOptions } from '../../src/modules/queue/internal/pgboss/boss-loader';
 import {
@@ -22,7 +26,9 @@ import {
 } from '../../src/modules/queue/internal/runtime/queue-runtime';
 
 /** Bật bộ tạo việc (như API) trên vai trò `app` của CSDL kiểm thử. Trả hàm dừng. */
-export async function startTestProducer(logger: QueueLogger = silentLogger): Promise<() => Promise<void>> {
+export async function startTestProducer(
+  logger: QueueLogger = silentLogger,
+): Promise<() => Promise<void>> {
   const urls = inject('dbUrls');
   const handle = await startProducer({ appUrl: urls.app, poolMax: 2, logger });
   return () => handle.stop();
@@ -94,7 +100,9 @@ export async function startTestWorkers(
       ...(opts.meterProvider !== undefined ? { meterProvider: opts.meterProvider } : {}),
       ...(opts.services !== undefined ? { services: opts.services(i) } : {}),
       ...(opts.coordinator !== undefined ? { coordinator: opts.coordinator } : {}),
-      ...(opts.shutdownTimeoutMs !== undefined ? { shutdownTimeoutMs: opts.shutdownTimeoutMs } : {}),
+      ...(opts.shutdownTimeoutMs !== undefined
+        ? { shutdownTimeoutMs: opts.shutdownTimeoutMs }
+        : {}),
       ...(opts.random !== undefined ? { random: opts.random } : {}),
     });
     await runtime.start();
@@ -164,9 +172,15 @@ export async function expectIdempotent<P>(
   payload: P,
   opts: { accountId?: string; snapshot: () => Promise<unknown> },
 ): Promise<void> {
-  await runJobInline(def, payload, { ...(opts.accountId !== undefined ? { accountId: opts.accountId } : {}), attempt: 1 });
+  await runJobInline(def, payload, {
+    ...(opts.accountId !== undefined ? { accountId: opts.accountId } : {}),
+    attempt: 1,
+  });
   const first = await opts.snapshot();
-  await runJobInline(def, payload, { ...(opts.accountId !== undefined ? { accountId: opts.accountId } : {}), attempt: 2 });
+  await runJobInline(def, payload, {
+    ...(opts.accountId !== undefined ? { accountId: opts.accountId } : {}),
+    attempt: 2,
+  });
   const second = await opts.snapshot();
   expect(second).toEqual(first);
 }

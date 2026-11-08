@@ -4,7 +4,7 @@ import type { JobHandler, JobHandlerOptions, JobTypeDefinition } from '../public
 import { queueError } from './errors';
 
 export interface RegisteredHandler {
-  def: JobTypeDefinition<unknown>;
+  def: JobTypeDefinition;
   handler: JobHandler<unknown>;
   onFinalFailure: JobHandlerOptions<unknown>['onFinalFailure'];
 }
@@ -28,12 +28,12 @@ export function registerJobHandler<P>(
   opts: JobHandlerOptions<P> = {},
 ): void {
   if (unit === 'api') throw queueError('QUEUE_HANDLER_ON_API');
-  if (getJobType(def.name) !== (def as JobTypeDefinition<unknown>)) {
+  if (getJobType(def.name) !== (def as JobTypeDefinition)) {
     throw queueError('QUEUE_JOB_TYPE_UNKNOWN');
   }
   if (handlers.has(def.name)) throw new Error(`Loại việc ${def.name} đã có bộ xử lý`);
   handlers.set(def.name, {
-    def: def as JobTypeDefinition<unknown>,
+    def: def,
     handler: handler as JobHandler<unknown>,
     onFinalFailure: opts.onFinalFailure as JobHandlerOptions<unknown>['onFinalFailure'],
   });
