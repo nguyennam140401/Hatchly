@@ -2,7 +2,11 @@
 TaiLieuDacTa/
 
 # ===== Claude Code =====
-.claude/
+# Theo dõi skill dự án (worktree cần chúng); bỏ qua phần còn lại của .claude/
+.claude/*
+!.claude/skills/
+.claude/worktrees/
+.claude/settings.local.json
 CLAUDE.md
 CLAUDE.local.md
 

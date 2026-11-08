@@ -1,0 +1,13 @@
+# Hook của Spec Kit (đọc bởi .claude/skills/speckit-*/SKILL.md).
+# Lệnh `speckit.worktree.start` → skill /speckit-worktree-start (dấu chấm thành gạch ngang).
+hooks:
+  before_implement:
+    - extension: worktree
+      command: speckit.worktree.start
+      description: Tạo git worktree nhánh impl/<feature> từ HEAD và chuyển phiên sang đó
+      optional: false
+  after_implement:
+    - extension: worktree
+      command: speckit.worktree.finish
+      description: Hỏi xác nhận merge --no-ff về nhánh gốc rồi xóa worktree
+      optional: false
