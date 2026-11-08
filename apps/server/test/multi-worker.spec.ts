@@ -12,7 +12,13 @@ describe('Nhiều Worker song song với API', () => {
   let w2: RunningProcess;
 
   beforeAll(async () => {
-    const env = { APP_ENV: 'test', LOG_LEVEL: 'info', API_PORT: String(API_PORT) };
+    const env = {
+      APP_ENV: 'test',
+      LOG_LEVEL: 'info',
+      API_PORT: String(API_PORT),
+      DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
+      DATABASE_SYSTEM_URL: 'postgres://system:x@127.0.0.1:1/app',
+    };
     api = startNode(['dist/api.js'], env);
     w1 = startNode(['dist/worker.js'], { ...env, WORKER_HEALTH_PORT: String(W1_PORT) });
     w2 = startNode(['dist/worker.js'], { ...env, WORKER_HEALTH_PORT: String(W2_PORT) });

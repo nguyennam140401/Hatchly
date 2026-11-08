@@ -8,6 +8,8 @@ export interface RunningProcess {
   child: ChildProcess;
   /** Các dòng nhật ký JSON đã đọc được từ stdout. */
   logs: Record<string, unknown>[];
+  /** Toàn bộ stderr đã nhận (vd thông báo lỗi cấu hình). */
+  stderr: () => string;
   /** Chờ tới khi có dòng nhật ký có `msg` khớp. */
   waitForLog: (msg: string, timeoutMs?: number) => Promise<Record<string, unknown>>;
   /** Chờ tiến trình thoát, trả mã thoát và thời gian từ lúc gọi. */
@@ -55,6 +57,7 @@ export function startNode(args: string[], env: Record<string, string>): RunningP
   return {
     child,
     logs,
+    stderr: () => stderr,
     waitForLog: (msg, timeoutMs = 20_000) => {
       const found = logs.find((l) => l.msg === msg);
       if (found) return Promise.resolve(found);

@@ -6,10 +6,13 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { WorkerAppModule } from './app/worker-app.module';
 import { ConfigError, installShutdownSignals, loadConfig, ShutdownCoordinator } from './core';
+import { assertWorkerDatabaseConfig } from './core/config/load-config';
 import { WorkerHealthServer } from './core/health/worker-health-server';
 
 export async function bootstrapWorker(env: NodeJS.ProcessEnv = process.env) {
   const config = loadConfig(env);
+  // Worker cần thêm bể system cho việc dùng chung (002, R15).
+  assertWorkerDatabaseConfig(config);
   const app = await NestFactory.createApplicationContext(WorkerAppModule.forRoot(config), {
     bufferLogs: true,
   });

@@ -11,6 +11,9 @@ const baseEnv = {
   APP_ENV: 'test',
   LOG_LEVEL: 'info',
   WORKER_HEALTH_PORT: String(PORT),
+  // Cổng 1 không mở: Worker vẫn khởi động được khi CSDL chưa sẵn sàng (002).
+  DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
+  DATABASE_SYSTEM_URL: 'postgres://system:x@127.0.0.1:1/app',
 };
 
 describe('Worker tắt có kiểm soát', () => {
@@ -33,6 +36,36 @@ describe('Worker tắt có kiểm soát', () => {
     const proc = startNode(['dist/worker.js'], { WORKER_HEALTH_PORT: 'khong-phai-so' });
     const { code } = await proc.waitForExit();
     expect(code).toBe(1);
+  });
+
+  it('API thiếu DATABASE_APP_URL → thoát mã 1, nêu tên biến (002, US2-AS5)', async () => {
+    const proc = startNode(['dist/api.js'], { APP_ENV: 'test', API_PORT: String(PORT + 10) });
+    const { code } = await proc.waitForExit();
+    expect(code).toBe(1);
+    expect(proc.stderr()).toContain('DATABASE_APP_URL: bắt buộc');
+  });
+
+  it('URL CSDL sai định dạng chứa mật khẩu → đầu ra không chứa mật khẩu (002, US2-AS5)', async () => {
+    const proc = startNode(['dist/api.js'], {
+      APP_ENV: 'test',
+      API_PORT: String(PORT + 11),
+      DATABASE_APP_URL: 'mysql://app:S3cr3t_marker@db/app',
+    });
+    const { code } = await proc.waitForExit();
+    expect(code).toBe(1);
+    expect(proc.stderr()).toContain('DATABASE_APP_URL: giá trị chưa hợp lệ');
+    expect(proc.stderr()).not.toContain('S3cr3t_marker');
+    expect(JSON.stringify(proc.logs)).not.toContain('S3cr3t_marker');
+  });
+
+  it('Worker thiếu DATABASE_SYSTEM_URL → thoát mã 1, nêu tên biến', async () => {
+    const proc = startNode(['dist/worker.js'], {
+      ...baseEnv,
+      DATABASE_SYSTEM_URL: '',
+    });
+    const { code } = await proc.waitForExit();
+    expect(code).toBe(1);
+    expect(proc.stderr()).toContain('DATABASE_SYSTEM_URL: bắt buộc');
   });
 
   it.skipIf(onWindows)(

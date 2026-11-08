@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  ERROR_CODES,
   ErrorResponse,
   Id,
   MicroUsd,
@@ -123,5 +124,11 @@ describe('toFieldErrors – thông điệp tiếng Việt', () => {
     const fromEsm = esm.toFieldErrors(esm.ErrorResponse.safeParse(input).error!);
     expect(fromCjs.length).toBeGreaterThan(0);
     expect(fromEsm).toEqual(fromCjs);
+  });
+});
+
+describe('ERROR_CODES', () => {
+  it('có VERSION_CONFLICT cho khóa lạc quan (002, FR-019)', () => {
+    expect(ERROR_CODES.VERSION_CONFLICT).toBe('VERSION_CONFLICT');
   });
 });

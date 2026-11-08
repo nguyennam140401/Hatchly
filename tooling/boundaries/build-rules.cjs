@@ -103,6 +103,20 @@ function buildForbiddenRules(manifest) {
       to: { path: aiPaths },
     },
     {
+      name: 'bind-account-restricted',
+      severity: 'error',
+      comment:
+        'Chỉ core/auth (guard xác thực), modules/queue (việc nền) và core/db được đặt accountId vào ngữ cảnh thực thi (002, FR-004). Module nghiệp vụ lấy tài khoản qua tenantTx/currentAccountId, không bao giờ từ tham số.',
+      from: {
+        pathNot: [
+          '^apps/server/src/core/(auth|context|db)/',
+          '^apps/server/src/modules/queue/',
+          '^apps/server/test/',
+        ],
+      },
+      to: { path: '^apps/server/src/core/context/(bind-account|execution-storage)\\.ts$' },
+    },
+    {
       name: 'no-unresolvable',
       severity: 'error',
       comment:

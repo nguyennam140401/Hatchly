@@ -1,0 +1,4 @@
+{
+  "note": "module nghiệp vụ nhập core/context/bind-account – chỉ core/auth, modules/queue, core/db được đặt accountId (002, FR-004)",
+  "violations": ["bind-account-restricted"]
+}

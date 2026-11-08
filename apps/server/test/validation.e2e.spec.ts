@@ -9,7 +9,11 @@ import { configureApiApp } from '../src/app/configure-api-app';
 import { loadConfig } from '../src/core/config/load-config';
 
 async function startApi(appEnv: 'test' | 'production'): Promise<INestApplication> {
-  const config = loadConfig({ APP_ENV: appEnv, LOG_LEVEL: 'fatal' });
+  const config = loadConfig({
+    APP_ENV: appEnv,
+    LOG_LEVEL: 'fatal',
+    DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
+  });
   const moduleRef = await Test.createTestingModule({
     imports: [ApiAppModule.forRoot(config)],
   }).compile();

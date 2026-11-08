@@ -1,0 +1,9 @@
+[
+  {
+    "schema": "content",
+    "name": "fx_b",
+    "kind": "tenant",
+    "tenantColumn": "account_id",
+    "indexExceptions": {}
+  }
+]

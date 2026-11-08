@@ -55,3 +55,13 @@ export function loadConfigFrom<S extends z.ZodObject>(schema: S, env: Env): z.in
 export function loadConfig(env: Env = process.env): AppConfig {
   return loadConfigFrom(AppConfigSchema, env);
 }
+
+/**
+ * Worker cần thêm bể `system` (việc dùng chung). Gọi lúc Worker khởi động; thiếu → ConfigError
+ * chỉ nêu tên biến. Đặt ở đây (không ở config.schema.ts) để tránh vòng phụ thuộc với ConfigError.
+ */
+export function assertWorkerDatabaseConfig(config: AppConfig): void {
+  if (config.DATABASE_SYSTEM_URL === undefined) {
+    throw new ConfigError([{ variable: 'DATABASE_SYSTEM_URL', reason: 'bắt buộc' }]);
+  }
+}

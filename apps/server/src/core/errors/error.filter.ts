@@ -9,6 +9,7 @@ import {
 import { ERROR_CODES, type ErrorResponse } from '@app/shared/core';
 import type { Request, Response } from 'express';
 import { resolveTraceId } from '../context/request-context';
+import { DbConnectionError, DbPolicyViolationError, TenantContextError } from '../db/errors';
 import { AppError } from './app-error';
 
 type ErrorBody = ErrorResponse['error'];
@@ -82,6 +83,20 @@ export class ErrorFilter implements ExceptionFilter {
         ...(exception.fieldErrors ? { fieldErrors: exception.fieldErrors } : {}),
         ...(exception.detail !== undefined ? { detail: exception.detail } : {}),
       };
+    } else if (
+      exception instanceof TenantContextError ||
+      exception instanceof DbPolicyViolationError
+    ) {
+      // Lỗi lập trình của lớp CSDL: khách hàng thấy lỗi chung, mã gốc chỉ ở "Chi tiết cho hỗ trợ".
+      mapped = { ...internal(), detail: exception.code };
+    } else if (exception instanceof DbConnectionError) {
+      mapped = {
+        status: HttpStatus.SERVICE_UNAVAILABLE,
+        code: ERROR_CODES.SERVICE_UNAVAILABLE,
+        message: 'Hệ thống đang tạm dừng để cập nhật. Vui lòng thử lại sau ít phút.',
+        actions: [RETRY],
+        detail: exception.code,
+      };
     } else if (exception instanceof HttpException) {
       mapped = fromHttpException(exception);
     } else {
@@ -89,6 +104,7 @@ export class ErrorFilter implements ExceptionFilter {
     }
 
     if (mapped.status >= 500 && !(exception instanceof AppError)) {
+      // Lỗi CSDL đã chuẩn hóa không chứa SQL/tham số/chuỗi kết nối (R15).
       this.logger.error({ msg: 'request.unhandled_error', err: exception, trace_id: traceId });
     }
 
