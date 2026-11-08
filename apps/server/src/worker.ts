@@ -5,13 +5,23 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { WorkerAppModule } from './app/worker-app.module';
-import { ConfigError, installShutdownSignals, loadConfig, ShutdownCoordinator } from './core';
+import {
+  ConfigError,
+  installShutdownSignals,
+  loadConfig,
+  ReadinessRegistry,
+  ShutdownCoordinator,
+} from './core';
 import { assertWorkerDatabaseConfig } from './core/config/load-config';
 import { WorkerHealthServer } from './core/health/worker-health-server';
+import { QueueLifecycle } from './modules/queue';
+
+/** Chờ hàng chờ khởi động lần đầu trước khi ghi worker.ready (CSDL chưa sẵn sàng → vẫn chạy tiếp). */
+const QUEUE_START_WAIT_MS = 15_000;
 
 export async function bootstrapWorker(env: NodeJS.ProcessEnv = process.env) {
   const config = loadConfig(env);
-  // Worker cần thêm bể system cho việc dùng chung (002, R15).
+  // Worker cần thêm bể system cho việc dùng chung (002, R15) và bể điều khiển hàng chờ (003).
   assertWorkerDatabaseConfig(config);
   const app = await NestFactory.createApplicationContext(WorkerAppModule.forRoot(config), {
     bufferLogs: true,
@@ -24,14 +34,17 @@ export async function bootstrapWorker(env: NodeJS.ProcessEnv = process.env) {
   const health = new WorkerHealthServer({
     version: config.APP_VERSION,
     getState: () => coordinator.state,
+    // GET /readyz: database + queue (003 FR-019, contracts/queue-commands.md mục 3).
+    readiness: app.get(ReadinessRegistry),
   });
   await health.listen(config.WORKER_HEALTH_PORT);
 
   installShutdownSignals(app, { logger, unit: 'worker', afterClose: () => health.close() });
 
+  const queue = app.get(QueueLifecycle);
+  await queue.whenStarted(QUEUE_START_WAIT_MS);
   coordinator.markReady();
-  // Chưa có hàng chờ nào (WBS 1.3) – Worker vẫn chạy giữ tiến trình.
-  logger.log({ msg: 'worker.ready', queues: [], health_port: config.WORKER_HEALTH_PORT });
+  logger.log({ msg: 'worker.ready', queues: queue.queues, health_port: config.WORKER_HEALTH_PORT });
   return { app, coordinator, health };
 }
 

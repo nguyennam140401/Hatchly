@@ -1,15 +1,23 @@
-import { createServer, type Server } from 'node:http';
+import { createServer, type Server, type ServerResponse } from 'node:http';
 import type { HealthResponse } from '@app/shared/core';
 import type { LifecycleState } from '../lifecycle/shutdown-coordinator';
 
 export interface WorkerHealthServerOptions {
   version: string;
   getState: () => LifecycleState;
+  /** Kiểm tra sẵn sàng (ReadinessRegistry): CSDL, hàng chờ – cho `GET /readyz` (003 FR-019). */
+  readiness?: { run(): Promise<{ name: string; status: 'pass' | 'fail' }[]> };
+}
+
+function send(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(body));
 }
 
 /**
- * Cổng kiểm tra sống của Worker: máy chủ `node:http` thuần, chỉ phục vụ `GET /healthz`.
- * KHÔNG dùng NestJS router – Worker không bao giờ có endpoint nghiệp vụ (FR-004, R5).
+ * Cổng kiểm tra của Worker: máy chủ `node:http` thuần, chỉ phục vụ `GET /healthz` (sống) và
+ * `GET /readyz` (sẵn sàng – contracts/queue-commands.md mục 3). KHÔNG dùng NestJS router – Worker không
+ * bao giờ có endpoint nghiệp vụ (FR-004, R5).
  */
 export class WorkerHealthServer {
   private readonly server: Server;
@@ -17,15 +25,17 @@ export class WorkerHealthServer {
   constructor(private readonly options: WorkerHealthServerOptions) {
     this.server = createServer((req, res) => {
       const path = (req.url ?? '').split('?')[0];
-      if (req.method !== 'GET' || path !== '/healthz') {
-        res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ status: 'not_found' }));
+      if (req.method !== 'GET' || (path !== '/healthz' && path !== '/readyz')) {
+        send(res, 404, { status: 'not_found' });
         return;
       }
       const state = this.options.getState();
       if (state === 'stopping' || state === 'stopped') {
-        res.writeHead(503, { 'content-type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ status: 'stopping' }));
+        send(res, 503, { status: 'stopping' });
+        return;
+      }
+      if (path === '/readyz') {
+        void this.ready(res);
         return;
       }
       const body: HealthResponse = {
@@ -34,11 +44,16 @@ export class WorkerHealthServer {
         version: this.options.version,
         time: new Date().toISOString(),
       };
-      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(body));
+      send(res, 200, body);
     });
     // Không giữ kết nối keep-alive khi tắt.
     this.server.keepAliveTimeout = 1000;
+  }
+
+  private async ready(res: ServerResponse): Promise<void> {
+    const checks = (await this.options.readiness?.run()) ?? [];
+    const failed = checks.some((c) => c.status === 'fail');
+    send(res, failed ? 503 : 200, { status: failed ? 'not_ready' : 'ready', checks });
   }
 
   listen(port: number): Promise<void> {
@@ -49,6 +64,12 @@ export class WorkerHealthServer {
         resolve();
       });
     });
+  }
+
+  /** Cổng thực đang nghe (kiểm thử dùng cổng 0). */
+  get port(): number {
+    const address = this.server.address();
+    return typeof address === 'object' && address !== null ? address.port : 0;
   }
 
   close(): Promise<void> {

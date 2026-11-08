@@ -56,7 +56,9 @@ describe('Nhiều Worker song song với API', () => {
       body: '{}',
     });
     expect(res.status).toBe(404);
-    expect((await getJson(`http://127.0.0.1:${W1_PORT}/readyz`)).status).toBe(404);
+    // 003 FR-019: Worker có /readyz (không CSDL → 503), ngoài /healthz, /readyz là 404.
+    expect((await getJson(`http://127.0.0.1:${W1_PORT}/readyz`)).status).toBe(503);
+    expect((await getJson(`http://127.0.0.1:${W1_PORT}/api/v1/healthz`)).status).toBe(404);
   });
 
   it('dừng một Worker không ảnh hưởng Worker còn lại và API', async () => {

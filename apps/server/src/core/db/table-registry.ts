@@ -13,6 +13,11 @@ export interface TableRegistration {
   indexExceptions: Record<string, string>;
   /** Bắt buộc với `shared`. */
   reason?: string;
+  /**
+   * Chỉ cho `tenant` có cột mã tài khoản cho phép NULL (vd `infra.dead_jobs` – việc hệ thống không
+   * thuộc tài khoản nào). PHẢI ghi lý do (quy tắc l của db:check).
+   */
+  nullableTenant?: { reason: string };
 }
 
 const registry = new Map<string, TableRegistration>();
@@ -31,7 +36,12 @@ export function tableRegistry(): ReadonlyMap<string, TableRegistration> {
   return registry;
 }
 
-/** Bảng có phải bảng khách hàng (`tenant`) không. */
+/**
+ * Bảng khách hàng mà bộ gác truy vấn phải chặn khi giao dịch không có tenant. Bảng `nullableTenant`
+ * (vd `infra.dead_jobs`) có dòng không thuộc tài khoản nào nên được truy cập ngoài tenant – chính sách
+ * RLS của bảng chỉ cho thấy dòng `account_id IS NULL` trong ngữ cảnh đó (003 data-model mục 5).
+ */
 export function isTenantTable(schema: string, name: string): boolean {
-  return registry.get(keyOf(schema, name))?.kind === 'tenant';
+  const entry = registry.get(keyOf(schema, name));
+  return entry?.kind === 'tenant' && entry.nullableTenant === undefined;
 }

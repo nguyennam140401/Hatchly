@@ -1,0 +1,552 @@
+{
+  "id": "d2a3f16e-63b0-4d9f-bebe-e477d587823e",
+  "prevId": "ce213b38-9ecd-42fb-8957-23c3ee050f1b",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "account.accounts": {
+      "name": "accounts",
+      "schema": "account",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "tenant_isolation": {
+          "name": "tenant_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "app",
+            "system"
+          ],
+          "using": "id = account.current_account_id()",
+          "withCheck": "id = account.current_account_id()"
+        }
+      },
+      "checkConstraints": {
+        "accounts_status_check": {
+          "name": "accounts_status_check",
+          "value": "status IN ('active', 'suspended', 'expired', 'deleting')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "infra.dead_jobs": {
+      "name": "dead_jobs",
+      "schema": "infra",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_job_id": {
+          "name": "original_job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "queue": {
+          "name": "queue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_type": {
+          "name": "job_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload_version": {
+          "name": "payload_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dedupe_key": {
+          "name": "dedupe_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cause": {
+          "name": "cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_created_at": {
+          "name": "job_created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "failed_at": {
+          "name": "failed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "trace_id": {
+          "name": "trace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generic_retry_allowed": {
+          "name": "generic_retry_allowed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "final_failure_notified": {
+          "name": "final_failure_notified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "final_failure_attempts": {
+          "name": "final_failure_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "retry_status": {
+          "name": "retry_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "retry_requested_by": {
+          "name": "retry_requested_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retry_requested_at": {
+          "name": "retry_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retried_at": {
+          "name": "retried_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_job_id": {
+          "name": "new_job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "dead_jobs_account_id_failed_at_idx": {
+          "name": "dead_jobs_account_id_failed_at_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "failed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "dead_jobs_queue_failed_at_idx": {
+          "name": "dead_jobs_queue_failed_at_idx",
+          "columns": [
+            {
+              "expression": "queue",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "failed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "dead_jobs_retry_requested_idx": {
+          "name": "dead_jobs_retry_requested_idx",
+          "columns": [
+            {
+              "expression": "retry_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "retry_status = 'requested'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "dead_jobs_account_id_accounts_id_fk": {
+          "name": "dead_jobs_account_id_accounts_id_fk",
+          "tableFrom": "dead_jobs",
+          "tableTo": "accounts",
+          "schemaTo": "account",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dead_jobs_original_job_id_key": {
+          "name": "dead_jobs_original_job_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "original_job_id"
+          ]
+        }
+      },
+      "policies": {
+        "tenant_isolation": {
+          "name": "tenant_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "app"
+          ],
+          "using": "account_id = account.current_account_id()",
+          "withCheck": "account_id = account.current_account_id()"
+        },
+        "system_scoped": {
+          "name": "system_scoped",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "system"
+          ],
+          "using": "account_id = account.current_account_id() OR (account_id IS NULL AND account.current_account_id() IS NULL)",
+          "withCheck": "account_id = account.current_account_id() OR (account_id IS NULL AND account.current_account_id() IS NULL)"
+        }
+      },
+      "checkConstraints": {
+        "dead_jobs_queue_check": {
+          "name": "dead_jobs_queue_check",
+          "value": "queue IN ('publish', 'media', 'ai_batch', 'trends', 'notify', 'scheduled')"
+        },
+        "dead_jobs_cause_check": {
+          "name": "dead_jobs_cause_check",
+          "value": "cause IN ('RETRIES_EXHAUSTED', 'PERMANENT_ERROR', 'NO_HANDLER', 'PAYLOAD_INVALID', 'EXPIRED')"
+        },
+        "dead_jobs_retry_status_check": {
+          "name": "dead_jobs_retry_status_check",
+          "value": "retry_status IN ('none', 'requested', 'retried', 'rejected_already_active')"
+        },
+        "dead_jobs_last_error_size_check": {
+          "name": "dead_jobs_last_error_size_check",
+          "value": "octet_length(last_error::text) <= 2048"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "infra.queue_settings": {
+      "name": "queue_settings",
+      "schema": "infra",
+      "columns": {
+        "queue": {
+          "name": "queue",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "concurrency_per_worker": {
+          "name": "concurrency_per_worker",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_per_tenant": {
+          "name": "max_per_tenant",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lock_seconds": {
+          "name": "lock_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "heartbeat_seconds": {
+          "name": "heartbeat_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retry_mode": {
+          "name": "retry_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_retries": {
+          "name": "max_retries",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retry_delays_seconds": {
+          "name": "retry_delays_seconds",
+          "type": "integer[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "poll_interval_ms": {
+          "name": "poll_interval_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "queue_settings_queue_check": {
+          "name": "queue_settings_queue_check",
+          "value": "\"infra\".\"queue_settings\".\"queue\" IN ('publish', 'media', 'ai_batch', 'trends', 'notify', 'scheduled')"
+        },
+        "queue_settings_concurrency_check": {
+          "name": "queue_settings_concurrency_check",
+          "value": "\"infra\".\"queue_settings\".\"concurrency_per_worker\" >= 1 AND \"infra\".\"queue_settings\".\"concurrency_per_worker\" <= 50"
+        },
+        "queue_settings_max_per_tenant_check": {
+          "name": "queue_settings_max_per_tenant_check",
+          "value": "\"infra\".\"queue_settings\".\"max_per_tenant\" IS NULL OR (\"infra\".\"queue_settings\".\"max_per_tenant\" >= 1 AND \"infra\".\"queue_settings\".\"max_per_tenant\" <= \"infra\".\"queue_settings\".\"concurrency_per_worker\" * 10)"
+        },
+        "queue_settings_lock_seconds_check": {
+          "name": "queue_settings_lock_seconds_check",
+          "value": "\"infra\".\"queue_settings\".\"lock_seconds\" >= 30 AND \"infra\".\"queue_settings\".\"lock_seconds\" <= 3600"
+        },
+        "queue_settings_heartbeat_seconds_check": {
+          "name": "queue_settings_heartbeat_seconds_check",
+          "value": "\"infra\".\"queue_settings\".\"heartbeat_seconds\" >= 10 AND \"infra\".\"queue_settings\".\"heartbeat_seconds\" < \"infra\".\"queue_settings\".\"lock_seconds\""
+        },
+        "queue_settings_retry_mode_check": {
+          "name": "queue_settings_retry_mode_check",
+          "value": "\"infra\".\"queue_settings\".\"retry_mode\" IN ('schedule', 'handler', 'none')"
+        },
+        "queue_settings_max_retries_check": {
+          "name": "queue_settings_max_retries_check",
+          "value": "\"infra\".\"queue_settings\".\"max_retries\" >= 0 AND \"infra\".\"queue_settings\".\"max_retries\" <= 20 AND (\"infra\".\"queue_settings\".\"retry_mode\" <> 'none' OR \"infra\".\"queue_settings\".\"max_retries\" = 0)"
+        },
+        "queue_settings_retry_delays_check": {
+          "name": "queue_settings_retry_delays_check",
+          "value": "cardinality(\"infra\".\"queue_settings\".\"retry_delays_seconds\") >= 1 AND array_position(\"infra\".\"queue_settings\".\"retry_delays_seconds\", NULL) IS NULL AND 1 <= ALL(\"infra\".\"queue_settings\".\"retry_delays_seconds\") AND 86400 >= ALL(\"infra\".\"queue_settings\".\"retry_delays_seconds\")"
+        },
+        "queue_settings_poll_interval_check": {
+          "name": "queue_settings_poll_interval_check",
+          "value": "\"infra\".\"queue_settings\".\"poll_interval_ms\" >= 200 AND \"infra\".\"queue_settings\".\"poll_interval_ms\" <= 60000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "infra.schedule_slots": {
+      "name": "schedule_slots",
+      "schema": "infra",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot_at": {
+          "name": "slot_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "late_seconds": {
+          "name": "late_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "schedule_slots_slot_at_idx": {
+          "name": "schedule_slots_slot_at_idx",
+          "columns": [
+            {
+              "expression": "slot_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "schedule_slots_pkey": {
+          "name": "schedule_slots_pkey",
+          "columns": [
+            "name",
+            "slot"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "schedule_slots_status_check": {
+          "name": "schedule_slots_status_check",
+          "value": "status IN ('enqueued', 'skipped_overlap')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

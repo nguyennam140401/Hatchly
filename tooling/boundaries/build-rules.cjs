@@ -103,6 +103,24 @@ function buildForbiddenRules(manifest) {
       to: { path: aiPaths },
     },
     {
+      name: 'pgboss-only-in-queue',
+      severity: 'error',
+      comment:
+        'Thư viện pg-boss chỉ được dùng trong modules/queue/internal (bộ nối) và src/db (công cụ migration) – 003 FR-001. Module khác tạo việc qua enqueue()/defineJobType() của modules/queue/index.ts.',
+      from: {
+        pathNot: ['^apps/server/src/modules/queue/internal/', '^apps/server/src/db/'],
+      },
+      to: { path: packagePatternToPath('^pg-boss$') },
+    },
+    {
+      name: 'cron-parser-only-in-queue',
+      severity: 'error',
+      comment:
+        'cron-parser chỉ được dùng trong modules/queue/internal (bộ hẹn giờ). Module khác khai báo việc định kỳ bằng defineSchedule() của modules/queue/index.ts.',
+      from: { pathNot: '^apps/server/src/modules/queue/internal/' },
+      to: { path: packagePatternToPath('^cron-parser$') },
+    },
+    {
       name: 'bind-account-restricted',
       severity: 'error',
       comment:

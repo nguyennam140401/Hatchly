@@ -49,7 +49,40 @@ describe('loadConfig', () => {
       SHUTDOWN_TIMEOUT_MS: 30000,
       LOG_LEVEL: 'info',
       CORS_ORIGINS: ['http://localhost:5173'],
+      QUEUE_ENABLED: true,
+      QUEUE_CONTROL_POOL_MAX: 6,
+      QUEUE_API_POOL_MAX: 2,
+      QUEUE_SETTINGS_REFRESH_MS: 60000,
+      QUEUE_SCHEDULER_TICK_MS: 10000,
     });
+  });
+
+  it('biến hàng chờ (003): đọc giá trị, ngoài khoảng → nêu tên biến', () => {
+    const config = loadConfig({
+      ...DB,
+      APP_ENV: 'test',
+      QUEUE_ENABLED: 'false',
+      QUEUE_CONTROL_POOL_MAX: '8',
+      QUEUE_SETTINGS_REFRESH_MS: '10000',
+    });
+    expect(config.QUEUE_ENABLED).toBe(false);
+    expect(config.QUEUE_CONTROL_POOL_MAX).toBe(8);
+    expect(config.QUEUE_SETTINGS_REFRESH_MS).toBe(10000);
+    expect(() => loadConfig({ ...DB, APP_ENV: 'test', QUEUE_CONTROL_POOL_MAX: '1' })).toThrow(
+      /QUEUE_CONTROL_POOL_MAX/,
+    );
+    expect(() => loadConfig({ ...DB, APP_ENV: 'test', QUEUE_API_POOL_MAX: '6' })).toThrow(
+      /QUEUE_API_POOL_MAX/,
+    );
+    expect(() =>
+      loadConfig({ ...DB, APP_ENV: 'test', QUEUE_SETTINGS_REFRESH_MS: '400000' }),
+    ).toThrow(/QUEUE_SETTINGS_REFRESH_MS/);
+    expect(() => loadConfig({ ...DB, APP_ENV: 'test', QUEUE_SCHEDULER_TICK_MS: '500' })).toThrow(
+      /QUEUE_SCHEDULER_TICK_MS/,
+    );
+    expect(() => loadConfig({ ...DB, APP_ENV: 'test', QUEUE_ENABLED: 'yes' })).toThrow(
+      /QUEUE_ENABLED/,
+    );
   });
 
   it('CORS_ORIGINS tách theo dấu phẩy', () => {
