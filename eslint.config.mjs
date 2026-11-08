@@ -36,7 +36,11 @@ export default tseslint.config(
   {
     // Kiểm thử: cho phép `!` sau khi đã khẳng định thất bại bằng expect.
     files: ['**/test/**/*.{ts,tsx}', '**/*.spec.{ts,tsx}'],
-    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+    // Hàm `async () => giá_trị` làm `fn` giả cho tenantTx/systemTx là mẫu thường gặp trong kiểm thử.
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/require-await': 'off',
+    },
   },
   {
     // Mã NestJS: lớp module rỗng dùng decorator là chuẩn của framework.

@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { type AppConfig, CoreModule } from '../core';
+import { DatabaseModule } from '../core/db/database.module';
 import { DiagnosticsController } from '../core/diagnostics/diagnostics.controller';
 import { HealthController } from '../core/health/health.controller';
 import { buildModules } from './module-registry';
@@ -10,7 +11,11 @@ export class ApiAppModule {
   static forRoot(config: AppConfig): DynamicModule {
     return {
       module: ApiAppModule,
-      imports: [CoreModule.forRoot('api', config), ...buildModules('api')],
+      imports: [
+        CoreModule.forRoot('api', config),
+        DatabaseModule.forRoot('api', config),
+        ...buildModules('api'),
+      ],
       controllers: [
         HealthController,
         // Điểm chẩn đoán không bao giờ có ở production (R17).

@@ -10,3 +10,6 @@ TaiLieuDacTa/
 CLAUDE.md
 tooling/boundaries/fixtures/
 *.tsbuildinfo
+
+# Tệp do drizzle-kit sinh (002) – không định dạng tay
+apps/server/drizzle/**/meta/

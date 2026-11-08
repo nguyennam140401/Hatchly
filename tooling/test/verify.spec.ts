@@ -8,12 +8,17 @@ import { describe, expect, it } from 'vitest';
 // US4: verify chạy ĐỦ mọi bước (không dừng ở lỗi đầu), in bảng tổng kết, mã thoát 1 nếu có bước lỗi.
 const verifyScript = join(dirname(fileURLToPath(import.meta.url)), '..', 'verify.mjs');
 
-function runWithSteps(steps: { name: string; command: string }[]) {
+function runWithSteps(
+  steps: { name: string; command: string; requiresEnv?: string; skipReason?: string }[],
+) {
   const dir = mkdtempSync(join(tmpdir(), 'verify-'));
   const file = join(dir, 'steps.json');
   writeFileSync(file, JSON.stringify(steps));
+  const env = { ...process.env };
+  delete env.VERIFY_TEST_UNSET;
   const result = spawnSync(process.execPath, [verifyScript, '--steps', file], {
     encoding: 'utf8',
+    env,
   });
   // Bảng tổng kết in ra stdout; stderr của từng bước được chuyển tiếp riêng.
   return { code: result.status, out: result.stdout };
@@ -47,5 +52,23 @@ describe('tooling/verify.mjs', () => {
     const { code, out } = runWithSteps([ok('a'), ok('b')]);
     expect(code).toBe(0);
     expect(out.trimEnd().split('\n').at(-1)).toBe('→ ĐẠT: 2/2 bước');
+  });
+
+  it('bước bỏ qua (requiresEnv chưa đặt, hoặc in SKIPPED:) → "– bỏ qua", không tính đạt/lỗi', () => {
+    const { code, out } = runWithSteps([
+      ok('a'),
+      {
+        name: 'test:db',
+        command: 'node -e "process.exit(3)"',
+        requiresEnv: 'VERIFY_TEST_UNSET',
+        skipReason: 'chưa có CSDL kiểm thử',
+      },
+      { name: 'tu-bo-qua', command: `node -e "console.log('SKIPPED: khong co du lieu')"` },
+    ]);
+    expect(code).toBe(0);
+    const table = out.slice(out.lastIndexOf('Bước'));
+    expect(table).toMatch(/test:db\s+– bỏ qua.*\(chưa có CSDL kiểm thử\)/);
+    expect(table).toMatch(/tu-bo-qua\s+– bỏ qua.*\(khong co du lieu\)/);
+    expect(table.trimEnd().split('\n').at(-1)).toBe('→ ĐẠT: 1/1 bước (2 bỏ qua)');
   });
 });

@@ -86,3 +86,20 @@ pnpm verify      # có TEST_DATABASE_ADMIN_URL: thêm db:lint-migrations, test:d
 Làm theo `apps/server/docs/database.md` mục "Thêm bảng khách hàng": khai báo bằng `tenantTable` trong
 `modules/<m>/internal/db/schema.ts` → `pnpm db:generate` → review SQL → `pnpm db:migrate` →
 `pnpm db:check` đạt → thêm bảng vào khuôn kiểm thử truy cập chéo. Mục tiêu ≤ 15 phút.
+
+## Kết quả chạy (2026-11-08, Windows 10, Docker 29, PostgreSQL 17)
+
+Compose chạy với tệp ghi đè cổng tạm (13000/13001/18080/15432) vì compose của checkout chính đang
+dùng 3000/3001/8080.
+
+| Mục | Kết quả |
+|---|---|
+| 1. `pnpm db:setup` ×2 | Lần 1: 5 migration chính + 2 dev, 0,1 s; lần 2: "0 migration mới", mã 0. 11 schema + `sandbox`, 4 vai trò không Superuser/Bypass RLS, `support` chỉ có quyền trên 2 khung nhìn |
+| 2. `pnpm db:check` | "ĐẠT: 0 vi phạm"; thêm `content.tmp` → `a-rls-missing` + `j-unregistered-table`, mã 1 |
+| 3. `pnpm test:db` | 17 tệp, 84 kiểm thử đạt (gồm 1.000 vòng không rò, SC-006: chênh p95 0,69 ms) |
+| 4. compose | `migrate` exited (0); api, worker healthy; `/readyz` 200 `database: pass`; dừng postgres → 503 `checks_failed:database`; bật lại → 200; `DATABASE_APP_URL` vai trò owner → `db.role_invalid`, mã 1, không in mật khẩu; `node dist/db/check-conventions.js` trong ảnh → ĐẠT (bỏ qua sandbox) |
+| 5. `pnpm verify` | Không có `TEST_DATABASE_ADMIN_URL`: ĐẠT 7/7 (test:db bỏ qua); có: ĐẠT 8/8 |
+| 6. Thêm bảng (SC-005) | ~5 phút, xem `apps/server/docs/database.md` mục "Lịch sử diễn tập" |
+
+Phát hiện khi chạy: `.dockerignore` mẫu `**/*.log*` loại nhầm `audit-log.log-table.ts` → đã thêm
+ngoại lệ `!**/*.log-table.ts`.

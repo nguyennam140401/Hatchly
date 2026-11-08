@@ -37,5 +37,7 @@ export const ERROR_CODES = {
   NOT_FOUND: 'NOT_FOUND',
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** Khóa lạc quan: bản ghi vừa được người khác sửa (HTTP 409). */
+  VERSION_CONFLICT: 'VERSION_CONFLICT',
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { ErrorResponse, HealthResponse, ReadinessResponse } from '@app/shared/core';
+import { ErrorResponse, HealthResponse } from '@app/shared/core';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiAppModule } from '../src/app/api-app.module';
@@ -11,7 +11,13 @@ import { ShutdownCoordinator } from '../src/core/lifecycle/shutdown-coordinator'
 
 describe('API /healthz, /readyz', () => {
   let app: INestApplication;
-  const config = loadConfig({ APP_ENV: 'test', APP_VERSION: '1.2.3-test', LOG_LEVEL: 'fatal' });
+  const config = loadConfig({
+    APP_ENV: 'test',
+    APP_VERSION: '1.2.3-test',
+    LOG_LEVEL: 'fatal',
+    // Cổng 1 không mở → CSDL "chưa sẵn sàng"; ca CSDL sẵn sàng ở test/db/readiness.db.spec.ts.
+    DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
+  });
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -38,11 +44,13 @@ describe('API /healthz, /readyz', () => {
     expect(res.headers['x-trace-id']).toBeTruthy();
   });
 
-  it('GET /readyz → 200 ready, checks rỗng', async () => {
+  it('GET /readyz khi CSDL không kết nối được → 503, support.detail nêu database', async () => {
     const res = await request(app.getHttpServer() as Server)
       .get('/readyz')
-      .expect(200);
-    expect(ReadinessResponse.parse(res.body)).toEqual({ status: 'ready', checks: [] });
+      .expect(503);
+    const body = ErrorResponse.parse(res.body);
+    expect(body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(body.error.support.detail).toBe('checks_failed:database');
   });
 
   it('đường dẫn lạ → 404 NOT_FOUND có hành động khắc phục, traceId trùng tiêu đề', async () => {

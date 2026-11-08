@@ -1,0 +1,1 @@
+{ "rules": ["b-tenant-column-missing", "j-unregistered-table", "k-reserved-schema-not-empty"] }

@@ -22,6 +22,8 @@ COPY apps/server apps/server
 RUN pnpm --filter @app/shared build \
  && pnpm --filter @app/server build \
  && pnpm deploy --filter @app/server --prod /out
+# /out có dist/ và drizzle/ (migration + bootstrap/roles.sql – trường "files" của apps/server):
+# Job migrate chạy `node dist/db/migrate.js` từ cùng ảnh (WBS 1.5).
 
 # ---- Tầng chạy ----
 FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS runtime

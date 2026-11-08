@@ -43,6 +43,7 @@ Cơ chế cấp:
 ```text
 GRANT USAGE ON SCHEMA <s> TO app, system           -- mọi schema nghiệp vụ/cổng, trừ approval
 GRANT USAGE ON SCHEMA infra, sandbox TO support    -- sandbox chỉ dev/test
+GRANT USAGE ON SCHEMA account TO support           -- gọi current_account_id()/account_exists(); KHÔNG có quyền trên bảng
 ALTER DEFAULT PRIVILEGES FOR ROLE owner IN SCHEMA <s>
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app, system;
 ALTER DEFAULT PRIVILEGES FOR ROLE owner IN SCHEMA <s>

@@ -9,5 +9,14 @@
     "outDir": "dist-types",
     "types": ["node"]
   },
-  "include": ["src", "src/**/*.json", "test", "scripts", "vitest.config.mts"]
+  "include": [
+    "src",
+    "src/**/*.json",
+    "test",
+    "scripts",
+    "vitest.config.mts",
+    "vitest.db.config.mts",
+    "drizzle.config.ts",
+    "drizzle.dev.config.ts"
+  ]
 }

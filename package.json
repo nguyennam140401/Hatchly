@@ -18,7 +18,15 @@
     "check:boundaries": "node tooling/check-boundaries.mjs",
     "check:web-bundle": "node tooling/check-web-bundle.mjs",
     "test": "pnpm -r test",
-    "verify": "node tooling/verify.mjs"
+    "verify": "node tooling/verify.mjs",
+    "db:up": "docker compose up -d postgres",
+    "db:bootstrap": "pnpm --filter @app/server db:bootstrap",
+    "db:setup": "pnpm --filter @app/server db:setup",
+    "db:migrate": "pnpm --filter @app/server db:migrate",
+    "db:check": "pnpm --filter @app/server db:check",
+    "db:lint-migrations": "pnpm --filter @app/server db:lint-migrations",
+    "db:generate": "pnpm --filter @app/server db:generate",
+    "test:db": "pnpm --filter @app/server test:db"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

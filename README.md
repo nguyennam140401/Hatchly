@@ -40,6 +40,8 @@ chạy khoảng 20–30 giây.
 
 ```powershell
 Copy-Item apps/server/.env.example apps/server/.env   # Linux/macOS: cp
+pnpm db:up         # PostgreSQL cục bộ (docker compose, cổng 5432)
+pnpm db:setup      # 4 vai trò CSDL + migration (gồm schema sandbox ở development)
 pnpm dev:api       # API  – http://localhost:3000/healthz
 pnpm dev:worker    # Worker – kiểm tra sống http://localhost:3001/healthz
 pnpm dev:web       # Web  – http://localhost:5173 (proxy /api, /healthz, /readyz sang API)
@@ -48,11 +50,23 @@ pnpm dev:web       # Web  – http://localhost:5173 (proxy /api, /healthz, /read
 Thiếu hoặc sai biến cấu hình → tiến trình thoát mã 1 và in **tên** biến kèm lý do (không in giá trị).
 Danh sách biến: `apps/server/.env.example`.
 
+### CSDL cục bộ
+
+```powershell
+pnpm db:up                 # docker compose up -d postgres
+pnpm db:setup              # bootstrap vai trò owner/app/system/support + migrate (chạy lại an toàn)
+pnpm db:check              # kiểm tra quy ước CSDL (RLS, chủ sở hữu, quyền…) → "ĐẠT: 0 vi phạm"
+$env:TEST_DATABASE_ADMIN_URL = 'postgres://postgres:postgres_dev_only@localhost:5432/postgres'
+pnpm test:db               # kiểm thử tích hợp trên CSDL tạm app_test_<ngẫu nhiên>
+```
+
+Hướng dẫn lớp CSDL (thêm bảng, ngữ cảnh tenant, migration tương thích ngược):
+[`apps/server/docs/database.md`](apps/server/docs/database.md).
+
 ### Chạy toàn bộ bằng container (docker compose)
 
 ```powershell
-docker compose up --build -d        # web (8080) + api (3000) + worker (3001)
-docker compose --profile db up -d   # thêm PostgreSQL 17 (5432) – dùng từ WBS 1.2
+docker compose up --build -d        # postgres (5432) + migrate (một lần) + web (8080) + api (3000) + worker (3001)
 docker compose logs -f api worker
 docker compose down                 # thêm -v để xóa dữ liệu PostgreSQL
 ```
@@ -76,6 +90,10 @@ Giao diện ổn định cho lập trình viên và CI (chi tiết: `specs/001-m
 | `pnpm check:boundaries`                             | Kiểm tra ranh giới module theo tệp kê khai                                      |
 | `pnpm test`                                         | Vitest cho mọi gói (gồm bộ mẫu vi phạm ranh giới)                               |
 | `pnpm check:web-bundle`                             | Build web, khẳng định gói web không chứa mã từ `apps/server`                    |
+| `pnpm db:up` / `pnpm db:setup` / `pnpm db:migrate`  | PostgreSQL cục bộ / vai trò + migration / chỉ migration                         |
+| `pnpm db:generate`                                  | Sinh migration từ định nghĩa bảng (drizzle-kit)                                 |
+| `pnpm db:check` / `pnpm db:lint-migrations`         | Kiểm tra quy ước CSDL / câu lệnh phá tương thích ngược                          |
+| `pnpm test:db`                                      | Kiểm thử CSDL thật (cần `TEST_DATABASE_ADMIN_URL`, không có thì bỏ qua)         |
 | `pnpm verify`                                       | Chạy tất cả các bước trên, in bảng tổng kết                                     |
 | `pnpm --filter @app/server test:linux`              | Kiểm thử tắt có kiểm soát bằng tín hiệu trong container Linux (cho máy Windows) |
 | `docker build -t app:local .`                       | Một ảnh cho cả API và Worker                                                    |

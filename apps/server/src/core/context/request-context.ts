@@ -1,23 +1,32 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { uuidV7 } from '../ids/uuid-v7';
+import { executionStorage, type ExecutionSource } from './execution-storage';
 
 /**
- * Ngữ cảnh của một yêu cầu API.
+ * Ngữ cảnh thực thi: một yêu cầu API, một việc nền hoặc một tác vụ hệ thống (002, contracts/db-layer-api.md
+ * mục 3).
  *
- * `accountId` CHỈ được lấy từ phiên đăng nhập (WBS 2.1) – không bao giờ từ param/body/path do người
- * dùng gửi lên (nguyên tắc I). Hiện chưa có phiên nên luôn để trống.
+ * `accountId` CHỈ được đặt bởi `bindAccountToRequest` (từ phiên đăng nhập – WBS 2.1) hoặc
+ * `runWithJobContext` (từ dữ liệu việc – WBS 1.3); không bao giờ từ param/body/path do người dùng gửi
+ * lên (nguyên tắc I, FR-004).
  */
-export interface ApiRequestContext {
+export interface ExecutionContext {
   readonly traceId: string;
   readonly accountId?: string;
+  readonly source: ExecutionSource;
 }
 
-const storage = new AsyncLocalStorage<ApiRequestContext>();
+/** Bí danh tương thích với mã của 001. */
+export type ApiRequestContext = ExecutionContext;
 
-/** Ngữ cảnh của yêu cầu hiện tại (không có khi chạy ngoài yêu cầu, vd trong Worker). */
-export function getRequestContext(): ApiRequestContext | undefined {
-  return storage.getStore();
+/** Ngữ cảnh thực thi hiện tại (không có khi chạy ngoài yêu cầu/việc). */
+export function getExecutionContext(): ExecutionContext | undefined {
+  return executionStorage.getStore();
+}
+
+/** Bí danh tương thích với mã của 001. */
+export function getRequestContext(): ExecutionContext | undefined {
+  return getExecutionContext();
 }
 
 export const TRACE_ID_HEADER = 'x-trace-id';
@@ -55,5 +64,5 @@ export function requestContextMiddleware(
   next: () => void,
 ): void {
   const traceId = resolveTraceId(req, res);
-  storage.run({ traceId }, next);
+  executionStorage.run({ traceId, source: 'request' }, next);
 }

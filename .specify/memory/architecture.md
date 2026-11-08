@@ -1,7 +1,9 @@
 # Đặc tả kiến trúc triển khai – Ứng dụng AI tạo & đăng nội dung MXH
 
-- Phiên bản: 1.1 (2026-11-08) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
-  001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn
+- Phiên bản: 1.2 (2026-11-08) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
+  001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn;
+  v1.2 theo tính năng 002 (lớp CSDL): vai trò `system` đặt được ngữ cảnh tenant và chịu RLS, biểu thức
+  RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11
 - Nguồn: `TaiLieuDacTa/` – Đặc tả yêu cầu v1.7, ADD tổng thể v1.2, ADD module Worker v1.1 /
   Đăng bài v1.1 / Cổng AI v1.0, ADR-01…10, Kiến trúc dữ liệu & cache v1.2, Lựa chọn công nghệ v1.1
 - Vai trò: tài liệu tham chiếu kỹ thuật cho `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`.
@@ -143,8 +145,8 @@ module nằm trong `apps/server/src/modules/<module>/` và chỉ export giao di�
 | Điểm | Cách triển khai |
 |---|---|
 | API | `accountId` lấy từ phiên đăng nhập, gắn vào request context. **Không** nhận từ param/body/path |
-| CSDL | Mỗi giao dịch chạy `set_config('app.account_id', $1, true)` (phạm vi giao dịch). Chính sách RLS: `account_id = current_setting('app.account_id', true)::uuid`; thiếu biến thì không thấy dòng nào |
-| Vai trò CSDL | `owner` (chỉ migration) · `app` (API/Worker, chịu RLS, không có BYPASSRLS) · `system` (job dùng chung; ghi schema dùng chung; ghi bộ đếm qua hàm `SECURITY DEFINER`; không đọc nội dung bài) · `support` (chỉ đọc view đã lọc, không có cột bí mật; mọi truy vấn ghi audit) |
+| CSDL | Mỗi giao dịch chạy `set_config('app.account_id', $1, true)` (phạm vi giao dịch). Chính sách RLS `tenant_isolation`: `account_id = account.current_account_id()` – hàm `nullif(current_setting('app.account_id', true), '')::uuid` vì sau giao dịch biến thành chuỗi rỗng; thiếu biến thì không thấy dòng nào. Module chỉ truy cập CSDL qua `tenantTx` / `systemTx` / `supportSearch` / `supportViewAccount` (`core/db`) |
+| Vai trò CSDL | `owner` (chỉ migration) · `app` (API/Worker, chịu RLS, không có BYPASSRLS) · `system` (chỉ Worker – job dùng chung; ghi schema dùng chung; đặt được ngữ cảnh tenant của **một** tài khoản cho việc theo tài khoản và khi đó chịu cùng RLS `tenant_isolation` – Clarifications 002; khuyến nghị ghi bộ đếm qua hàm `SECURITY DEFINER`) · `support` (chỉ đọc view đã lọc, không có cột bí mật; mọi truy vấn ghi audit) |
 | Hàng chờ | Dữ liệu job chỉ chứa mã tham chiếu và `accountId`; Worker đặt lại ngữ cảnh tenant trước khi gọi bộ xử lý. Có giới hạn đồng thời theo tenant |
 | Kho tệp | `tenants/{accountId}/media/{mediaId}/original` · `/normalized/…` · `/thumb` · `tenants/{accountId}/context/…` · `tmp/{jobId}/…` |
 | Nhật ký, chỉ số | Gắn `account_id`, `trace_id`; **không** ghi token, nội dung bài, prompt |
@@ -344,6 +346,11 @@ API (vd 60 yêu cầu/phút/tài khoản).
 | Duyệt & lịch (module) | `approval` (schema `approval` dành sẵn) | Cổng nền tảng (module) | `platform_gateway` (schema `platform_gateway`) |
 | Hàng chờ (module hạ tầng) | `queue` (schema `infra`) | Lõi dùng chung phía máy chủ | `core` (`apps/server/src/core`) |
 | Tệp kê khai module | `modules.manifest.json` | Đơn vị triển khai | `api` / `worker` |
+
+| Biến phiên tenant | GUC `app.account_id`; hàm `account.current_account_id()` | Khuôn chính sách mẫu | chính sách `tenant_isolation` |
+| Bảng khách hàng / dùng chung / nhật ký phân vùng | loại `tenant` / `shared` / `partitioned_log`; `tenantTable` / `sharedTable` / `partitionedLogTable` | Giao dịch có ngữ cảnh tenant / hệ thống / hỗ trợ | `tenantTx` / `systemTx` / `supportSearch`, `supportViewAccount` |
+| Bảng mẫu (chỉ dev/test) | schema `sandbox`: `tenant_notes`, `support_note_search`, `support_note_detail` | Nhật ký migration | `infra.schema_migrations`, `infra.schema_migrations_dev` |
+| Xung đột phiên bản | mã lỗi `VERSION_CONFLICT` | Kiểm tra quy ước CSDL | `pnpm db:check` |
 
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
 
