@@ -10,9 +10,13 @@ worktree khi chưa có xác nhận của người dùng qua AskUserQuestion.**
 
 ## 1. Xác định ngữ cảnh
 
-1. Nếu `git rev-parse --git-dir` == `git rev-parse --git-common-dir` → không ở trong worktree.
-   Người dùng gọi thủ công và có `.claude/worktrees/*.base` → hỏi muốn hoàn tất worktree nào rồi
-   gọi `EnterWorktree(path)` vào đó; nếu chạy từ hook → kết thúc im lặng.
+1. Gọi thủ công có mã tính năng (vd `/speckit-worktree-finish 003`) → chạy
+   `bash .claude/skills/speckit-worktree-switch/scripts/resolve.sh 003`; nếu `CUR_IS_WT=false` và
+   `WT_EXISTS=true` → `EnterWorktree(path: <WT>)` rồi tiếp tục; `WT_EXISTS=false` → báo không có
+   worktree của tính năng đó, dừng.
+   Không có mã và `git rev-parse --git-dir` == `git rev-parse --git-common-dir` (không ở worktree):
+   chạy từ hook (implement không mã, làm trên nhánh chính) → kết thúc im lặng; gọi thủ công và có
+   `.claude/worktrees/*.base` → hỏi muốn hoàn tất worktree nào rồi `EnterWorktree(path)` vào đó.
 2. `BR` = `git branch --show-current`; không bắt đầu bằng `impl/` → kết thúc im lặng.
    `FEATURE` = phần sau `impl/`, `NNN` = 3 chữ số đầu.
 3. `WT` = `git rev-parse --show-toplevel`; `ROOT` = thư mục cha của `git rev-parse --git-common-dir`
@@ -65,14 +69,14 @@ Nếu verify lỗi hoặc còn task chưa xong: ghi rõ trong câu hỏi và đ�
 4. Xung đột → `git merge --abort`, liệt kê tệp xung đột, báo người dùng worktree vẫn còn ở
    `.claude/worktrees/<FEATURE>`; gợi ý: vào lại worktree, `git merge <BASE>` để giải quyết ở đó, rồi
    chạy lại `/speckit-worktree-finish`. Dừng.
-5. Thành công → dọn:
+5. Thành công → dọn (script xóa node_modules trước vì `git worktree remove` trên Windows hay lỗi
+   "Result too large"; nó từ chối nếu worktree còn thay đổi đã theo dõi chưa commit):
    ```bash
-   git worktree remove ".claude/worktrees/<FEATURE>"
+   bash .claude/skills/speckit-worktree-switch/scripts/remove.sh "<ROOT>" "<FEATURE>"
    git branch -d "impl/<FEATURE>"
-   rm -f ".claude/worktrees/<FEATURE>.base"
    ```
-   `worktree remove` từ chối vì còn tệp không theo dõi (node_modules, tệp đã chép) → được phép thêm
-   `--force` **chỉ sau khi** đã kiểm tra `git -C <WT> status --porcelain` không còn thay đổi đã theo dõi.
+   `ERROR=TRACKED_CHANGES` → báo người dùng, không xóa. `ERROR=DIR_LEFT` → báo thư mục còn sót để
+   người dùng tự xóa (thường do tệp đang bị chương trình khác mở).
 6. In: commit merge (`git log --oneline -1`), nhánh hiện tại, xác nhận worktree đã xóa
    (`git worktree list`).
 
@@ -80,8 +84,8 @@ Nếu verify lỗi hoặc còn task chưa xong: ghi rõ trong câu hỏi và đ�
 
 `ExitWorktree` với `action: "keep"`. In:
 - Worktree: `.claude/worktrees/<FEATURE>`, nhánh `impl/<FEATURE>`.
-- Làm tiếp: chạy `/speckit-implement` (hook start sẽ hỏi "vào lại worktree cũ") hoặc
-  `/speckit-worktree-finish` để merge sau.
+- Làm tiếp: chạy `/speckit-implement <NNN>` (hook switch tự vào lại worktree) hoặc
+  `/speckit-worktree-finish <NNN>` để merge sau.
 
 ## 5c. Bỏ worktree
 
@@ -89,7 +93,6 @@ Xác nhận lần 2 bằng AskUserQuestion, liệt kê các commit sẽ mất. �
 `ExitWorktree(keep)`, rồi tại `<ROOT>`:
 
 ```bash
-git worktree remove --force ".claude/worktrees/<FEATURE>"
+bash .claude/skills/speckit-worktree-switch/scripts/remove.sh "<ROOT>" "<FEATURE>" --discard
 git branch -D "impl/<FEATURE>"
-rm -f ".claude/worktrees/<FEATURE>.base"
 ```

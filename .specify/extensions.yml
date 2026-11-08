@@ -1,10 +1,47 @@
 # Hook của Spec Kit (đọc bởi .claude/skills/speckit-*/SKILL.md).
-# Lệnh `speckit.worktree.start` → skill /speckit-worktree-start (dấu chấm thành gạch ngang).
+# Lệnh `speckit.worktree.switch` → skill /speckit-worktree-switch (dấu chấm thành gạch ngang).
+# Quy tắc: lệnh có mã tính năng ở đầu tham số (vd `/speckit-plan 003 …`) chạy trong worktree
+# impl/<NNN-…> (tạo nếu chưa có); không có mã, hoặc /speckit-specify → chạy ở repo chính.
 hooks:
+  before_specify:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
+  before_clarify:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
+  before_plan:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
+  before_tasks:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
+  before_analyze:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
+  before_checklist:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
+  before_converge:
+    - extension: worktree
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
+      optional: false
   before_implement:
     - extension: worktree
-      command: speckit.worktree.start
-      description: Tạo git worktree nhánh impl/<feature> từ HEAD và chuyển phiên sang đó
+      command: speckit.worktree.switch
+      description: Vào worktree impl/<feature> nếu tham số có mã tính năng, không thì về repo chính
       optional: false
   after_implement:
     - extension: worktree
