@@ -1,0 +1,6 @@
+{
+  "note": "module a nhập tệp nội bộ của module b (FR-011a)",
+  "violations": [
+    "no-internal-cross-module"
+  ]
+}

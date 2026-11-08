@@ -1,0 +1,15 @@
+{
+  "name": "@app/tooling",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Công cụ của kho: kiểm tra ranh giới module, pnpm verify, quét gói web",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "dependency-cruiser": "18.7.2",
+    "eslint": "9.39.5",
+    "vitest": "5.1.0"
+  }
+}

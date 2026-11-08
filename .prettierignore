@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+pnpm-lock.yaml
+.specify/
+.claude/
+specs/
+TaiLieuDacTa/
+CLAUDE.md
+tooling/boundaries/fixtures/
+*.tsbuildinfo

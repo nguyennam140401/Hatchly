@@ -1,0 +1,6 @@
+{
+  "note": "a → b → a qua index.ts (FR-011b)",
+  "violations": [
+    "no-circular"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modules.manifest.schema.json",
+  "title": "Tệp kê khai module",
+  "description": "Nguồn sự thật duy nhất cho danh sách module, schema sở hữu, phía chạy và phụ thuộc được phép (contracts/module-manifest.md). Mọi thay đổi MUST qua review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sharedAllowedPackages", "aiProviderPackagePatterns", "modules"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "sharedAllowedPackages": {
+      "description": "Gói npm mà packages/shared được phép phụ thuộc (FR-011e)",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "aiProviderPackagePatterns": {
+      "description": "Mẫu (regex) tên gói SDK nhà cung cấp AI – chỉ được nhập trong modules/ai_gateway (nguyên tắc III)",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/module" }
+    }
+  },
+  "$defs": {
+    "snakeCase": { "type": "string", "pattern": "^[a-z][a-z0-9]*(_[a-z0-9]+)*$" },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "title", "kind", "schema", "runsIn", "allowedDeps"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/snakeCase",
+          "description": "Trùng tên thư mục src/modules/<name>/"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Tên tiếng Việt theo ADD mục 6"
+        },
+        "kind": { "enum": ["business", "gateway", "infra"] },
+        "schema": {
+          "$ref": "#/$defs/snakeCase",
+          "description": "Schema PostgreSQL sở hữu (duy nhất)"
+        },
+        "reservedSchema": {
+          "type": "boolean",
+          "description": "true = schema dành sẵn, chưa được có bảng"
+        },
+        "runsIn": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["api", "worker"] }
+        },
+        "allowedDeps": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/snakeCase" }
+        }
+      }
+    }
+  }
+}

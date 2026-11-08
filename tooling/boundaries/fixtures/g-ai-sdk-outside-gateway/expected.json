@@ -1,0 +1,7 @@
+{
+  "note": "SDK AI nhập ngoài ai_gateway (nguyên tắc III); gói không cài nên còn no-unresolvable",
+  "violations": [
+    "ai-sdk-only-in-ai-gateway",
+    "no-unresolvable"
+  ]
+}

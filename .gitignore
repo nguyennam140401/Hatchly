@@ -1,0 +1,57 @@
+# ===== Tài liệu đặc tả =====
+TaiLieuDacTa/
+
+# ===== Claude Code =====
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# ===== Spec Kit =====
+# .specify/
+# specs/
+
+# ===== Phụ thuộc =====
+node_modules/
+.pnpm-store/
+
+# ===== Build =====
+dist/
+build/
+out/
+.vite/
+*.tsbuildinfo
+.turbo/
+.cache/
+
+# ===== Test & coverage =====
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+junit*.xml
+
+# ===== Cấu hình môi trường & bí mật =====
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+kubeconfig*
+
+# ===== IDE / hệ điều hành =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Log =====
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*

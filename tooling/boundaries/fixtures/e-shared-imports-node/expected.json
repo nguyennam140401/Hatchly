@@ -1,0 +1,6 @@
+{
+  "note": "gói dùng chung nhập module lõi Node (FR-011e)",
+  "violations": [
+    "shared-pure"
+  ]
+}

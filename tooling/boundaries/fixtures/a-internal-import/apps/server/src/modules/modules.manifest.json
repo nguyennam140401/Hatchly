@@ -1,0 +1,37 @@
+{
+  "sharedAllowedPackages": [
+    "zod"
+  ],
+  "aiProviderPackagePatterns": [
+    "^@anthropic-ai/",
+    "^openai$",
+    "^@google/genai$",
+    "^@mistralai/"
+  ],
+  "modules": [
+    {
+      "name": "a",
+      "title": "a",
+      "kind": "business",
+      "schema": "a",
+      "runsIn": [
+        "api",
+        "worker"
+      ],
+      "allowedDeps": [
+        "b"
+      ]
+    },
+    {
+      "name": "b",
+      "title": "b",
+      "kind": "business",
+      "schema": "b",
+      "runsIn": [
+        "api",
+        "worker"
+      ],
+      "allowedDeps": []
+    }
+  ]
+}

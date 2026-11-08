@@ -1,0 +1,6 @@
+{
+  "note": "a nhập index.ts của b nhưng b không có trong allowedDeps của a (FR-011f)",
+  "violations": [
+    "allowed-deps-a"
+  ]
+}

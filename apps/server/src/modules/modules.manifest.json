@@ -1,0 +1,96 @@
+{
+  "$schema": "./modules.manifest.schema.json",
+  "sharedAllowedPackages": ["zod"],
+  "aiProviderPackagePatterns": ["^@anthropic-ai/", "^openai$", "^@google/genai$", "^@mistralai/"],
+  "modules": [
+    {
+      "name": "account",
+      "title": "Tài khoản & Gói",
+      "kind": "business",
+      "schema": "account",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["queue"]
+    },
+    {
+      "name": "context",
+      "title": "Ngữ cảnh kinh doanh",
+      "kind": "business",
+      "schema": "context",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["ai_gateway", "queue"]
+    },
+    {
+      "name": "media",
+      "title": "Thư viện media",
+      "kind": "business",
+      "schema": "media",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["account", "ai_gateway", "queue"]
+    },
+    {
+      "name": "trends",
+      "title": "Xu hướng",
+      "kind": "business",
+      "schema": "trends",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["ai_gateway", "queue"]
+    },
+    {
+      "name": "content",
+      "title": "Nội dung",
+      "kind": "business",
+      "schema": "content",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["account", "context", "media", "trends", "ai_gateway", "queue"]
+    },
+    {
+      "name": "approval",
+      "title": "Duyệt & lịch",
+      "kind": "business",
+      "schema": "approval",
+      "reservedSchema": true,
+      "runsIn": ["api"],
+      "allowedDeps": ["account", "content", "publishing", "queue"]
+    },
+    {
+      "name": "publishing",
+      "title": "Đăng bài",
+      "kind": "business",
+      "schema": "publishing",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["content", "media", "platform_gateway", "notifications", "queue"]
+    },
+    {
+      "name": "platform_gateway",
+      "title": "Cổng nền tảng",
+      "kind": "gateway",
+      "schema": "platform_gateway",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["notifications", "queue"]
+    },
+    {
+      "name": "ai_gateway",
+      "title": "Cổng AI",
+      "kind": "gateway",
+      "schema": "ai_gateway",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["account", "queue"]
+    },
+    {
+      "name": "notifications",
+      "title": "Thông báo",
+      "kind": "business",
+      "schema": "notifications",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": ["account", "queue"]
+    },
+    {
+      "name": "queue",
+      "title": "Hàng chờ (hạ tầng)",
+      "kind": "infra",
+      "schema": "infra",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": []
+    }
+  ]
+}

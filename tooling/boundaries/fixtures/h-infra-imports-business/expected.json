@@ -1,0 +1,7 @@
+{
+  "note": "module hạ tầng queue nhập module nghiệp vụ (FR-011c)",
+  "violations": [
+    "allowed-deps-queue",
+    "infra-no-business"
+  ]
+}

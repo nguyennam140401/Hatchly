@@ -1,0 +1,51 @@
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+
+// US4: verify chạy ĐỦ mọi bước (không dừng ở lỗi đầu), in bảng tổng kết, mã thoát 1 nếu có bước lỗi.
+const verifyScript = join(dirname(fileURLToPath(import.meta.url)), '..', 'verify.mjs');
+
+function runWithSteps(steps: { name: string; command: string }[]) {
+  const dir = mkdtempSync(join(tmpdir(), 'verify-'));
+  const file = join(dir, 'steps.json');
+  writeFileSync(file, JSON.stringify(steps));
+  const result = spawnSync(process.execPath, [verifyScript, '--steps', file], {
+    encoding: 'utf8',
+  });
+  // Bảng tổng kết in ra stdout; stderr của từng bước được chuyển tiếp riêng.
+  return { code: result.status, out: result.stdout };
+}
+
+const ok = (name: string) => ({ name, command: 'node -e "console.log(1)"' });
+const fail = (name: string, message: string) => ({
+  name,
+  command: `node -e "console.log('dong dau'); console.error('${message}'); process.exit(2)"`,
+});
+
+describe('tooling/verify.mjs', () => {
+  it('một bước đạt, hai bước lỗi → chạy đủ 3 bước, mã thoát 1', () => {
+    const { code, out } = runWithSteps([
+      fail('buoc-loi-1', 'error TS2322: sai kieu'),
+      ok('buoc-dat'),
+      fail('buoc-loi-2', 'error vi pham ranh gioi'),
+    ]);
+    expect(code).toBe(1);
+    const table = out.slice(out.lastIndexOf('Bước'));
+    const rows = table.split('\n').filter((l) => l.startsWith('buoc-'));
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatch(/✗ lỗi/);
+    expect(rows[0]).toContain('error TS2322: sai kieu');
+    expect(rows[1]).toMatch(/✓ đạt/);
+    expect(rows[2]).toMatch(/✗ lỗi/);
+    expect(table.trimEnd().split('\n').at(-1)).toBe('→ THẤT BẠI: 2/3 bước lỗi');
+  });
+
+  it('mọi bước đạt → mã thoát 0', () => {
+    const { code, out } = runWithSteps([ok('a'), ok('b')]);
+    expect(code).toBe(0);
+    expect(out.trimEnd().split('\n').at(-1)).toBe('→ ĐẠT: 2/2 bước');
+  });
+});

@@ -1,0 +1,6 @@
+{
+  "note": "web nhập mã máy chủ (FR-011d)",
+  "violations": [
+    "web-only-shared"
+  ]
+}

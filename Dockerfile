@@ -1,0 +1,33 @@
+# Một ảnh container cho cả API và Worker (ADR-01, R14).
+#   API    : docker run app:<tag>                      (lệnh mặc định node dist/api.js)
+#   Worker : docker run app:<tag> node dist/worker.js  (Kubernetes ghi đè `command`)
+# Ảnh không chứa mã web – web build riêng, phục vụ tĩnh qua CDN.
+
+# ---- Tầng build ----
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS build
+WORKDIR /repo
+RUN corepack enable
+
+# Cài phụ thuộc trước (tận dụng cache khi chỉ đổi mã nguồn).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/server/package.json apps/server/
+COPY apps/web/package.json apps/web/
+COPY tooling/package.json tooling/
+RUN pnpm install --frozen-lockfile --filter @app/server... --filter @app/shared
+
+COPY tsconfig.base.json ./
+COPY packages/shared packages/shared
+COPY apps/server apps/server
+RUN pnpm --filter @app/shared build \
+ && pnpm --filter @app/server build \
+ && pnpm deploy --filter @app/server --prod /out
+
+# ---- Tầng chạy ----
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=node:node /out ./
+USER node
+EXPOSE 3000 3001
+CMD ["node", "dist/api.js"]
