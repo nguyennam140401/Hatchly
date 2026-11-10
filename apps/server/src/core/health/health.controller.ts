@@ -1,6 +1,7 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ERROR_CODES, type HealthResponse, type ReadinessResponse } from '@app/shared/core';
 import { APP_CONFIG, type AppConfig } from '../config/config.schema';
+import { Public } from '../auth/access.decorators';
 import { AppError } from '../errors/app-error';
 import { ShutdownCoordinator } from '../lifecycle/shutdown-coordinator';
 import { ReadinessRegistry } from './readiness';
@@ -10,6 +11,7 @@ import { ReadinessRegistry } from './readiness';
 
 /** Kiểm tra sống / sẵn sàng của API – không cần đăng nhập, không chứa dữ liệu tenant (FR-003). */
 @Controller()
+@Public()
 export class HealthController {
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,

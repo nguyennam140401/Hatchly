@@ -1,5 +1,6 @@
 // contracts/db-commands.md mục 4, research R7: /readyz có kiểm tra `database`; chạy nhầm vai trò
 // `owner` → tiến trình ghi db.role_invalid và thoát mã 1, không in mật khẩu.
+import { TEST_AUTH_ENV } from '../helpers/auth-env';
 import { beforeAll, expect, it } from 'vitest';
 import { getJson, startNode, waitForHttp } from '../helpers/processes';
 import { dbUrls, describeDb } from './helpers/db';
@@ -15,6 +16,7 @@ describeDb('/readyz với CSDL thật', () => {
 
   it('DATABASE_APP_URL đúng vai trò app → 200, checks có database: pass', async () => {
     const proc = startNode(['dist/api.js'], {
+      ...TEST_AUTH_ENV,
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: String(PORT),
@@ -35,6 +37,7 @@ describeDb('/readyz với CSDL thật', () => {
   it('DATABASE_APP_URL dùng vai trò owner → db.role_invalid, thoát mã 1, không lộ mật khẩu', async () => {
     const ownerPassword = decodeURIComponent(new URL(dbUrls.owner).password);
     const proc = startNode(['dist/api.js'], {
+      ...TEST_AUTH_ENV,
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: String(PORT + 1),

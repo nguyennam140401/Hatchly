@@ -1,9 +1,11 @@
 # Đặc tả kiến trúc triển khai – Ứng dụng AI tạo & đăng nội dung MXH
 
-- Phiên bản: 1.2 (2026-11-08) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
+- Phiên bản: 1.3 (2026-11-10) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
   001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn;
   v1.2 theo tính năng 002 (lớp CSDL): vai trò `system` đặt được ngữ cảnh tenant và chịu RLS, biểu thức
-  RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11
+  RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11; v1.3 theo tính năng 004
+  (xác thực tối thiểu): chốt T7 (bộ thư viện nhỏ thay khung trọn gói, lý do RLS), lớp chặn quyền ở API
+  (mục 5), dữ liệu cá nhân mới, thuật ngữ xác thực ở mục 11
 - Nguồn: `TaiLieuDacTa/` – Đặc tả yêu cầu v1.7, ADD tổng thể v1.2, ADD module Worker v1.1 /
   Đăng bài v1.1 / Cổng AI v1.0, ADR-01…10, Kiến trúc dữ liệu & cache v1.2, Lựa chọn công nghệ v1.1
 - Vai trò: tài liệu tham chiếu kỹ thuật cho `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`.
@@ -46,7 +48,7 @@ không phải từ tải.
 | Giám sát | OpenTelemetry → Prometheus / Loki / Tempo + Grafana; lỗi ứng dụng → **GlitchTip** (Sentry SDK) | Đã chốt |
 | Email | Amazon SES qua SMTP | Đã chốt, xem lại theo Q-D3 |
 | Xu hướng | RSS báo chính thống + Brave Search API | Đã chốt |
-| Xác thực | Thư viện xác thực mã nguồn mở cho TypeScript, dữ liệu trong schema `account`; email+mật khẩu, Google, Facebook, liên kết nhiều cách đăng nhập | Thư viện cụ thể **chưa chọn** |
+| Xác thực | Bộ thư viện mã nguồn mở nhỏ, bọc trong module `account`: **argon2id** (`@node-rs/argon2`) + **phiên lưu phía máy chủ** (bảng `account.sessions`, mã ngẫu nhiên `node:crypto`, chỉ lưu SHA-256) + **nodemailer** (SMTP); Google/Facebook sau này qua **arctic** (chưa cài). Không dùng khung trọn gói (Better Auth, Auth.js) vì chúng tự truy vấn bảng danh tính ngoài ngữ cảnh tenant – trái RLS/nguyên tắc I (004 research R1) | Đã chốt (004) |
 | Mô hình AI, STT | Ứng viên: một mô hình tầm trung và một mô hình nhỏ của Anthropic và OpenAI; STT của OpenAI / FPT.AI / Viettel AI | Chốt sau POC-1, POC-4 |
 | Xử lý video | Công cụ dòng lệnh (vd ffmpeg) trong ảnh container của Worker | Đã chốt |
 
@@ -151,6 +153,21 @@ module nằm trong `apps/server/src/modules/<module>/` và chỉ export giao di�
 | Kho tệp | `tenants/{accountId}/media/{mediaId}/original` · `/normalized/…` · `/thumb` · `tenants/{accountId}/context/…` · `tmp/{jobId}/…` |
 | Nhật ký, chỉ số | Gắn `account_id`, `trace_id`; **không** ghi token, nội dung bài, prompt |
 | Prompt cache AI | Phân theo tenant; không đưa hồ sơ của nhiều tài khoản vào cùng phần đầu prompt |
+
+**Xác thực và chặn quyền ở API (004).** `AccessGuard` toàn cục, **mặc định từ chối**: mỗi điểm cuối phải có
+đúng một khai báo `@Public` / `@CustomerAccess(...quyền)` / `@StaffAccess(...quyền)` (thiếu → 403
+`ACCESS_NOT_DECLARED`, dev/test không khởi động được). Guard đọc cookie `__Host-sid` (khách) hoặc
+`__Host-staff_sid` (nhân viên), tra phiên qua bộ nhớ đệm trong tiến trình ≤ 60 giây rồi qua
+`SessionResolver`, gắn `actor` và `accountId` vào ngữ cảnh – guard là nơi **duy nhất** gọi
+`bindAccountToRequest`, không đọc path/query/body. Danh mục quyền là dữ liệu dùng chung
+(`packages/shared/src/auth/permissions.ts`). Các bước trước khi biết tenant (đăng ký, tra email, tra
+phiên, tra mã một lần) đi qua 4 hàm `SECURITY DEFINER` hẹp (`account.auth_register`,
+`auth_lookup_email`, `auth_resolve_session`, `auth_find_token`, chỉ `app` được gọi) trong `authTx`
+(giao dịch `app` không tenant, bộ gác vẫn chặn bảng tenant); sau khi danh tính đã xác minh thì
+`runInAccountScope(accountId)` + `tenantTx`. Hai hàm hạn chế này có quy tắc ranh giới riêng
+(`auth-tx-restricted`, `account-scope-restricted`). Chống giả mạo yêu cầu: kiểm `Origin`/`Sec-Fetch-Site`
+cho mọi phương thức không an toàn + `SameSite=Lax`. Chống dò: bộ đếm nguyên tử `account.auth_throttle`
+(khóa HMAC). Hướng dẫn: `apps/server/docs/auth.md`.
 
 Bắt buộc trong CI: (1) kiểm thử truy cập chéo trên mọi bảng (tài khoản A thử đọc/sửa/xóa dữ liệu của
 B, phải thất bại); (2) lint phát hiện bảng có `account_id` mà chưa bật RLS.
@@ -292,6 +309,13 @@ trước ≤ 1 giờ); kết quả tính sẵn trong CSDL (xu hướng theo tu�
 trình cho cấu hình (5 phút) và phiên + vai trò (60 giây). Giới hạn tốc độ đếm trong bộ nhớ của từng bản
 API (vd 60 yêu cầu/phút/tài khoản).
 
+**Dữ liệu cá nhân của xác thực (004, data-model.md mục 8)** – bổ sung danh mục ở Kiến trúc dữ liệu mục 9:
+email, tên hiển thị (`users`, `staff_users`); băm mật khẩu argon2id (`login_identities`, `staff_users` – không
+bao giờ rời CSDL); tóm tắt thiết bị "Chrome · Android" ≤ 60 ký tự (`sessions`); địa chỉ mạng trong
+`infra.audit_log.metadata` (12 tháng theo phân vùng, ẩn danh hóa khi xóa tài khoản); email/địa chỉ mạng
+ở `auth_throttle` **chỉ dạng HMAC** (≤ 24 giờ). Metadata kiểm toán chỉ có `{ ip, ua_family, reason }`, không
+email, mật khẩu hay mã. Không có bên nhận mới ở nước ngoài (SES đã có).
+
 ## 9. Quan sát và cảnh báo
 
 - Mỗi lượt đăng có `trace_id` đi qua API → job → Worker → nền tảng (OpenTelemetry).
@@ -352,6 +376,13 @@ API (vd 60 yêu cầu/phút/tài khoản).
 | Bảng mẫu (chỉ dev/test) | schema `sandbox`: `tenant_notes`, `support_note_search`, `support_note_detail` | Nhật ký migration | `infra.schema_migrations`, `infra.schema_migrations_dev` |
 | Xung đột phiên bản | mã lỗi `VERSION_CONFLICT` | Kiểm tra quy ước CSDL | `pnpm db:check` |
 
+| Phiên đăng nhập | `account.sessions`, cookie `__Host-sid` | Nhân viên nội bộ / phiên nhân viên | `account.staff_users` / `account.staff_sessions`, cookie `__Host-staff_sid` |
+| Mã một lần (xác minh email, đặt lại mật khẩu) | `account.auth_tokens` (`purpose`: `verify_email`, `reset_password`) | Bộ đếm chống dò | `account.auth_throttle` |
+| Ghế thành viên | `memberships.seat` | Danh mục quyền | `PERMISSIONS`, kiểu `Permission` (`@app/shared/auth`) |
+| Người gọi | `actor` trong `ExecutionContext`; `currentActor()`, `can()` | Khai báo truy cập điểm cuối | `@Public`, `@CustomerAccess`, `@StaffAccess`; `AccessGuard` |
+| Giao dịch xác thực không tenant | `authTx` | Chạy trong phạm vi tài khoản đã xác minh | `runInAccountScope` |
+| Giao diện gửi thư | `core/mail`, `Mailer`, `MAILER` | Lệnh vận hành nhân viên / dữ liệu mẫu | `pnpm staff` / `pnpm dev:seed-auth` |
+
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
 
 ## 12. Việc còn mở ảnh hưởng triển khai
@@ -360,7 +391,7 @@ Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đ�
 |---|---|---|---|
 | T4 | Chốt nhà cung cấp đám mây sau 3 điểm xác minh: PITR, giá băng thông ra, SLA ≥ 99,5% | Chỉ ảnh hưởng cấu hình (chuẩn mở) | Trước khi ký hợp đồng |
 | T4c | CSDL được quản lý hay CloudNativePG | Chỉ ảnh hưởng hạ tầng | Theo T4 |
-| T7 | Chọn thư viện xác thực cụ thể | Module `account` | Khi dựng khung dự án |
+| ~~T7~~ | ~~Chọn thư viện xác thực cụ thể~~ – **đã chốt ở 004**: argon2 + phiên máy chủ + arctic (sau), xem mục 2 | Module `account` | Xong (2026-11-10) |
 | T11 | Mô hình AI, dịch vụ STT | Chỉ ảnh hưởng adapter nhà cung cấp trong AI Gateway | POC-1, POC-4 |
 | POC-2 | Khả năng đối soát của từng nền tảng; hạn mức Zalo OA/Instagram; thời gian khóa 2 phút cho video | Adapter + `error_mappings` | Trước khi hoàn thiện Publishing |
 | POC-3 | Chất lượng nguồn xu hướng | Module `trends` | Trước khi hoàn thiện Trends |

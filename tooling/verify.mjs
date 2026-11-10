@@ -12,6 +12,7 @@ const DEFAULT_STEPS = [
     'typecheck',
     'lint',
     'check:boundaries',
+    'check:secrets',
     'test',
     'check:web-bundle',
     'db:lint-migrations',

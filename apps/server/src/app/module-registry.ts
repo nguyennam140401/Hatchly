@@ -1,4 +1,4 @@
-import type { Type } from '@nestjs/common';
+import type { DynamicModule, Type } from '@nestjs/common';
 import { AccountModule } from '../modules/account';
 import { AiGatewayModule } from '../modules/ai_gateway';
 import { ApprovalModule } from '../modules/approval';
@@ -42,12 +42,15 @@ export function assertRegistryMatchesManifest(): void {
   }
 }
 
+/** Module có cấu hình theo đơn vị (vd account: controller xác thực chỉ ở API). */
+type UnitAwareModule = Type & { forUnit?: (unit: 'api' | 'worker') => DynamicModule };
+
 /** Các module NestJS chạy ở một đơn vị, lọc theo `runsIn`. */
-export function buildModules(unit: 'api' | 'worker'): Type[] {
+export function buildModules(unit: 'api' | 'worker'): (Type | DynamicModule)[] {
   assertRegistryMatchesManifest();
   return modulesFor(unit).map((m) => {
-    const mod = MODULE_REGISTRY[m.name];
+    const mod = MODULE_REGISTRY[m.name] as UnitAwareModule | undefined;
     if (mod === undefined) throw new Error(`Module ${m.name} chưa có trong registry`);
-    return mod;
+    return typeof mod.forUnit === 'function' ? mod.forUnit(unit) : mod;
   });
 }

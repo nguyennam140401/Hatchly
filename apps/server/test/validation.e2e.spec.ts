@@ -1,3 +1,4 @@
+import { TEST_AUTH_ENV, TEST_ORIGIN } from './helpers/auth-env';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -12,6 +13,11 @@ async function startApi(appEnv: 'test' | 'production'): Promise<INestApplication
   const config = loadConfig({
     APP_ENV: appEnv,
     LOG_LEVEL: 'fatal',
+    ...TEST_AUTH_ENV,
+    // production không nhận MAIL_TRANSPORT=memory (004) – dùng smtp giả (không gửi thư nào).
+    ...(appEnv === 'production'
+      ? { MAIL_TRANSPORT: 'smtp', SMTP_URL: 'smtp://127.0.0.1:1', MAIL_FROM: 'no-reply@app.test' }
+      : {}),
     DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
   });
   const moduleRef = await Test.createTestingModule({
@@ -36,6 +42,7 @@ describe('POST /api/v1/diagnostics/echo – kiểm tra đầu vào bằng lượ
   it('{} → 400 VALIDATION_FAILED, fieldErrors tiếng Việt giống hệt web', async () => {
     const res = await request(app.getHttpServer() as Server)
       .post('/api/v1/diagnostics/echo')
+      .set('origin', TEST_ORIGIN)
       .send({})
       .expect(400);
     const body = ErrorResponse.parse(res.body);
@@ -60,6 +67,7 @@ describe('POST /api/v1/diagnostics/echo – kiểm tra đầu vào bằng lượ
   it('thân không phải JSON hợp lệ → 400 ErrorResponse', async () => {
     const res = await request(app.getHttpServer() as Server)
       .post('/api/v1/diagnostics/echo')
+      .set('origin', TEST_ORIGIN)
       .set('content-type', 'application/json')
       .send('{"message":')
       .expect(400);
@@ -69,6 +77,7 @@ describe('POST /api/v1/diagnostics/echo – kiểm tra đầu vào bằng lượ
   it('đầu vào hợp lệ → 200 EchoResponse (đã cắt khoảng trắng)', async () => {
     const res = await request(app.getHttpServer() as Server)
       .post('/api/v1/diagnostics/echo')
+      .set('origin', TEST_ORIGIN)
       .send({ message: '  xin chào  ', sentAt: '2026-11-08T03:00:00Z' })
       .expect(200);
     const body = EchoResponse.parse(res.body);
@@ -82,6 +91,7 @@ describe('APP_ENV=production', () => {
     try {
       const res = await request(app.getHttpServer() as Server)
         .post('/api/v1/diagnostics/echo')
+        .set('origin', TEST_ORIGIN)
         .send({ message: 'a', sentAt: '2026-11-08T03:00:00Z' })
         .expect(404);
       expect(ErrorResponse.parse(res.body).error.code).toBe('NOT_FOUND');

@@ -1,0 +1,4 @@
+{
+  "note": "tệp core/auth khác access.guard.ts nhập bind-account – chỉ guard được gắn tài khoản (004)",
+  "violations": ["bind-account-restricted"]
+}

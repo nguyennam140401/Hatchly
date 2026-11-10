@@ -2,8 +2,11 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  AUTH_ERROR_MESSAGES,
   ERROR_CODES,
+  ErrorAction,
   ErrorResponse,
+  loginThrottledMessage,
   Id,
   MicroUsd,
   UsagePercent,
@@ -130,5 +133,25 @@ describe('toFieldErrors – thông điệp tiếng Việt', () => {
 describe('ERROR_CODES', () => {
   it('có VERSION_CONFLICT cho khóa lạc quan (002, FR-019)', () => {
     expect(ERROR_CODES.VERSION_CONFLICT).toBe('VERSION_CONFLICT');
+  });
+
+  it('có mã lỗi xác thực (004) và mỗi mã có thông điệp tiếng Việt', () => {
+    const authCodes = Object.keys(AUTH_ERROR_MESSAGES);
+    expect(authCodes).toHaveLength(14);
+    for (const code of authCodes) {
+      expect((ERROR_CODES as Record<string, string>)[code]).toBe(code);
+      expect(AUTH_ERROR_MESSAGES[code as keyof typeof AUTH_ERROR_MESSAGES].length).toBeGreaterThan(
+        5,
+      );
+    }
+    expect(loginThrottledMessage(14 * 60 + 1)).toBe(
+      'Bạn đã thử sai nhiều lần. Hãy thử lại sau 15 phút hoặc đặt lại mật khẩu.',
+    );
+  });
+
+  it('ErrorAction nhận kind mới resend_verification, contact_owner', () => {
+    for (const kind of ['resend_verification', 'contact_owner']) {
+      expect(ErrorAction.safeParse({ kind, label: 'x' }).success).toBe(true);
+    }
   });
 });

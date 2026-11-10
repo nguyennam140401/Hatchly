@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     include: ['test/**/*.spec.ts'],
     // Kiểm thử CSDL chạy riêng bằng `pnpm test:db` (vitest.db.config.mts).
-    exclude: ['test/db/**', '**/node_modules/**'],
+    exclude: ['test/db/**', 'test/auth/**/*.e2e.spec.ts', 'test/ops/**', '**/node_modules/**'],
     globalSetup: ['./test/global-setup.ts'],
     testTimeout: 30_000,
     hookTimeout: 60_000,

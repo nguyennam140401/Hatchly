@@ -13,6 +13,8 @@ import { runBootstrap } from '../../src/db/bootstrap';
 import { runMigrations } from '../../src/db/migrate';
 import { dbUrls, describeDb } from './helpers/db';
 import './sandbox/schema';
+// Bảng của module (đăng ký vào sổ khi nạp) – như db:check nạp mọi modules/*/internal/db/schema.ts.
+import '../../src/modules/account/internal/db/schema';
 
 const FIXTURES = join(__dirname, 'fixtures', 'conventions');
 const fixtures = readdirSync(FIXTURES)

@@ -48,22 +48,23 @@ duy nhất mã tài khoản đi vào yêu cầu API.
 Chủ kinh doanh mở ứng dụng trên điện thoại, nhập tên hiển thị, email, mật khẩu, tích ô đồng ý điều
 khoản/chính sách dữ liệu (ô không được đặt sẵn) rồi bấm "Tạo tài khoản". Hệ thống tạo **một tài khoản
 khách hàng mới**, một người dùng và gắn người đó làm **chủ tài khoản** – tất cả trong một thao tác
-nguyên vẹn – rồi đăng nhập luôn và gửi thư xác minh email. Người dùng bấm liên kết trong thư thì vào
-được màn hình đầu tiên; trước đó chỉ thấy màn hình "Hãy xác nhận email" có nút gửi lại thư.
+nguyên vẹn – rồi gửi thư xác minh email và hiện màn hình "Hãy kiểm tra email" có nút gửi lại thư.
+Người dùng bấm liên kết trong thư thì được đăng nhập và vào màn hình đầu tiên. (Cập nhật theo plan
+R8: đăng ký không tự đăng nhập, để phản hồi cho email mới và email đã có giống hệt nhau – FR-008b.)
 
 **Why this priority**: Không có tài khoản thì không có tenant, không tính năng nào khác chạy được. Là
 bước 1 của hành trình "người mới bắt đầu nhanh" (UI/UX mục 4).
 
 **Independent Test**: Gửi đăng ký với email mới → có đúng 1 tài khoản, 1 người dùng, 1 vai trò chủ, 1
-cách đăng nhập "mật khẩu"; hộp thư thử có 1 thư xác minh; gọi API thử dành cho chủ → bị từ chối "chưa
-xác nhận email"; mở liên kết xác minh rồi gọi lại → thành công và dữ liệu ghi ra mang mã tài khoản vừa
-tạo.
+cách đăng nhập "mật khẩu"; hộp thư thử có 1 thư xác minh; đăng nhập bằng mật khẩu rồi gọi API thử
+dành cho chủ → bị từ chối "chưa xác nhận email"; mở liên kết xác minh (được đăng nhập) rồi gọi lại →
+thành công và dữ liệu ghi ra mang mã tài khoản vừa tạo.
 
 **Acceptance Scenarios**:
 
 1. **Given** email chưa từng đăng ký, **When** gửi đăng ký hợp lệ có tích ô đồng ý, **Then** tài khoản,
-   người dùng, vai trò chủ được tạo cùng lúc; người dùng đã đăng nhập ở trạng thái "chưa xác minh email";
-   thư xác minh được gửi; thời điểm và phiên bản điều khoản đã đồng ý được ghi lại.
+   người dùng, vai trò chủ được tạo cùng lúc, email ở trạng thái "chưa xác minh"; thư xác minh được gửi;
+   phản hồi không đăng nhập người dùng; thời điểm và phiên bản điều khoản đã đồng ý được ghi lại.
 2. **Given** email đã có người dùng (khác chữ hoa/thường hoặc có khoảng trắng thừa), **When** đăng ký,
    **Then** không tạo tài khoản thứ hai; màn hình hiện cùng thông báo như đăng ký mới ("Hãy kiểm tra
    email"); chủ của email đó nhận thư kèm nút "Đăng nhập" / "Quên mật khẩu" (FR-008b).

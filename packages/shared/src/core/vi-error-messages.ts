@@ -85,6 +85,35 @@ function translate(issue: Issue): string {
   }
 }
 
+/**
+ * Thông điệp tiếng Việt đời thường cho mã lỗi của xác thực (004, contracts/auth-http-api.md mục 3).
+ * API và web dùng chung để luôn ra cùng câu chữ. `{n}` trong `LOGIN_THROTTLED` là số phút còn lại.
+ * `FORBIDDEN` có thông điệp riêng theo quyền thiếu (máy chủ); đây là câu mặc định.
+ */
+export const AUTH_ERROR_MESSAGES = {
+  UNAUTHENTICATED: 'Bạn cần đăng nhập để tiếp tục.',
+  FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này.',
+  EMAIL_NOT_VERIFIED: 'Hãy xác nhận email để tiếp tục.',
+  ACCESS_NOT_DECLARED: 'Chức năng này tạm thời không dùng được.',
+  CSRF_REJECTED: 'Yêu cầu không hợp lệ. Hãy tải lại trang và thử lại.',
+  INVALID_CREDENTIALS: 'Email hoặc mật khẩu chưa đúng.',
+  LOGIN_THROTTLED: 'Bạn đã thử sai nhiều lần. Hãy thử lại sau {n} phút hoặc đặt lại mật khẩu.',
+  RATE_LIMITED: 'Bạn thao tác quá nhanh. Hãy thử lại sau ít phút.',
+  ACCOUNT_UNAVAILABLE: 'Tài khoản này đang tạm khóa hoặc đang được xóa.',
+  TOKEN_INVALID: 'Liên kết đã hết hạn hoặc đã được dùng.',
+  EMAIL_ALREADY_VERIFIED: 'Email của bạn đã được xác nhận.',
+  IP_NOT_ALLOWED: 'Lối vào nội bộ không mở cho mạng này.',
+  OWNER_REQUIRED: 'Tài khoản phải luôn có một chủ tài khoản.',
+  SEATS_FULL: 'Tài khoản đã đủ 2 cộng tác viên.',
+} as const;
+export type AuthErrorCode = keyof typeof AUTH_ERROR_MESSAGES;
+
+/** Thông điệp `LOGIN_THROTTLED` với số phút còn lại (làm tròn lên, tối thiểu 1). */
+export function loginThrottledMessage(retryAfterSeconds: number): string {
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return AUTH_ERROR_MESSAGES.LOGIN_THROTTLED.replace('{n}', String(minutes));
+}
+
 /** Chuyển lỗi Zod thành danh sách lỗi theo ô, thông điệp tiếng Việt. */
 export function toFieldErrors(error: z.ZodError): FieldError[] {
   return error.issues.map((issue) => ({

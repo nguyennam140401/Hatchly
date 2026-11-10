@@ -112,8 +112,13 @@ function requirePool(role: DbRole, missingMessage: string): RolePool {
   return pool;
 }
 
+/** Bể của một vai trò hoặc lỗi lập trình nêu `missingMessage` (chỉ lớp CSDL dùng). */
+export function rolePoolOrThrow(role: DbRole, missingMessage: string): RolePool {
+  return requirePool(role, missingMessage);
+}
+
 /** Giao dịch lồng: cùng vai trò + cùng tài khoản → dùng lại; khác → CONFLICT. */
-function reuseOrConflict(role: DbRole, accountId: string | null): TxContext | undefined {
+export function reuseOrConflict(role: DbRole, accountId: string | null): TxContext | undefined {
   const current = txStorage.getStore();
   if (current === undefined) return undefined;
   if (current.role === role && current.accountId === accountId) return current;

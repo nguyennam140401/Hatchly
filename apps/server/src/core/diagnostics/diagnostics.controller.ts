@@ -1,5 +1,6 @@
 import { Controller, HttpCode, Post } from '@nestjs/common';
 import { EchoRequest, type EchoResponse } from '@app/shared/core';
+import { Public } from '../auth/access.decorators';
 import { ValidBody } from '../validation/decorators';
 
 /**
@@ -7,6 +8,8 @@ import { ValidBody } from '../validation/decorators';
  * dùng chung (FR-013a). CHỈ đăng ký khi APP_ENV ≠ production (R17).
  */
 @Controller('diagnostics')
+// Chỉ có khi APP_ENV ≠ production, không đọc/ghi dữ liệu khách hàng → công khai (004).
+@Public()
 export class DiagnosticsController {
   @Post('echo')
   @HttpCode(200)

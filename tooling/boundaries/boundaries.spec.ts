@@ -47,7 +47,7 @@ function dirExists(base: string, rel: string): boolean {
 }
 
 describe('Bộ mẫu ranh giới module', () => {
-  it('có đủ các trường hợp a–i và clean', () => {
+  it('có đủ các trường hợp a–l và clean', () => {
     expect(cases).toEqual(
       [
         'a-internal-import',
@@ -59,6 +59,9 @@ describe('Bộ mẫu ranh giới module', () => {
         'g-ai-sdk-outside-gateway',
         'h-infra-imports-business',
         'i-bind-account-outside-queue',
+        'j-auth-tx-outside-auth',
+        'k-account-scope-outside-account',
+        'l-bind-account-in-core-auth',
         'clean',
       ].sort(),
     );

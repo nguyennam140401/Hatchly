@@ -1,3 +1,4 @@
+import { TEST_AUTH_ENV } from './helpers/auth-env';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -16,6 +17,7 @@ describe('API /healthz, /readyz', () => {
     APP_VERSION: '1.2.3-test',
     LOG_LEVEL: 'fatal',
     // Cổng 1 không mở → CSDL "chưa sẵn sàng"; ca CSDL sẵn sàng ở test/db/readiness.db.spec.ts.
+    ...TEST_AUTH_ENV,
     DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
   });
 

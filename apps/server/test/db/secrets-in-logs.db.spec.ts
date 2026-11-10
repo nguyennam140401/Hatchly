@@ -1,4 +1,5 @@
 // SC-008: không chuỗi nhật ký / thông báo lỗi nào chứa mật khẩu vai trò hay chuỗi kết nối có mật khẩu.
+import { TEST_AUTH_ENV } from '../helpers/auth-env';
 import { spawnSync } from 'node:child_process';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { DatabaseService, setActiveDatabase } from '../../src/core/db/database';
@@ -93,6 +94,7 @@ describeDb('Bí mật không lọt vào nhật ký và thông báo lỗi', () =>
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: '34420',
+      ...TEST_AUTH_ENV,
       DATABASE_APP_URL: wrong.toString(),
     });
     try {

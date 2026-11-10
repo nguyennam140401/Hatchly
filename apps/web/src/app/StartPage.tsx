@@ -1,5 +1,7 @@
 import type { HealthResponse } from '@app/shared/core';
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useContext, useEffect, useState, type CSSProperties } from 'react';
+import { authApi } from '../features/auth/auth-api';
+import { SessionContext } from '../features/auth/session';
 import { getHealth } from '../lib/api-client';
 
 // Trang khởi đầu (FR-016): trạng thái API bằng chữ tiếng Việt + biểu tượng có nhãn – không chỉ dựa
@@ -36,6 +38,7 @@ const retryButton: CSSProperties = {
 };
 
 export function StartPage() {
+  const session = useContext(SessionContext);
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   const load = useCallback(async () => {
@@ -56,6 +59,38 @@ export function StartPage() {
   return (
     <main style={page}>
       <h1 style={{ fontSize: 24, margin: '0 0 16px' }}>Trợ lý đăng bài</h1>
+      {session !== null && (
+        <nav
+          aria-label="Tài khoản"
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}
+        >
+          <span style={{ alignSelf: 'center' }}>Xin chào, {session.me.user.displayName}</span>
+          <a
+            href="/settings/security"
+            style={{
+              ...retryButton,
+              background: '#fff',
+              color: '#1d4ed8',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            Bảo mật
+          </a>
+          <button
+            type="button"
+            style={{ ...retryButton, background: '#fff', color: '#1d4ed8' }}
+            onClick={() => {
+              void authApi.logout().finally(() => {
+                window.location.assign('/login');
+              });
+            }}
+          >
+            Đăng xuất
+          </button>
+        </nav>
+      )}
       <section aria-live="polite">
         {state.kind === 'loading' && <p>Đang kiểm tra kết nối…</p>}
         {state.kind === 'ok' && (

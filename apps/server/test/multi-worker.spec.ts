@@ -1,3 +1,4 @@
+import { TEST_AUTH_ENV } from './helpers/auth-env';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getJson, startNode, waitForHttp, type RunningProcess } from './helpers/processes';
 
@@ -16,6 +17,7 @@ describe('Nhiều Worker song song với API', () => {
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: String(API_PORT),
+      ...TEST_AUTH_ENV,
       DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
       DATABASE_SYSTEM_URL: 'postgres://system:x@127.0.0.1:1/app',
     };

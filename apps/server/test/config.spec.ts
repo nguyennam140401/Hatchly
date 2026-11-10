@@ -6,7 +6,9 @@ import {
   loadConfig,
   loadConfigFrom,
 } from '../src/core/config/load-config';
+import { resolveAuthConfig } from '../src/core/config/auth-config';
 import { secret } from '../src/core/config/config.schema';
+import { TEST_AUTH_ENV } from './helpers/auth-env';
 
 const DB = { DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:5432/app' };
 
@@ -49,6 +51,17 @@ describe('loadConfig', () => {
       SHUTDOWN_TIMEOUT_MS: 30000,
       LOG_LEVEL: 'info',
       CORS_ORIGINS: ['http://localhost:5173'],
+      SESSION_IDLE_DAYS: 14,
+      SESSION_ABSOLUTE_DAYS: 30,
+      STAFF_SESSION_IDLE_MINUTES: 30,
+      STAFF_SESSION_ABSOLUTE_HOURS: 12,
+      STAFF_ALLOWED_CIDRS: [],
+      LOGIN_MAX_FAILURES_PER_EMAIL: 5,
+      LOGIN_MAX_FAILURES_PER_IP: 30,
+      LOGIN_WINDOW_MINUTES: 15,
+      LOGIN_BLOCK_MINUTES: 15,
+      ARGON2_MEMORY_KIB: 19456,
+      ARGON2_TIME_COST: 2,
     });
   });
 
@@ -128,12 +141,90 @@ describe('cấu hình CSDL (002)', () => {
     }).not.toThrow();
   });
 
-  it('giới hạn bể và thời gian chờ', () => {
+  it('giới hạn bể và thời gian chờ (002)', () => {
     expect(() => loadConfig({ ...DB, APP_ENV: 'test', DATABASE_POOL_MAX: '0' })).toThrow(
       /DATABASE_POOL_MAX/,
     );
     expect(() =>
       loadConfig({ ...DB, APP_ENV: 'test', DATABASE_STATEMENT_TIMEOUT_MS: '10' }),
     ).toThrow(/DATABASE_STATEMENT_TIMEOUT_MS/);
+  });
+});
+
+describe('cấu hình xác thực của API (004)', () => {
+  const base = { ...DB, APP_ENV: 'test' };
+
+  it('thiếu biến bắt buộc → ConfigError nêu đủ tên biến', () => {
+    try {
+      resolveAuthConfig(loadConfig(base));
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigError);
+      const names = (err as ConfigError).issues.map((i) => i.variable);
+      expect(names).toEqual(
+        expect.arrayContaining([
+          'WEB_BASE_URL',
+          'AUTH_THROTTLE_SECRET',
+          'TERMS_VERSION',
+          'MAIL_TRANSPORT',
+        ]),
+      );
+    }
+  });
+
+  it('đủ biến → mặc định WEB_ORIGINS = gốc WEB_BASE_URL, TRUST_PROXY_HOPS theo APP_ENV', () => {
+    const auth = resolveAuthConfig(
+      loadConfig({ ...base, ...TEST_AUTH_ENV, WEB_ORIGINS: '', WEB_BASE_URL: 'https://a.vn/app/' }),
+    );
+    expect(auth.webOrigins).toEqual(['https://a.vn']);
+    expect(auth.webBaseUrl).toBe('https://a.vn/app');
+    expect(auth.trustProxyHops).toBe(0);
+    expect(auth.mail).toEqual({ transport: 'memory' });
+    const staging = resolveAuthConfig(
+      loadConfig({
+        ...base,
+        ...TEST_AUTH_ENV,
+        APP_ENV: 'staging',
+        MAIL_TRANSPORT: 'smtp',
+        SMTP_URL: 'smtp://mail:1025',
+        MAIL_FROM: 'no-reply@a.vn',
+      }),
+    );
+    expect(staging.trustProxyHops).toBe(1);
+  });
+
+  it('MAIL_TRANSPORT=memory ở production → bị từ chối', () => {
+    expect(() =>
+      resolveAuthConfig(loadConfig({ ...base, ...TEST_AUTH_ENV, APP_ENV: 'production' })),
+    ).toThrow(/MAIL_TRANSPORT/);
+  });
+
+  it('MAIL_TRANSPORT=smtp thiếu SMTP_URL, MAIL_FROM → nêu tên biến', () => {
+    expect(() =>
+      resolveAuthConfig(loadConfig({ ...base, ...TEST_AUTH_ENV, MAIL_TRANSPORT: 'smtp' })),
+    ).toThrow(/SMTP_URL: bắt buộc[\s\S]*MAIL_FROM: bắt buộc/);
+  });
+
+  it('CIDR sai → nêu STAFF_ALLOWED_CIDRS; CIDR IPv4/IPv6 đúng được nhận', () => {
+    expect(() => loadConfig({ ...base, STAFF_ALLOWED_CIDRS: '10.0.0.0/33' })).toThrow(
+      /STAFF_ALLOWED_CIDRS/,
+    );
+    expect(() => loadConfig({ ...base, STAFF_ALLOWED_CIDRS: 'abc' })).toThrow(
+      /STAFF_ALLOWED_CIDRS/,
+    );
+    const c = loadConfig({ ...base, STAFF_ALLOWED_CIDRS: '10.0.0.0/8, 2001:db8::/32' });
+    expect(c.STAFF_ALLOWED_CIDRS).toEqual(['10.0.0.0/8', '2001:db8::/32']);
+  });
+
+  it('AUTH_THROTTLE_SECRET ngắn, SMTP_URL sai → lỗi, không lộ giá trị bí mật', () => {
+    try {
+      loadConfig({ ...base, AUTH_THROTTLE_SECRET: 'ngan_qua_marker', SMTP_URL: 'http://x_marker' });
+      expect.unreachable();
+    } catch (err) {
+      const e = err as ConfigError;
+      expect(e.message).toContain('AUTH_THROTTLE_SECRET: giá trị chưa hợp lệ');
+      expect(e.message).toContain('SMTP_URL: giá trị chưa hợp lệ');
+      expect(e.message).not.toContain('marker');
+    }
   });
 });
