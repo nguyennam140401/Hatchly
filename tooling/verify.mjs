@@ -23,6 +23,13 @@ const DEFAULT_STEPS = [
     requiresEnv: 'TEST_DATABASE_ADMIN_URL',
     skipReason: 'chưa có CSDL kiểm thử',
   },
+  // Kiểm thử tích hợp hàng chờ trên PostgreSQL thật (003, FR-034).
+  {
+    name: 'test:queue',
+    command: 'pnpm test:queue',
+    requiresEnv: 'TEST_DATABASE_ADMIN_URL',
+    skipReason: 'chưa có CSDL kiểm thử',
+  },
 ];
 
 function readSteps(argv) {

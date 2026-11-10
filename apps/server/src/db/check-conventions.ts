@@ -24,7 +24,17 @@ export type RuleCode =
   | 'h-fk-delete-rule'
   | 'i-support-view-leak'
   | 'j-unregistered-table'
-  | 'k-reserved-schema-not-empty';
+  | 'k-reserved-schema-not-empty'
+  | 'l-nullable-tenant-without-reason';
+
+/**
+ * Schema của thư viện ngoài module (003 research R12): không áp quy tắc b, j (bảng của thư viện không
+ * khai báo bằng tenantTable/sharedTable); áp f (mọi đối tượng thuộc owner), g (không CREATE cho vai trò
+ * ứng dụng) và kiểm bảng việc có RLS + chính sách (a).
+ */
+export const LIBRARY_SCHEMAS = ['pgboss'] as const;
+/** Bảng của thư viện BẮT BUỘC bật RLS (việc mang group_id = mã tài khoản). */
+const LIBRARY_RLS_TABLES = ['pgboss.job', 'pgboss.job_common'];
 
 export interface Violation {
   schema: string;
@@ -62,6 +72,7 @@ interface TableRow {
   policies: number;
   has_account_id: boolean;
   account_id_attnum: number | null;
+  account_id_nullable: boolean;
 }
 
 /** Chạy mọi quy tắc trên CSDL mà `client` đang kết nối. */
@@ -89,7 +100,8 @@ export async function checkConventions(
       `SELECT c.oid::int AS oid, n.nspname AS schema, c.relname AS name, c.relkind::text AS relkind,
               c.relrowsecurity AS rls,
               (SELECT count(*)::int FROM pg_policy p WHERE p.polrelid = c.oid) AS policies,
-              a.attnum IS NOT NULL AS has_account_id, a.attnum::int AS account_id_attnum
+              a.attnum IS NOT NULL AS has_account_id, a.attnum::int AS account_id_attnum,
+              coalesce(NOT a.attnotnull, false) AS account_id_nullable
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
          LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'account_id' AND NOT a.attisdropped
@@ -138,7 +150,49 @@ export async function checkConventions(
         'bảng không khai báo bằng tenantTable/sharedTable/partitionedLogTable',
       );
     }
+    // (l) bảng tenant có account_id cho phép NULL mà không khai báo lý do (003 – nullableTenant).
+    if (
+      isTenant(t) &&
+      !isRoot(t) &&
+      t.account_id_nullable &&
+      (r?.nullableTenant?.reason ?? '').trim() === ''
+    ) {
+      add(
+        t.schema,
+        t.name,
+        'l-nullable-tenant-without-reason',
+        'account_id cho phép NULL – thêm NOT NULL hoặc đăng ký nullableTenant: { reason } nếu cố ý',
+      );
+    }
   }
+
+  // (a) bảng việc của thư viện hàng chờ (schema ngoài module) phải bật RLS + có chính sách (R12).
+  const libraries = LIBRARY_SCHEMAS.filter((s) => present.has(s));
+  if (libraries.length > 0) {
+    const libTables = (
+      await client.query<{ schema: string; name: string; rls: boolean; policies: number }>(
+        `SELECT n.nspname AS schema, c.relname AS name, c.relrowsecurity AS rls,
+                (SELECT count(*)::int FROM pg_policy p WHERE p.polrelid = c.oid) AS policies
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname || '.' || c.relname = ANY($1)`,
+        [LIBRARY_RLS_TABLES],
+      )
+    ).rows;
+    for (const t of libTables) {
+      if (!t.rls || t.policies === 0) {
+        add(
+          t.schema,
+          t.name,
+          'a-rls-missing',
+          t.rls
+            ? 'đã bật RLS nhưng không có chính sách'
+            : 'bảng việc của thư viện hàng chờ chưa bật RLS',
+        );
+      }
+    }
+  }
+  /** Phạm vi cho quy tắc f, g: schema module + schema thư viện. */
+  const ownedScope = [...scope, ...libraries];
 
   // (c), (h) khóa ngoại.
   const fks = (
@@ -255,7 +309,7 @@ export async function checkConventions(
        SELECT n.nspname, p.proname || '()', 'hàm', pg_get_userbyid(p.proowner)
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = ANY($1)
        ORDER BY 1, 2`,
-      [scope],
+      [ownedScope],
     )
   ).rows;
   for (const o of owners) {
@@ -319,7 +373,7 @@ export async function checkConventions(
          CROSS JOIN pg_namespace n
         WHERE (n.nspname = ANY($2) OR n.nspname = 'public') AND has_schema_privilege(r.role, n.oid, 'CREATE')
         ORDER BY 2, 1`,
-      [[...APP_ROLES], scope],
+      [[...APP_ROLES], ownedScope],
     )
   ).rows;
   for (const p of createPrivs) {

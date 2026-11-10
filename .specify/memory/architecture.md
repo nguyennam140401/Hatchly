@@ -1,9 +1,11 @@
 # Đặc tả kiến trúc triển khai – Ứng dụng AI tạo & đăng nội dung MXH
 
-- Phiên bản: 1.2 (2026-11-08) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
+- Phiên bản: 1.3 (2026-11-08) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
   001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn;
   v1.2 theo tính năng 002 (lớp CSDL): vai trò `system` đặt được ngữ cảnh tenant và chịu RLS, biểu thức
-  RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11
+  RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11; v1.3 theo tính năng 003
+  (lớp hàng chờ): bảng `queue_settings`, `dead_jobs`, `schedule_slots` + schema `pgboss` (mục 4), ghi chú
+  hiện thực hàng chờ (mục 6), thuật ngữ hàng chờ (mục 11)
 - Nguồn: `TaiLieuDacTa/` – Đặc tả yêu cầu v1.7, ADD tổng thể v1.2, ADD module Worker v1.1 /
   Đăng bài v1.1 / Cổng AI v1.0, ADR-01…10, Kiến trúc dữ liệu & cache v1.2, Lựa chọn công nghệ v1.1
 - Vai trò: tài liệu tham chiếu kỹ thuật cho `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`.
@@ -128,7 +130,7 @@ thành job trong cùng giao dịch. CI tự động kiểm tra phụ thuộc gi�
 | Platform Gateway (`platform_gateway`) | `platform_gateway` | `channel_connections` | Kết nối kênh, mã quyền truy cập mã hóa (chỉ module này giải mã), bộ chuyển đổi từng nền tảng sau giao diện chung (ADR-05) | FR-02, 07 |
 | AI Gateway (`ai_gateway`) | `ai_gateway` | `ai_budgets`, `ai_cost_ledger`, `model_prices` | Điểm duy nhất gọi AI; giữ chỗ/quyết toán ngân sách; chọn mô hình; ghi sổ chi phí | FR-11, 12 |
 | Notifications (`notifications`) | `notifications` | `notifications` | Thông báo trong ứng dụng + email, chống gửi lặp, gộp tin trong 10 phút | FR-09 |
-| Queue – hạ tầng (`queue`) | `infra` (+ schema của pg-boss) | `dead_jobs`, `audit_log` | Bọc hàng chờ, việc định kỳ, nhật ký kiểm toán | — |
+| Queue – hạ tầng (`queue`) | `infra` (+ schema thư viện `pgboss`) | `queue_settings`, `dead_jobs`, `schedule_slots`, `audit_log` (+ `pgboss.job_common`, `pgboss.queue` của pg-boss 12.38.0) | Bọc hàng chờ (pg-boss sau giao diện riêng), giới hạn theo tenant, việc hỏng, việc định kỳ, nhật ký kiểm toán | — |
 
 "Duyệt & lịch" (FR-06) có schema `approval` dành sẵn, chưa có bảng: trạng thái duyệt nằm trên
 `content.posts`, giờ đăng nằm trên `publishing.publish_attempts`.
@@ -179,6 +181,18 @@ Các con số là giả định ban đầu, cấu hình được. Mọi bộ x�
 Job hỏng hẳn được chuyển sang `dead_jobs` kèm lỗi cuối; hỗ trợ chạy lại được bằng một thao tác.
 Khóa chống trùng (singleton key) có dạng `publish:{attemptId}`, `media_label:{mediaId}`,
 `scheduled:{name}:{slot}`.
+
+**Ghi chú hiện thực (003):** 6 hàng chờ pg-boss chính sách `exclusive` (khóa chống trùng duy nhất trong số
+việc chờ · chờ thử lại · đang chạy; mọi việc luôn có khóa, mặc định `{loại việc}:{mã việc}`). Dữ liệu việc là
+phong bì `{ type, v, accountId, traceId, payload }`, `group_id` = mã tài khoản – dùng cho cả giới hạn tenant
+lẫn RLS trên `pgboss.job_common` (`app` chỉ thấy việc của tenant hiện hành). Khóa việc = heartbeat 30 giây
+(gia hạn mỗi 10 giây) + trần cứng "thời gian khóa" ở bảng trên. Worker không dùng `work()`: mỗi hàng chờ
+một vòng lấy việc trên bể điều khiển (vai trò `system`), lệnh lấy việc chạy dưới
+`pg_advisory_xact_lock(hashtext('queue_fetch:' || hàng chờ))` để giới hạn tenant không bị vượt khi nhiều bản
+lấy cùng lúc. Thông số ở `infra.queue_settings` (đọc lại mỗi 60 giây). Việc hỏng ở `infra.dead_jobs` (không
+dùng `deadLetter` của thư viện). Việc định kỳ: bộ hẹn giờ riêng trên mọi bản, khóa khung bằng PK
+`(name, slot)` của `infra.schedule_slots`, chống chồng bằng khóa `scheduled:{name}` – không dùng
+`schedule()` của pg-boss. Tài liệu cho lập trình viên module: `apps/server/docs/queue.md`.
 
 **Việc định kỳ** (chạy trên mọi bản Worker, chống trùng theo khung thời gian):
 
@@ -351,6 +365,14 @@ API (vd 60 yêu cầu/phút/tài khoản).
 | Bảng khách hàng / dùng chung / nhật ký phân vùng | loại `tenant` / `shared` / `partitioned_log`; `tenantTable` / `sharedTable` / `partitionedLogTable` | Giao dịch có ngữ cảnh tenant / hệ thống / hỗ trợ | `tenantTx` / `systemTx` / `supportSearch`, `supportViewAccount` |
 | Bảng mẫu (chỉ dev/test) | schema `sandbox`: `tenant_notes`, `support_note_search`, `support_note_detail` | Nhật ký migration | `infra.schema_migrations`, `infra.schema_migrations_dev` |
 | Xung đột phiên bản | mã lỗi `VERSION_CONFLICT` | Kiểm tra quy ước CSDL | `pnpm db:check` |
+
+| loại việc | `job type` – `JobTypeDefinition`, tên `<module>.<action>` (`defineJobType`) | việc tenant / việc hệ thống | `tenant job` / `system job` (`scope`: `'tenant'` / `'system'`) |
+| khóa chống trùng | `dedupeKey` (API) → `singleton_key` (pg-boss) | giờ chạy sớm nhất | `runAfter` (API) → `start_after` (pg-boss) |
+| thời gian khóa / nhịp gia hạn | `lock_seconds` → `expireInSeconds` / `heartbeat_seconds` | khung thời gian | `slot` (`infra.schedule_slots`) |
+| việc định kỳ | `schedule` (`defineSchedule`) | cấu hình hàng chờ | `infra.queue_settings` |
+| việc hỏng / chôn việc | `infra.dead_jobs` / `buryJob` | chạy lại việc hỏng | `retry dead job` (`requestDeadJobRetry`) |
+| bể điều khiển hàng chờ | `queue control pool` (vai trò `system`, chỉ Worker) | phong bì việc | `job envelope` |
+| schema thư viện hàng chờ | `pgboss` | bộ chạy hàng chờ của một bản Worker | `QueueRuntime` |
 
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
 

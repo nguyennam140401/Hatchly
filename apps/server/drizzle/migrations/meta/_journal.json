@@ -36,6 +36,34 @@
       "when": 1794120320600,
       "tag": "0004_account_exists",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794136665112,
+      "tag": "0005_pgboss_install",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794136755258,
+      "tag": "0006_queue_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794137684713,
+      "tag": "0007_dead_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794138618325,
+      "tag": "0008_schedule_slots_partitions",
+      "breakpoints": true
     }
   ]
 }

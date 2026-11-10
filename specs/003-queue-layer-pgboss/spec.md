@@ -25,6 +25,21 @@ hỏng) và – gián tiếp – chủ tài khoản: bài đã duyệt được 
 duy nhất** chạm vào thư viện hàng chờ; các module khác chỉ dùng giao diện công khai của nó (nguyên
 tắc IV, IX – thư viện bên ngoài quan trọng phải bọc sau giao diện nội bộ).
 
+## Clarifications
+
+### Session 2026-11-08
+
+- Q: Đội hỗ trợ có được dùng nút "chạy lại việc hỏng" chung cho việc hỏng của hàng chờ `publish`
+  không? → A: Không. Mỗi loại việc khai báo cờ "cho phép chạy lại chung" (mặc định có); các loại việc
+  `publish` tắt cờ này – máy chủ từ chối chạy lại chung, việc đăng lại chỉ đi qua luồng nghiệp vụ của
+  module Đăng bài ("Đăng lại"/"Đã đăng").
+- Q: Bản Worker cũ nhận việc thuộc loại mới chưa có bộ xử lý (lúc phát hành song song) thì làm gì?
+  → A: Giữ như FR-020 – tính lượt thử như lỗi tạm thời theo giãn cách của hàng chờ, hết lượt thì vào
+  việc hỏng với lý do "không có bộ xử lý"; không có cơ chế ân hạn riêng.
+- Q: Khi xóa một tài khoản, lớp hàng chờ xử lý việc hỏng và việc đã xong còn lưu của tài khoản thế nào?
+  → A: Có thao tác công khai "xóa mọi việc của tài khoản" (gọi từ luồng xóa tài khoản): hủy việc chờ,
+  xóa việc đã xong/đã hủy và việc hỏng của tài khoản; nhật ký kiểm toán chỉ ghi số lượng đã xóa.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Tạo việc nền trong cùng giao dịch với dữ liệu nghiệp vụ (Priority: P1)
@@ -154,6 +169,9 @@ chạy lại, có dòng nhật ký kiểm toán.
 4. **Given** ngữ cảnh tenant A, **When** truy vấn việc hỏng, **Then** không thấy việc hỏng của tài khoản
    khác.
 5. **Given** việc hỏng cũ hơn 90 ngày, **When** việc định kỳ dọn dẹp chạy, **Then** bản ghi bị xóa.
+6. **Given** việc hỏng thuộc loại việc tắt cờ "cho phép chạy lại chung" (mọi loại việc của `publish`),
+   **When** người hỗ trợ chọn "chạy lại", **Then** máy chủ từ chối, không tạo việc mới, thông báo chỉ
+   cách xử lý qua luồng nghiệp vụ của module sở hữu; lần thử bị từ chối vẫn được ghi nhật ký kiểm toán.
 
 ---
 
@@ -230,8 +248,8 @@ tương ứng vượt ngưỡng và quy tắc cảnh báo đã khai báo đánh 
 - Tạo việc cho tài khoản B trong giao dịch ngữ cảnh A: MUST bị từ chối (mã tài khoản lấy từ ngữ cảnh,
   không nhận từ tham số).
 - Tài khoản bị tạm dừng/xóa trong khi còn việc chờ: Worker vẫn đặt ngữ cảnh và gọi bộ xử lý; bộ xử lý
-  của module sở hữu quyết định bỏ qua. Việc dọn dữ liệu tài khoản (WBS sau) MUST hủy được mọi việc
-  chờ của tài khoản qua giao diện của lớp hàng chờ.
+  của module sở hữu quyết định bỏ qua. Việc dọn dữ liệu tài khoản (WBS sau) gọi thao tác "xóa mọi việc
+  của tài khoản" của lớp hàng chờ (FR-037) – không chờ lịch dọn dẹp 30/90 ngày.
 - Bộ xử lý chạy quá thời gian khóa nhưng vẫn đang sống: không được để bản Worker khác chạy song song
   cùng việc; plan chọn cơ chế (gia hạn khóa theo nhịp như ADD Worker mục 2, hoặc thời gian khóa đủ lớn
   và bộ xử lý tự ngắt trước hạn) và ghi lý do.
@@ -313,8 +331,10 @@ tương ứng vượt ngưỡng và quy tắc cảnh báo đã khai báo đánh 
   tối đa 30 giây, rồi thoát; việc chưa xong được trả lại theo FR-017.
 - **FR-019**: Worker MUST tự kết nối lại khi CSDL tạm mất kết nối, không thoát tiến trình, và báo trạng
   thái "chưa sẵn sàng" qua điểm kiểm tra sống của tính năng 001 trong lúc mất kết nối.
-- **FR-020**: Việc có loại không có bộ xử lý đăng ký ở bản Worker đang chạy MUST được chuyển sang việc
-  hỏng với lý do "không có bộ xử lý" sau khi hết lượt thử, không bị xóa âm thầm.
+- **FR-020**: Việc có loại không có bộ xử lý đăng ký ở bản Worker đang chạy MUST được xử lý như lỗi
+  tạm thời (tính lượt thử, giãn cách theo hàng chờ – để bản Worker khác có thể nhận ở lần thử sau) và
+  chuyển sang việc hỏng với lý do "không có bộ xử lý" khi hết lượt thử, không bị xóa âm thầm. Không có
+  cơ chế ân hạn/không tính lượt riêng cho trường hợp này.
 
 **Giới hạn đồng thời theo tenant**
 
@@ -335,7 +355,14 @@ tương ứng vượt ngưỡng và quy tắc cảnh báo đã khai báo đánh 
   khoảng thời gian, trạng thái chạy lại) và **chạy lại một việc hỏng** (dùng cho màn hình hỗ trợ WBS 4.7),
   chỉ cho vai trò hỗ trợ/quản trị nội bộ; chạy lại tạo việc mới cùng loại/dữ liệu/khóa chống trùng, nối
   mã theo dõi, ghi nhật ký kiểm toán; chạy lại hai lần khi việc mới còn hiệu lực MUST NOT tạo việc trùng.
-  Quyền MUST kiểm tra ở tầng máy chủ.
+  Quyền MUST kiểm tra ở tầng máy chủ. Chạy lại chung MUST bị từ chối với loại việc tắt cờ "cho phép chạy
+  lại chung"; mọi loại việc của hàng chờ `publish` MUST tắt cờ này (nguyên tắc II – đăng lại chỉ qua
+  luồng nghiệp vụ có đối soát của module Đăng bài).
+- **FR-037**: MUST có thao tác công khai **xóa mọi việc của một tài khoản** (cho luồng xóa tài khoản,
+  nguyên tắc VII – xóa CSDL ≤ 30 ngày): trong một giao dịch, hủy mọi việc chờ/chờ thử lại, xóa việc đã
+  xong/đã hủy còn lưu và mọi bản ghi `infra.dead_jobs` của tài khoản; việc đang chạy được đánh dấu để
+  không thử lại và bị xóa khi kết thúc. Chạy lại được an toàn; nhật ký kiểm toán chỉ ghi số lượng đã
+  xóa theo loại, không chứa dữ liệu việc.
 
 **Việc định kỳ**
 
@@ -373,7 +400,8 @@ tương ứng vượt ngưỡng và quy tắc cảnh báo đã khai báo đánh 
   hoàn tác thì không có việc; khóa chống trùng; 2 bản Worker không chạy trùng một việc; Worker chết giữa
   chừng → việc được chạy lại; giới hạn theo tenant trên 2 bản Worker; ngữ cảnh tenant/hệ thống đúng
   trong bộ xử lý; thử lại/giãn cách/việc hỏng; chạy lại việc hỏng; việc định kỳ đúng một lần mỗi khung
-  với 2 bản Worker; tắt có kiểm soát.
+  với 2 bản Worker; tắt có kiểm soát; từ chối chạy lại chung việc `publish`; xóa mọi việc của tài
+  khoản (FR-037) không chạm việc của tài khoản khác.
 - **FR-035**: MUST có khuôn kiểm thử dùng lại cho module khác: (a) chạy một bộ xử lý **hai lần** với cùng
   việc và so sánh kết quả (cổng kiểm thử "chạy lại hai lần cho cùng kết quả" của hiến pháp); (b) chạy
   đồng bộ việc trong kiểm thử mà không cần khởi động Worker thật.
@@ -396,7 +424,8 @@ tương ứng vượt ngưỡng và quy tắc cảnh báo đã khai báo đánh 
   | `scheduled` | Việc định kỳ (nhiều module) | 2 | — | 10 phút | Không thử lại; lần chạy kế tiếp tự bù |
 
 - **Loại việc**: tên, hàng chờ, khuôn dữ liệu, tenant/hệ thống, bộ xử lý, phản hồi thất bại cuối, chính
-  sách thử lại (mặc định theo hàng chờ).
+  sách thử lại (mặc định theo hàng chờ), cờ "cho phép chạy lại chung" (mặc định có; loại việc `publish`
+  tắt).
 - **Việc**: mã, loại, hàng chờ, mã tài khoản (rỗng với việc hệ thống), dữ liệu (chỉ mã tham chiếu), trạng
   thái (chờ · đang chạy · chờ thử lại · xong · hủy · hỏng), giờ chạy sớm nhất, số lần thử/tối đa, khóa
   đến, khóa chống trùng, mã theo dõi. Lưu trong vùng dữ liệu của thư viện hàng chờ (schema riêng do plan

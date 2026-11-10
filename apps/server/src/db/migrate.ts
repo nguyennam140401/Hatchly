@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client } from 'pg';
+import { ensureQueues } from './ensure-queues';
 import { loadMigrateConfig } from './script-config';
 import { DRIZZLE_DIR, runScript } from './script-utils';
 
@@ -19,6 +20,8 @@ export interface MigrateOptions {
   ownerUrl: string;
   appEnv: AppEnvName;
   log?: (line: string) => void;
+  /** Tạo/đồng bộ 6 hàng chờ pg-boss sau migration (003). Mặc định bật. */
+  ensureQueues?: boolean;
 }
 
 export interface MigrateResult {
@@ -78,6 +81,12 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrateRes
         dev = await applyFolder(client, devFolder, 'schema_migrations_dev');
       } else if (!devAllowed) {
         log(`Bỏ qua migration dev (APP_ENV=${options.appEnv})`);
+      }
+
+      // 003: tạo/đồng bộ 6 hàng chờ pg-boss sau migration (idempotent).
+      if (options.ensureQueues !== false) {
+        const queues = await ensureQueues(options.ownerUrl);
+        if (queues.created.length > 0) log(`Đã tạo hàng chờ: ${queues.created.join(', ')}`);
       }
 
       const seconds = (performance.now() - started) / 1000;

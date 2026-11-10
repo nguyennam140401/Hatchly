@@ -88,7 +88,7 @@ describeDb('Migration có quản lý', () => {
       `SELECT nspname FROM pg_namespace
         WHERE nspname NOT IN ('public', 'information_schema', 'sandbox') AND nspname NOT LIKE 'pg\\_%'`,
     );
-    expect(schemas.map((s) => s.nspname).sort()).toEqual([...manifestSchemas].sort());
+    expect(schemas.map((s) => s.nspname).sort()).toEqual([...manifestSchemas, 'pgboss'].sort()); // + schema thư viện hàng chờ (003)
 
     const approvalTables = await query(
       db.ownerUrl,

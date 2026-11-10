@@ -26,7 +26,10 @@
     "db:check": "pnpm --filter @app/server db:check",
     "db:lint-migrations": "pnpm --filter @app/server db:lint-migrations",
     "db:generate": "pnpm --filter @app/server db:generate",
-    "test:db": "pnpm --filter @app/server test:db"
+    "test:db": "pnpm --filter @app/server test:db",
+    "test:queue": "pnpm --filter @app/server test:queue",
+    "test:queue-soak": "pnpm --filter @app/server test:queue-soak",
+    "queue:sql": "pnpm --filter @app/server queue:sql"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

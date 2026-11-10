@@ -1,0 +1,4 @@
+{
+  "note": "pg-boss/cron-parser nhập ngoài modules/queue/internal (003 FR-001); gói không cài trong bộ mẫu nên còn no-unresolvable",
+  "violations": ["cron-parser-only-in-queue", "no-unresolvable", "pgboss-only-in-queue"]
+}
