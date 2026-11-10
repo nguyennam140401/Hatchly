@@ -186,7 +186,7 @@ export class QueueRuntime {
       this.bossRef = boss;
 
       const settings = new SettingsCache({
-        load: async () => (await pool.query(SETTINGS_SQL)).rows,
+        load: async () => (await pool.query<Record<string, unknown>>(SETTINGS_SQL)).rows,
         refreshMs: this.options.settingsRefreshMs,
         logger,
         onInvalid: (queue) => {

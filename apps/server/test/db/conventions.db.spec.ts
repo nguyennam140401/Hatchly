@@ -125,7 +125,7 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
     const result = await check(clean);
     expect(result.violations).toEqual([]);
     expect(result.checked.tables).toBeGreaterThanOrEqual(3);
-    expect(result.checked.views).toBe(2);
+    expect(result.checked.views).toBe(4); // + 2 khung nhìn hỗ trợ việc hỏng (003)
   });
 
   it.each(fixtures)('%s → phát hiện đúng quy tắc mong đợi', async (fixture) => {

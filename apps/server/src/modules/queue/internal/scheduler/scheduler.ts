@@ -31,12 +31,14 @@ export class SchedulerService implements RuntimeService {
     this.runtime = runtime;
     this.stopped = false;
     this.timer = setInterval(() => {
-      if (this.running === undefined) {
-        this.running = this.tick().finally(() => (this.running = undefined));
-      }
+      this.running ??= this.tick().finally(() => (this.running = undefined));
     }, this.options.tickMs);
     this.timer.unref();
     this.running = this.tick().finally(() => (this.running = undefined));
+  }
+
+  private isStopped(): boolean {
+    return this.stopped;
   }
 
   async stop(): Promise<void> {
@@ -52,9 +54,9 @@ export class SchedulerService implements RuntimeService {
     let handled = 0;
     try {
       const nowRow = await runtime.pool.query<{ now: Date }>('SELECT now() AS now');
-      const dbNow = nowRow.rows[0]!.now;
+      const dbNow = nowRow.rows[0]?.now ?? new Date();
       for (const schedule of listSchedules()) {
-        if (this.stopped) break;
+        if (this.isStopped()) break;
         if (this.options.only !== undefined && !this.options.only.includes(schedule.name)) continue;
         const { slot, slotAt } = currentSlot(schedule.cron, schedule.tz, dbNow);
         if (this.seen.get(schedule.name) === slot) continue;

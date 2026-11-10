@@ -87,6 +87,7 @@ export interface NoRetry {
   readonly reason: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- bộ xử lý "không trả gì" = hoàn tất
 export type JobHandlerResult = void | RetryAfter | NoRetry;
 
 export type JobHandler<P> = (payload: P, ctx: JobContext) => Promise<JobHandlerResult>;

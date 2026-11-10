@@ -7,6 +7,7 @@ import { defineJobType, enqueue, registerJobHandler } from '../../src/modules/qu
 import { tenantNotes } from '../db/sandbox/schema';
 import { startTestWorkers, type TestWorkers } from '../support/queue-test-kit';
 import {
+  asOwner,
   createAccount,
   describeDb,
   makeDatabase,
@@ -114,6 +115,41 @@ describeDb('US2 – ngữ cảnh khi xử lý việc', () => {
     });
     expect(typeof line!.duration_ms).toBe('number');
     expect(typeof line!.wait_ms).toBe('number');
+  });
+
+  it('data.accountId lệch group_id → không chạy bộ xử lý, chôn PERMANENT_ERROR dưới tài khoản group_id', async () => {
+    // Hiến pháp I: mã tài khoản chuẩn là group_id (qua RLS WITH CHECK lúc tạo), không tin dữ liệu việc.
+    const probeId = crypto.randomUUID();
+    const jobId = crypto.randomUUID();
+    await asOwner((c) =>
+      c.query(
+        `INSERT INTO pgboss.job (id, name, data, group_id) VALUES ($1::uuid, 'notify', $2::jsonb, $3)`,
+        [
+          jobId,
+          JSON.stringify({
+            type: 'sandbox.read_notes',
+            v: 1,
+            accountId: b,
+            traceId: 'mismatch-trace',
+            payload: { probeId },
+          }),
+          a,
+        ],
+      ),
+    );
+    const dead = () =>
+      asOwner(
+        async (c) =>
+          (
+            await c.query<{ account_id: string; cause: string }>(
+              'SELECT account_id, cause FROM infra.dead_jobs WHERE original_job_id = $1::uuid',
+              [jobId],
+            )
+          ).rows,
+      );
+    await waitFor(async () => (await dead()).length === 1, 20_000, 50, 'chôn việc lệch tài khoản');
+    expect(await dead()).toEqual([{ account_id: a, cause: 'PERMANENT_ERROR' }]);
+    expect(seen.has(probeId)).toBe(false);
   });
 
   it('việc hệ thống: không có accountId; tenantTx → TENANT_CONTEXT_MISSING', async () => {

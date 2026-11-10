@@ -26,7 +26,7 @@ export async function runCleanup(): Promise<{ deadJobs: number; slots: number }>
     const slots = await db.execute(
       sql`DELETE FROM infra.schedule_slots WHERE slot_at < now() - make_interval(days => ${DEAD_JOB_RETENTION_DAYS})`,
     );
-    return { deadJobs: Number(dead.rows[0]?.n ?? 0), slots: slots.rowCount ?? 0 };
+    return { deadJobs: dead.rows[0]?.n ?? 0, slots: slots.rowCount ?? 0 };
   });
 }
 
@@ -46,7 +46,7 @@ export async function runPartitions(): Promise<{ table: string; dropped: number 
         const r = await db.execute<{ n: number }>(
           sql`SELECT ${sql.raw(log.dropFunction)}(${log.retentionMonths}) AS n`,
         );
-        dropped = Number(r.rows[0]?.n ?? 0);
+        dropped = r.rows[0]?.n ?? 0;
       }
       out.push({ table: log.table, dropped });
     });

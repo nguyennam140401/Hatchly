@@ -24,7 +24,8 @@ import type { QueueRuntime } from './runtime/queue-runtime';
 const MAX_LIMIT = 100;
 const MIN_REASON = 5;
 
-interface SearchRow {
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- db.execute<T> cần kiểu có chữ ký chỉ mục
+type SearchRow = {
   id: string;
   account_id: string | null;
   queue: QueueName;
@@ -34,7 +35,7 @@ interface SearchRow {
   failed_at: Date;
   retry_status: DeadJobRetryStatus;
   retried_at: Date | null;
-}
+};
 
 const toSummary = (r: SearchRow): DeadJobSummary => ({
   id: r.id,
@@ -177,7 +178,7 @@ export async function requestDeadJobRetry(
       sql`SELECT infra.request_dead_job_retry(${deadJobId}::uuid, ${actor.staffId}, ${reason.trim()},
                  ${uuidV7()}::uuid, ${getExecutionContext()?.traceId ?? null}) AS result`,
     );
-    return r.rows[0]!.result;
+    return r.rows[0]?.result ?? 'not_found';
   });
 }
 

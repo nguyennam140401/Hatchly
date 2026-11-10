@@ -163,6 +163,20 @@ mở rộng nhỏ (sổ đăng ký bảng, `/readyz`, cấu hình, migrate/check
 
 ## Complexity Tracking
 
-Không có vi phạm hiến pháp cần biện minh. Các phần tự làm thay vì dùng sẵn của thư viện (đã ghi lý do ở
+| Độ lệch | Vì sao cần | Phương án đơn giản hơn đã loại |
+|---|---|---|
+| `infra.dead_jobs.account_id` cho phép NULL (hiến pháp I: bảng khách hàng `account_id NOT NULL`) | Việc hệ thống (định kỳ, không thuộc tài khoản) cũng phải vào việc hỏng để tra cứu/chạy lại một chỗ (FR-023) | Hai bảng việc hỏng (tenant / hệ thống): nhân đôi khung nhìn, hàm, việc định kỳ. Lớp bù: RLS `system_scoped` (dòng NULL chỉ thấy khi giao dịch không tenant), `app` không bao giờ thấy dòng NULL, quy tắc `l` của `db:check` bắt buộc khai báo `nullableTenant.reason`, kiểm thử truy cập chéo `test/db/dead-jobs-isolation.db.spec.ts` |
+
+Ngoài độ lệch trên, không có vi phạm hiến pháp khác. Các phần tự làm thay vì dùng sẵn của thư viện (đã ghi lý do ở
 research): vòng lấy việc + khóa tư vấn (R6 – `groupConcurrency` không có khóa giữa các bản), bộ hẹn giờ
 trên bảng khung (R9), việc hỏng ở bảng riêng (R8, spec Assumptions).
+
+**Kết quả khi implement (T028):** RLS trên `pgboss.job` / `pgboss.job_common` KHÔNG xung đột với lệnh của
+pg-boss 12.38.0 (send/insert/findJobs/cancel/update chạy được bằng `app` trong `tenantTx`) – áp dụng đầy đủ
+R12, **không** dùng phương án lùi. Điều chỉnh nhỏ so với thiết kế: `infra.request_dead_job_retry` nhận thêm
+`p_audit_id` (UUID v7 sinh ở ứng dụng) và `p_trace_id`; thêm hàm `infra.pending_final_failures(int)` cho
+`queue.sweep_failed`; `core/db/support.ts` thêm `supportCommand` (gọi hàm tự ghi kiểm toán, không chèn dòng
+`support.search`); `core/lifecycle/shutdown-signals.ts` thoát theo `process.exitCode` (hàng chờ đặt 1 khi
+hủy việc vì tắt quá hạn); bộ gác truy vấn không chặn bảng `nullableTenant`.
+Worker lấy mã tài khoản từ `group_id` của việc (đã qua RLS `WITH CHECK`), không tin `data.accountId`; hai giá
+trị lệch → chôn `PERMANENT_ERROR` (`ACCOUNT_MISMATCH`), không chạy bộ xử lý (rà hiến pháp T075).

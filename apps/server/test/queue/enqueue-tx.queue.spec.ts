@@ -32,7 +32,7 @@ const sysJob = defineJobType({
   payload: z.strictObject({}),
 });
 
-const detail = (code: string) => expect.objectContaining({ detail: code });
+const detail = (code: string): unknown => expect.objectContaining({ detail: code });
 
 describeDb('US1 – tạo việc trong giao dịch', () => {
   let database: TestDatabase;

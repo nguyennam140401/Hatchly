@@ -32,6 +32,8 @@ export interface BuryInput {
   /** Lượt đang giữ (việc `active`) – xóa có rào theo lượt; null cho việc đã `failed` (quét). */
   attempt: { id: string; retryCount: number } | null;
   data: unknown;
+  /** `group_id` của việc pg-boss – nguồn mã tài khoản chuẩn (xem readEnvelope). */
+  groupId: string | null;
   dedupeKey: string;
   attempts: number;
   jobCreatedAt: Date;
@@ -39,23 +41,40 @@ export interface BuryInput {
   error: unknown;
 }
 
-/** Phần phong bì đọc được an toàn từ dữ liệu việc (có thể sai khuôn). */
-export function readEnvelope(data: unknown): {
+/**
+ * Phần phong bì đọc được an toàn từ dữ liệu việc (có thể sai khuôn).
+ * Mã tài khoản chuẩn là `group_id` của việc (đã qua RLS `WITH CHECK` lúc tạo – hiến pháp I), KHÔNG phải
+ * `data.accountId`: khi truyền `groupId` mà hai giá trị lệch nhau → `accountMismatch` và dùng `group_id`.
+ */
+export function readEnvelope(
+  data: unknown,
+  groupId?: string | null,
+): {
   type: string;
   v: number;
   accountId: string | null;
+  accountMismatch: boolean;
   traceId: string;
   payload: Record<string, unknown>;
   retriedFrom: JobEnvelope['retriedFrom'];
 } {
   const d = (typeof data === 'object' && data !== null ? data : {}) as Partial<JobEnvelope>;
+  const fromData =
+    typeof d.accountId === 'string' && UUID.test(d.accountId) ? d.accountId.toLowerCase() : null;
+  const fromGroup =
+    groupId === undefined
+      ? fromData
+      : typeof groupId === 'string' && UUID.test(groupId)
+        ? groupId.toLowerCase()
+        : null;
   return {
     type: typeof d.type === 'string' ? d.type.slice(0, 200) : 'unknown.unknown',
     v: typeof d.v === 'number' && Number.isInteger(d.v) ? d.v : 0,
-    accountId: typeof d.accountId === 'string' && UUID.test(d.accountId) ? d.accountId : null,
+    accountId: fromGroup,
+    accountMismatch: fromGroup !== fromData,
     traceId: typeof d.traceId === 'string' && d.traceId !== '' ? d.traceId.slice(0, 64) : uuidV7(),
     payload:
-      typeof d.payload === 'object' && d.payload !== null && !Array.isArray(d.payload)
+      typeof d.payload === 'object' && (d.payload as unknown) !== null && !Array.isArray(d.payload)
         ? d.payload
         : {},
     retriedFrom: d.retriedFrom,
@@ -89,7 +108,7 @@ class LostAttemptError extends Error {
 
 /** Chèn dòng việc hỏng + xóa việc pg-boss trong MỘT giao dịch, rồi gọi onFinalFailure (R8). */
 export async function buryJob(deps: BuryDeps, input: BuryInput): Promise<BuryResult> {
-  const env = readEnvelope(input.data);
+  const env = readEnvelope(input.data, input.groupId);
   const def = getJobType(env.type);
   const lastError = redactError(input.error);
   let result: BuryResult;
@@ -196,7 +215,7 @@ async function notifyFinalFailure(deps: BuryDeps, target: FinalFailureTarget): P
         )
         .where(eq(deadJobs.id, target.deadJobId));
     });
-  if (callback === undefined) {
+  if (registered === undefined || callback === undefined) {
     // Không có gì để gọi (loại việc không đăng ký onFinalFailure, hoặc không có bộ xử lý ở bản này):
     // chỉ đánh dấu khi đã biết chắc loại việc không có callback.
     if (registered !== undefined) await mark(true);
@@ -204,7 +223,7 @@ async function notifyFinalFailure(deps: BuryDeps, target: FinalFailureTarget): P
   }
   let payload: unknown = target.payload;
   try {
-    payload = upgradePayload(registered!.def, target.payload, target.payloadVersion);
+    payload = upgradePayload(registered.def, target.payload, target.payloadVersion);
   } catch {
     // Dữ liệu sai khuôn: vẫn báo cho module với dữ liệu thô (chỉ mã tham chiếu).
   }
@@ -247,12 +266,13 @@ export async function sweepFailed(deps: BuryDeps): Promise<{ buried: number; ren
     id: string;
     name: QueueName;
     data: unknown;
+    group_id: string | null;
     singleton_key: string | null;
     retry_count: number;
     created_on: Date;
     output: { value?: { message?: unknown }; message?: unknown } | null;
   }>(
-    `SELECT id::text, name, data, singleton_key, retry_count, created_on, output
+    `SELECT id::text, name, data, group_id, singleton_key, retry_count, created_on, output
        FROM ${JOB_TABLE}
       WHERE name = ANY($1) AND state = 'failed'
       ORDER BY completed_on NULLS FIRST LIMIT 100`,
@@ -267,6 +287,7 @@ export async function sweepFailed(deps: BuryDeps): Promise<{ buried: number; ren
       jobId: job.id,
       attempt: null,
       data: job.data,
+      groupId: job.group_id,
       dedupeKey: job.singleton_key ?? `${readEnvelope(job.data).type}:${job.id}`,
       attempts: job.retry_count + 1,
       jobCreatedAt: job.created_on,

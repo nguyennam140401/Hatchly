@@ -133,9 +133,9 @@ describeDb('Bộ chịu tải lớp hàng chờ', () => {
       let maxPerTenant = 0;
       try {
         const done = workers.drain(300_000);
-        let finished = false;
-        void done.then(() => (finished = true));
-        while (!finished) {
+        const state = { finished: false };
+        void done.then(() => (state.finished = true));
+        while (!state.finished) {
           const r = await sampler.query<{ n: string }>(
             "SELECT max(n)::text AS n FROM (SELECT count(*) AS n FROM pgboss.job_common WHERE name = 'media' AND state = 'active' GROUP BY group_id) x",
           );

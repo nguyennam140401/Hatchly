@@ -104,7 +104,7 @@ export async function runJob(
   job: BossJob,
 ): Promise<RunOutcome> {
   const started = Date.now();
-  const env = readEnvelope(job.data);
+  const env = readEnvelope(job.data, job.groupId ?? null);
   const settings = deps.settings.get(queue);
   const def = getJobType(env.type);
   const registered = getHandler(env.type);
@@ -147,6 +147,13 @@ export async function runJob(
     handlerResult = await runWithJobContext(
       { traceId: env.traceId, accountId: env.accountId ?? undefined },
       async () => {
+        // Mã tài khoản trong dữ liệu lệch group_id (đã qua RLS) → không chạy bộ xử lý (hiến pháp I).
+        if (env.accountMismatch) {
+          throw new PermanentJobError(
+            'ACCOUNT_MISMATCH',
+            'Mã tài khoản trong dữ liệu việc không khớp group_id',
+          );
+        }
         if (registered === undefined || def === undefined) {
           throw new TransientQueueError(
             'NO_HANDLER',
@@ -232,6 +239,7 @@ export async function runJob(
       jobId: job.id,
       attempt: attemptRef,
       data: job.data,
+      groupId: job.groupId ?? null,
       dedupeKey,
       attempts: attempt,
       jobCreatedAt: new Date(job.createdOn),

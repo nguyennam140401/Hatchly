@@ -143,7 +143,8 @@ của `owner`, `EXECUTE` chỉ cho `system`:
 | `infra.cleanup_dead_jobs(older_than_days int)` → int | xóa dòng `failed_at < now() - days` |
 | `infra.claim_dead_job_retries(max int)` → setof (id, account_id) | lấy dòng `requested` (`FOR UPDATE SKIP LOCKED`) |
 | `infra.count_dead_jobs_since(since timestamptz)` → setof (queue, n) | chỉ số |
-| `infra.request_dead_job_retry(id uuid, staff text, reason text)` → text | **`EXECUTE` cho `support`** – R14 |
+| `infra.pending_final_failures(max int)` → setof (id, account_id) | dòng chưa gọi `onFinalFailure` thành công (< 5 lần) – `queue.sweep_failed` |
+| `infra.request_dead_job_retry(id uuid, staff text, reason text, audit_id uuid, trace_id text)` → text | **`EXECUTE` cho `support`** – R14; `audit_id` là UUID v7 sinh ở ứng dụng |
 
 **Khung nhìn hỗ trợ** (chủ `owner`, `GRANT SELECT` chỉ cho `support` – quy tắc `i`):
 

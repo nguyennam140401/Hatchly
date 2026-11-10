@@ -158,7 +158,9 @@ describeDb('FR-037 – xóa mọi việc của tài khoản', () => {
   });
 
   it('ngoài systemTx from-context → QUEUE_SYSTEM_TENANT_CONTEXT_REQUIRED', async () => {
-    const code = expect.objectContaining({ detail: 'QUEUE_SYSTEM_TENANT_CONTEXT_REQUIRED' });
+    const code: unknown = expect.objectContaining({
+      detail: 'QUEUE_SYSTEM_TENANT_CONTEXT_REQUIRED',
+    });
     await expect(purgeAccountJobs()).rejects.toEqual(code);
     await expect(systemTx(() => purgeAccountJobs())).rejects.toEqual(code);
     await expect(withAccount(a, () => tenantTx(() => purgeAccountJobs()))).rejects.toEqual(code);

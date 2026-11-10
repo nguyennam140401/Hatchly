@@ -52,11 +52,21 @@ describe('currentSlot', () => {
   });
 
   it('cron 6 trường (giây) chỉ khi APP_ENV=test; có giây trong slot', () => {
-    expect(() => { assertCron('*/2 * * * * *', 'production'); }).toThrow(/APP_ENV=test/);
-    expect(() => { assertCron('*/2 * * * * *', 'development'); }).toThrow(/APP_ENV=test/);
-    expect(() => { assertCron('*/2 * * * * *', 'test'); }).not.toThrow();
-    expect(() => { assertCron('* * *', 'test'); }).toThrow(/5 trường/);
-    expect(() => { assertCron('99 * * * *', 'test'); }).toThrow();
+    expect(() => {
+      assertCron('*/2 * * * * *', 'production');
+    }).toThrow(/APP_ENV=test/);
+    expect(() => {
+      assertCron('*/2 * * * * *', 'development');
+    }).toThrow(/APP_ENV=test/);
+    expect(() => {
+      assertCron('*/2 * * * * *', 'test');
+    }).not.toThrow();
+    expect(() => {
+      assertCron('* * *', 'test');
+    }).toThrow(/5 trường/);
+    expect(() => {
+      assertCron('99 * * * *', 'test');
+    }).toThrow();
     expect(currentSlot('*/2 * * * * *', 'UTC', new Date('2026-11-08T22:00:03.500Z')).slot).toBe(
       '2026-11-08T22:00:02+00:00',
     );

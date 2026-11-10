@@ -91,6 +91,9 @@ registerJobHandler(executeAttempt, async ({ attemptId }, ctx) => {
 - **Tôn trọng `ctx.signal`**: bị hủy khi sắp hết thời gian khóa, khi mất khóa (việc đã bị trả lại hoặc tài
   khoản bị xóa), khi Worker tắt quá hạn. Sau khi hủy, kết quả **không** được ghi.
 - Không giữ giao dịch/kết nối CSDL trong lúc gọi API ngoài.
+- **Bộ xử lý `publish` (hiến pháp II):** Worker chết giữa lúc gửi thì việc được chạy lại sau heartbeat – lớp
+  hàng chờ KHÔNG biết bài đã lên nền tảng hay chưa. Bộ xử lý PHẢI đọc trạng thái lượt đăng trước: đã ở
+  "Đã gửi, chờ phản hồi" → đối soát, không gửi lại; chỉ ghi trạng thái đó TRƯỚC khi gọi nền tảng.
 
 Kết quả:
 
@@ -246,6 +249,6 @@ Biến môi trường: `QUEUE_ENABLED`, `QUEUE_CONTROL_POOL_MAX` (6), `QUEUE_API
 
 ## Lịch sử diễn tập (SC-012 – lập trình viên mới thêm một loại việc ≤ 30 phút)
 
-| Ngày | Người | Việc diễn tập | Thời gian | Ghi chú |
-| ---- | ----- | ------------- | --------- | ------- |
-|      |       |               |           |         |
+| Ngày       | Người                                    | Việc diễn tập                                                                                                                                                    | Thời gian | Ghi chú                                                                                                |
+| ---------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------ |
+| 2026-11-08 | Claude (tác tử, trong lúc implement 003) | `sandbox.echo`: khai báo loại việc, bộ xử lý ghi `sandbox.tenant_notes` (bỏ qua nếu đã có), tạo việc trong `tenantTx`, kiểm thử Worker thật + `expectIdempotent` | ≈ 10 phút | Đạt 2/2. Chưa phải người mới – cần một lập trình viên chưa đọc mã diễn tập lại để đo SC-012 đúng nghĩa |

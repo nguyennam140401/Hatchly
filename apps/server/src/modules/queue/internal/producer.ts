@@ -212,7 +212,7 @@ export async function enqueueMany<P>(
     { db, returnId: true },
   );
   // Một giao dịch khác chen cùng khóa giữa lúc kiểm và lúc chèn → ON CONFLICT bỏ dòng: hủy cả lô.
-  if (ids === null || ids.length !== jobs.length) throw queueError('QUEUE_DUPLICATE_IN_BATCH');
+  if (ids?.length !== jobs.length) throw queueError('QUEUE_DUPLICATE_IN_BATCH');
   return { jobIds: jobs.map((j) => j.id) };
 }
 

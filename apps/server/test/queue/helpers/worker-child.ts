@@ -37,7 +37,7 @@ registerJobHandler(longJob, async ({ durationMs }, ctx) => {
       send({
         event: 'aborted',
         jobId: ctx.jobId,
-        reason: String((ctx.signal.reason as Error).message),
+        reason: (ctx.signal.reason as Error).message,
       });
       resolve();
     });

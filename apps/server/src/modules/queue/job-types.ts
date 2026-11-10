@@ -148,7 +148,7 @@ export function defineJobType<P extends z.ZodObject>(
   if (!(QUEUE_NAMES as readonly string[]).includes(def.queue)) {
     fail(name, `hàng chờ "${def.queue}" không tồn tại`);
   }
-  if (def.scope !== 'tenant' && def.scope !== 'system') fail(name, 'scope phải là tenant | system');
+  if (!['tenant', 'system'].includes(def.scope)) fail(name, 'scope phải là tenant | system');
   if (!Number.isInteger(def.version) || def.version < 1) {
     fail(name, 'version phải là số nguyên ≥ 1');
   }
