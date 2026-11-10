@@ -40,22 +40,50 @@
     {
       "idx": 5,
       "version": "7",
-      "when": 1794139259796,
-      "tag": "0005_account_auth_tables",
+      "when": 1794136665112,
+      "tag": "0005_pgboss_install",
       "breakpoints": true
     },
     {
       "idx": 6,
       "version": "7",
-      "when": 1794139272041,
-      "tag": "0006_account_auth_functions",
+      "when": 1794136755258,
+      "tag": "0006_queue_settings",
       "breakpoints": true
     },
     {
       "idx": 7,
       "version": "7",
-      "when": 1794139273143,
-      "tag": "0007_audit_actor_types",
+      "when": 1794137684713,
+      "tag": "0007_dead_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794138618325,
+      "tag": "0008_schedule_slots_partitions",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794324687741,
+      "tag": "0009_account_auth_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794324703616,
+      "tag": "0010_account_auth_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794324704560,
+      "tag": "0011_audit_actor_types",
       "breakpoints": true
     }
   ]

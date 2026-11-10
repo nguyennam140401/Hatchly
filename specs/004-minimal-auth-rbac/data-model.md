@@ -132,9 +132,9 @@ phiên bị thu hồi/hết hạn/của người bị khóa thì 0 dòng.
 
 | Tệp | Loại | Nội dung |
 |---|---|---|
-| `0005_account_auth_tables.sql` | sinh (drizzle-kit) | 8 bảng mục 2–3, chỉ mục, `CHECK`, chính sách `tenant_isolation` |
-| `0006_account_auth_functions.sql` | tay | 4 hàm mục 4 + quyền |
-| `0007_audit_actor_types.sql` | tay | mở rộng `CHECK` mục 5 |
+| `0009_account_auth_tables.sql` | sinh (drizzle-kit) | 8 bảng mục 2–3, chỉ mục, `CHECK`, chính sách `tenant_isolation` |
+| `0010_account_auth_functions.sql` | tay | 4 hàm mục 4 + quyền |
+| `0011_audit_actor_types.sql` | tay | mở rộng `CHECK` mục 5 |
 
 Mọi thay đổi đều chỉ thêm. API/Worker bản cũ (chưa biết các bảng này) vẫn chạy được (hiến pháp: tương
 thích ngược). `pnpm db:check` phải không có vi phạm. Mọi chỉ mục toàn cục đã liệt kê đều có lý do trong

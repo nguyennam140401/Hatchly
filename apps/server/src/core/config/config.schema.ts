@@ -116,6 +116,21 @@ export const AppConfigSchema = z.object({
   ),
   /** Bắt buộc khi `MAIL_TRANSPORT=smtp`. */
   MAIL_FROM: z.string().min(3).optional(),
+
+  // ----- Hàng chờ (003, contracts/queue-commands.md mục 2) – không có biến bí mật mới -----
+  /** `false`: Worker khởi động nhưng không lấy việc (gỡ lỗi). */
+  QUEUE_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  /** Bể điều khiển của Worker (vai trò `system`): lấy việc, heartbeat, ghi kết quả. */
+  QUEUE_CONTROL_POOL_MAX: z.coerce.number().int().min(2).max(20).default(6),
+  /** Bể của thể hiện pg-boss phía API (vai trò `app`) – chỉ đọc bộ nhớ đệm hàng chờ. */
+  QUEUE_API_POOL_MAX: z.coerce.number().int().min(1).max(5).default(2),
+  /** Chu kỳ đọc lại `infra.queue_settings` (≤ 5 phút – FR-006). */
+  QUEUE_SETTINGS_REFRESH_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
+  /** Nhịp bộ hẹn giờ việc định kỳ. */
+  QUEUE_SCHEDULER_TICK_MS: z.coerce.number().int().min(1000).max(30_000).default(10_000),
 });
 
 /** Cú pháp CIDR IPv4/IPv6 (`địa chỉ/độ dài tiền tố`). */

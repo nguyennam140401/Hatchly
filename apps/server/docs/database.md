@@ -199,7 +199,7 @@ ALTER TABLE "content"."posts" DROP COLUMN "title";
 
 Vài bước của xác thực xảy ra **trước** khi biết tenant: đăng ký, tra email khi đăng nhập/quên mật
 khẩu, tra phiên theo cookie, tra mã một lần trong liên kết. Không có vai trò nào được vượt RLS, nên các
-bước này đi qua 4 hàm `SECURITY DEFINER` hẹp (migration `0006_account_auth_functions.sql`):
+bước này đi qua 4 hàm `SECURITY DEFINER` hẹp (migration `0010_account_auth_functions.sql`):
 
 | Hàm                                                           | Dùng khi                         | Trả về                                                                        |
 | ------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |

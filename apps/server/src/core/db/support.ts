@@ -64,6 +64,17 @@ export async function supportSearch<T>(
 }
 
 /**
+ * Gọi MỘT hàm SECURITY DEFINER đã tự ghi kiểm toán (vd `infra.request_dead_job_retry` – 003 R14) trên
+ * bể `support`, không tenant. KHÔNG tự chèn dòng kiểm toán (hàm được gọi phải ghi, cùng giao dịch).
+ * Bộ gác truy vấn bật: không đọc được bảng khách hàng.
+ */
+export async function supportCommand<T>(fn: (db: Db) => Promise<T>): Promise<T> {
+  const pool = supportPool();
+  assertNotNested();
+  return runTx(pool, 'support', null, fn, { guard: true });
+}
+
+/**
  * Xem chi tiết MỘT tài khoản qua khung nhìn chi tiết. `accountId` từ tham số là ngoại lệ có chủ đích
  * (nhân viên chọn tài khoản) – chỉ ở bể `support`, luôn kèm lý do và kiểm toán (hiến pháp I).
  */

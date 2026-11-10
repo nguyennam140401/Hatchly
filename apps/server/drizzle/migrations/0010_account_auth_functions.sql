@@ -1,4 +1,4 @@
--- Migration tay 0006 (004, data-model.md mục 4, research R4): 4 hàm SECURITY DEFINER hẹp cho các
+-- Migration tay 0010 (004, data-model.md mục 4, research R4): 4 hàm SECURITY DEFINER hẹp cho các
 -- bước xác thực xảy ra TRƯỚC khi biết tenant (đăng ký, tra email, tra phiên, tra mã một lần).
 -- Chung: chủ "owner" (chủ bảng – không bị RLS vì không FORCE), search_path cố định, REVOKE PUBLIC,
 -- chỉ "app" có EXECUTE (không cấp "system", "support"). Đầu vào đã chuẩn hóa/băm ở ứng dụng; hàm

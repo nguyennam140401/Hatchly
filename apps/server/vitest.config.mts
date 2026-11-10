@@ -6,8 +6,14 @@ export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
   test: {
     include: ['test/**/*.spec.ts'],
-    // Kiểm thử CSDL chạy riêng bằng `pnpm test:db` (vitest.db.config.mts).
-    exclude: ['test/db/**', 'test/auth/**/*.e2e.spec.ts', 'test/ops/**', '**/node_modules/**'],
+    // Chạy riêng: CSDL + e2e xác thực + lệnh vận hành bằng `pnpm test:db`, hàng chờ bằng `pnpm test:queue`.
+    exclude: [
+      'test/db/**',
+      'test/queue/**',
+      'test/auth/**/*.e2e.spec.ts',
+      'test/ops/**',
+      '**/node_modules/**',
+    ],
     globalSetup: ['./test/global-setup.ts'],
     testTimeout: 30_000,
     hookTimeout: 60_000,

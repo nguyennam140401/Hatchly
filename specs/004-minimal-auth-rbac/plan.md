@@ -130,9 +130,9 @@ apps/server/
 ├── package.json                         # + @node-rs/argon2, nodemailer; scripts staff, dev:seed-auth
 ├── .env.example                         # + biến của contracts/auth-ops.md mục 1
 ├── drizzle/migrations/
-│   ├── 0005_account_auth_tables.sql     # sinh
-│   ├── 0006_account_auth_functions.sql  # tay – 4 hàm SECURITY DEFINER
-│   └── 0007_audit_actor_types.sql       # tay
+│   ├── 0009_account_auth_tables.sql     # sinh
+│   ├── 0010_account_auth_functions.sql  # tay – 4 hàm SECURITY DEFINER
+│   └── 0011_audit_actor_types.sql       # tay
 ├── src/
 │   ├── core/
 │   │   ├── auth/
@@ -193,7 +193,7 @@ packages/shared/src/
 tooling/boundaries/build-rules.cjs       # + auth-tx-restricted, account-scope-restricted; thu hẹp bind-account-restricted
 tooling/verify.mjs                       # + mẫu quét bí mật
 docker-compose.yml                       # + mailpit (dev); package.json gốc: db:up bật cả mailpit
-.specify/memory/architecture.md          # v1.3: T7 cụ thể, thuật ngữ mới, mục API/xác thực
+.specify/memory/architecture.md          # v1.4: T7 cụ thể, thuật ngữ mới, mục API/xác thực
 ```
 
 **Structure Decision**: Lõi `core/auth` chứa những gì mọi module cần (khai báo truy cập, guard, danh mục
