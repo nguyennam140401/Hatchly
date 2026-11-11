@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -34,4 +34,4 @@
 - Đây là tính năng hạ tầng nội bộ; "người dùng" là đội phát triển/kiểm thử. Các tên chuẩn mở (S3, SMTP), tên hàng chờ
   `notify`, khuôn vị trí tệp và đơn vị micro-USD được giữ vì là ràng buộc đã chốt trong hiến pháp/ADR, không phải lựa chọn
   cài đặt của tính năng – cùng cách viết với đặc tả 002–004.
-- Còn 1 điểm cần làm rõ: phạm vi bản thật S3/SMTP + dịch vụ giả lập cục bộ (mục Clarifications).
+- Đã làm rõ 5 điểm (Clarifications, Session 2026-11-08); không còn điểm mở.

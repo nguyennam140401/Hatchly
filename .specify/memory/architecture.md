@@ -68,7 +68,7 @@ flowchart TB
             otel[OTel Collector]
         end
         pg[(PostgreSQL<br/>1 chính + 1 dự phòng, PITR 7 ngày)]
-        s3[(S3-compatible<br/>tenants/&lbrace;accountId&rbrace;/…, tmp/…)]
+        s3[(S3-compatible<br/>tenants/&lbrace;accountId&rbrace;/… – cả tmp/&lbrace;jobId&rbrace;/)]
         kms[KMS]
     end
     subgraph ext[Bên ngoài]
@@ -97,7 +97,7 @@ flowchart TB
 | `api` | 2 | Chịu được lỗi một bản. Không xử lý tệp lớn. Tạo **một** bài và tạo lại chạy ngay trong request, trả kết quả dần (stream) |
 | `worker` | 2 | Cùng ảnh container với `api`, khác lệnh khởi động. Chạy 6 hàng chờ và bộ hẹn giờ định kỳ |
 | PostgreSQL | 1 chính + 1 dự phòng | Sao lưu WAL liên tục + snapshot hằng ngày (giữ 30 ngày); RPO ≤ 5 phút, RTO ≤ 1 giờ; diễn tập khôi phục mỗi quý |
-| Kho tệp | Dịch vụ | Bật versioning, tệp đã xóa giữ thêm 7 ngày; `tmp/` tự xóa sau 1 ngày |
+| Kho tệp | Dịch vụ | Bật versioning, tệp đã xóa giữ thêm 7 ngày; tệp tạm `tenants/{accountId}/tmp/…` có nhãn `lifecycle=tmp`, tự xóa sau 1 ngày (luật vòng đời lọc theo nhãn) |
 | Giám sát | Tự chạy trên cùng cluster | Dữ liệu giám sát ở trong nước |
 
 **Phát hành:**
@@ -148,7 +148,7 @@ module nằm trong `apps/server/src/modules/<module>/` và chỉ export giao di�
 | CSDL | Mỗi giao dịch chạy `set_config('app.account_id', $1, true)` (phạm vi giao dịch). Chính sách RLS `tenant_isolation`: `account_id = account.current_account_id()` – hàm `nullif(current_setting('app.account_id', true), '')::uuid` vì sau giao dịch biến thành chuỗi rỗng; thiếu biến thì không thấy dòng nào. Module chỉ truy cập CSDL qua `tenantTx` / `systemTx` / `supportSearch` / `supportViewAccount` (`core/db`) |
 | Vai trò CSDL | `owner` (chỉ migration) · `app` (API/Worker, chịu RLS, không có BYPASSRLS) · `system` (chỉ Worker – job dùng chung; ghi schema dùng chung; đặt được ngữ cảnh tenant của **một** tài khoản cho việc theo tài khoản và khi đó chịu cùng RLS `tenant_isolation` – Clarifications 002; khuyến nghị ghi bộ đếm qua hàm `SECURITY DEFINER`) · `support` (chỉ đọc view đã lọc, không có cột bí mật; mọi truy vấn ghi audit) |
 | Hàng chờ | Dữ liệu job chỉ chứa mã tham chiếu và `accountId`; Worker đặt lại ngữ cảnh tenant trước khi gọi bộ xử lý. Có giới hạn đồng thời theo tenant |
-| Kho tệp | `tenants/{accountId}/media/{mediaId}/original` · `/normalized/…` · `/thumb` · `tenants/{accountId}/context/…` · `tmp/{jobId}/…` |
+| Kho tệp | `tenants/{accountId}/media/{mediaId}/original` · `/normalized/…` · `/thumb` · `tenants/{accountId}/context/…` · `tenants/{accountId}/tmp/{jobId}/…` (mọi khóa trong tiền tố tài khoản – hiến pháp I; 005) |
 | Nhật ký, chỉ số | Gắn `account_id`, `trace_id`; **không** ghi token, nội dung bài, prompt |
 | Prompt cache AI | Phân theo tenant; không đưa hồ sơ của nhiều tài khoản vào cùng phần đầu prompt |
 
