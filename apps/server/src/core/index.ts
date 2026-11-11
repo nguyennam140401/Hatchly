@@ -25,4 +25,30 @@ export {
 export { installShutdownSignals } from './lifecycle/shutdown-signals';
 export { CoreModule, APP_UNIT } from './core.module';
 export { ValidBody, ValidParam, ValidQuery } from './validation/decorators';
+// Xác thực và phân quyền (004, contracts/authz-api.md). KHÔNG xuất authTx, runInAccountScope,
+// SessionCache (hàm hạn chế – quy tắc auth-tx-restricted, account-scope-restricted).
+export { AUTH_CONFIG, resolveAuthConfig, type AuthConfig } from './config/auth-config';
+export {
+  PERMISSIONS,
+  PERMISSION_LIST,
+  PERMISSION_DENIED_MESSAGES,
+  permissionsOf,
+  type CustomerRole,
+  type Permission,
+  type StaffRole,
+} from './auth/permissions';
+export { Public, CustomerAccess, StaffAccess } from './auth/access.decorators';
+export {
+  can,
+  currentActor,
+  requireCustomer,
+  requireStaff,
+  type Actor,
+  type CustomerActor,
+  type StaffActor,
+} from './auth/actor';
+export { SESSION_RESOLVER, type Resolved, type SessionResolver } from './auth/session-resolver';
+export { MailModule } from './mail/mail.module';
+export { MAILER, type MailMessage, type Mailer } from './mail/mailer';
+export { MemoryMailTransport } from './mail/memory.transport';
 export { ZodValidationPipe } from './validation/zod-validation.pipe';

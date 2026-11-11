@@ -1,0 +1,4 @@
+{
+  "note": "module nghiệp vụ nhập core/auth/account-scope – chỉ modules/account/internal/auth được dùng (004, R4)",
+  "violations": ["account-scope-restricted"]
+}

@@ -6,7 +6,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
   test: {
-    include: ['test/db/**/*.db.spec.ts'],
+    // 004: e2e xác thực (test/auth/**/*.e2e.spec.ts) và lệnh vận hành (test/ops) cần CSDL thật.
+    include: ['test/db/**/*.db.spec.ts', 'test/auth/**/*.e2e.spec.ts', 'test/ops/**/*.spec.ts'],
     globalSetup: ['./test/db/global-setup.ts'],
     fileParallelism: false,
     testTimeout: 60_000,

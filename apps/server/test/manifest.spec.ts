@@ -82,7 +82,9 @@ describe('modules.manifest.json', () => {
     expect(Object.keys(MODULE_REGISTRY).sort()).toEqual(manifest.modules.map((m) => m.name).sort());
     for (const unit of ['api', 'worker'] as const) {
       const expected = modulesFor(unit).map((m) => MODULE_REGISTRY[m.name]);
-      expect(buildModules(unit)).toEqual(expected);
+      // Module có forUnit (account – 004) trả DynamicModule; so theo lớp module.
+      const built = buildModules(unit).map((mod) => ('module' in mod ? mod.module : mod));
+      expect(built).toEqual(expected);
     }
     expect(modulesFor('worker').map((m) => m.name)).not.toContain('approval');
     expect(modulesFor('api').map((m) => m.name)).toContain('approval');

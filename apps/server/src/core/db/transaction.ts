@@ -14,7 +14,7 @@ import { guardClient } from './query-guard';
 /** Drizzle gắn vào kết nối của giao dịch hiện tại. Chỉ dùng bên trong hàm truyền cho *Tx. */
 export type Db = NodePgDatabase & { $client: PoolClient };
 
-interface TxContext {
+export interface TxContext {
   role: DbRole;
   /** null: giao dịch không tenant (systemTx 'none', supportSearch). */
   accountId: string | null;
@@ -112,8 +112,13 @@ function requirePool(role: DbRole, missingMessage: string): RolePool {
   return pool;
 }
 
+/** Bể của một vai trò hoặc lỗi lập trình nêu `missingMessage` (chỉ lớp CSDL dùng). */
+export function rolePoolOrThrow(role: DbRole, missingMessage: string): RolePool {
+  return requirePool(role, missingMessage);
+}
+
 /** Giao dịch lồng: cùng vai trò + cùng tài khoản → dùng lại; khác → CONFLICT. */
-function reuseOrConflict(role: DbRole, accountId: string | null): TxContext | undefined {
+export function reuseOrConflict(role: DbRole, accountId: string | null): TxContext | undefined {
   const current = txStorage.getStore();
   if (current === undefined) return undefined;
   if (current.role === role && current.accountId === accountId) return current;
@@ -156,6 +161,14 @@ export async function systemTx<T>(
 export function currentTx(): { role: DbRole; accountId: string | null } | undefined {
   const tx = txStorage.getStore();
   return tx === undefined ? undefined : { role: tx.role, accountId: tx.accountId };
+}
+
+/**
+ * Giao dịch hiện tại KÈM kết nối – CHỈ cho `modules/queue` (003 R4): pg-boss ghi việc trên đúng kết nối
+ * của tenantTx/systemTx để việc và dữ liệu nghiệp vụ cùng xác nhận/hoàn tác. Không xuất qua index.ts.
+ */
+export function currentTxHandle(): TxContext | undefined {
+  return txStorage.getStore();
 }
 
 /** Tài khoản của ngữ cảnh hiện hành (FR-007) – nhật ký và module đọc được; null khi không có. */

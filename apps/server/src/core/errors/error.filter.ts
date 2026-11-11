@@ -81,6 +81,9 @@ export class ErrorFilter implements ExceptionFilter {
         message: exception.message,
         actions: exception.actions,
         ...(exception.fieldErrors ? { fieldErrors: exception.fieldErrors } : {}),
+        ...(exception.retryAfterSeconds !== undefined
+          ? { retryAfterSeconds: exception.retryAfterSeconds }
+          : {}),
         ...(exception.detail !== undefined ? { detail: exception.detail } : {}),
       };
     } else if (

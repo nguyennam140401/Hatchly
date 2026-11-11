@@ -5,7 +5,7 @@ import { APP_CONFIG, type AppConfig } from './config/config.schema';
 import { ErrorFilter } from './errors/error.filter';
 import { ReadinessRegistry } from './health/readiness';
 import { ShutdownCoordinator } from './lifecycle/shutdown-coordinator';
-import { LoggingModule } from './logging/logging.module';
+import { LoggingModule, type LogDestination } from './logging/logging.module';
 
 /** Token cho tên đơn vị đang chạy (`api` | `worker`). */
 export const APP_UNIT = Symbol('APP_UNIT');
@@ -18,10 +18,14 @@ export const APP_UNIT = Symbol('APP_UNIT');
 @Global()
 @Module({})
 export class CoreModule {
-  static forRoot(unit: UnitName, config: AppConfig): DynamicModule {
+  static forRoot(
+    unit: UnitName,
+    config: AppConfig,
+    options: { logDestination?: LogDestination | undefined } = {},
+  ): DynamicModule {
     return {
       module: CoreModule,
-      imports: [LoggingModule.forRoot(unit, config)],
+      imports: [LoggingModule.forRoot(unit, config, options.logDestination)],
       providers: [
         { provide: APP_CONFIG, useValue: config },
         { provide: APP_UNIT, useValue: unit },

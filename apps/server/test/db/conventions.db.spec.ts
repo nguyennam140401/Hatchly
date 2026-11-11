@@ -12,7 +12,10 @@ import { checkConventions, manifestInfo, type CheckResult } from '../../src/db/c
 import { runBootstrap } from '../../src/db/bootstrap';
 import { runMigrations } from '../../src/db/migrate';
 import { dbUrls, describeDb } from './helpers/db';
+import '../../src/modules/queue/internal/db/schema';
 import './sandbox/schema';
+// Bảng của module (đăng ký vào sổ khi nạp) – như db:check nạp mọi modules/*/internal/db/schema.ts.
+import '../../src/modules/account/internal/db/schema';
 
 const FIXTURES = join(__dirname, 'fixtures', 'conventions');
 const fixtures = readdirSync(FIXTURES)
@@ -85,7 +88,7 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
     });
   });
 
-  it('có đủ mẫu cho 11 quy tắc a–k', () => {
+  it('có đủ mẫu cho 12 quy tắc a–l', () => {
     expect(fixtures.map((f) => f[0])).toEqual([
       'a',
       'b',
@@ -98,6 +101,25 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
       'i',
       'j',
       'k',
+      'l',
+    ]);
+  });
+
+  it('003: pgboss.job_common tắt RLS → a-rls-missing; vai trò app có CREATE trên pgboss → g', async () => {
+    const name = `app_test_fx_pgboss_${suffix}`;
+    created.push(name);
+    await run(dbUrls.admin, (c) =>
+      c.query(`CREATE DATABASE ${c.escapeIdentifier(name)} TEMPLATE ${c.escapeIdentifier(clean)}`),
+    );
+    await run(withDb(dbUrls.admin, name), (c) =>
+      c.query(
+        'ALTER TABLE pgboss.job_common DISABLE ROW LEVEL SECURITY; GRANT CREATE ON SCHEMA pgboss TO "app";',
+      ),
+    );
+    const result = await check(name);
+    expect(result.violations.map((v) => `${v.rule}:${v.schema}.${v.table}`).sort()).toEqual([
+      'a-rls-missing:pgboss.job_common',
+      'g-app-privileges:pgboss.-',
     ]);
   });
 
@@ -105,7 +127,7 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
     const result = await check(clean);
     expect(result.violations).toEqual([]);
     expect(result.checked.tables).toBeGreaterThanOrEqual(3);
-    expect(result.checked.views).toBe(2);
+    expect(result.checked.views).toBe(4); // + 2 khung nhìn hỗ trợ việc hỏng (003)
   });
 
   it.each(fixtures)('%s → phát hiện đúng quy tắc mong đợi', async (fixture) => {

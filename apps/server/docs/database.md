@@ -195,6 +195,43 @@ trong cùng tệp). Câu lệnh cố ý (bước thu gọn) phải có chú thí
 ALTER TABLE "content"."posts" DROP COLUMN "title";
 ```
 
+## Xác thực: `authTx`, `runInAccountScope`, hàm `SECURITY DEFINER` (004)
+
+Vài bước của xác thực xảy ra **trước** khi biết tenant: đăng ký, tra email khi đăng nhập/quên mật
+khẩu, tra phiên theo cookie, tra mã một lần trong liên kết. Không có vai trò nào được vượt RLS, nên các
+bước này đi qua 4 hàm `SECURITY DEFINER` hẹp (migration `0010_account_auth_functions.sql`):
+
+| Hàm                                                           | Dùng khi                         | Trả về                                                                        |
+| ------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------- |
+| `account.auth_register(…)`                                    | đăng ký                          | `'created'` / `'email_taken'` – tạo nguyên vẹn 5 dòng hoặc không gì           |
+| `account.auth_lookup_email(email_normalized)`                 | đăng nhập, quên mật khẩu         | người dùng + băm + trạng thái (khớp chính xác, bỏ tài khoản đã xóa)           |
+| `account.auth_resolve_session(token_hash, touch_after, idle)` | mỗi yêu cầu khi bộ nhớ đệm trượt | phiên còn hiệu lực + vai trò; gia hạn khi `last_seen_at` cũ hơn `touch_after` |
+| `account.auth_find_token(token_hash, purpose)`                | mở liên kết xác minh/đặt lại     | mã còn hiệu lực – **không** tiêu thụ                                          |
+
+Mỗi hàm: chủ `owner`, `SET search_path = pg_catalog, account`, `REVOKE ALL … FROM PUBLIC`, chỉ `app` có
+`EXECUTE` (không cấp `system`, `support`), trả đúng các cột liệt kê. Sửa các hàm này phải review theo
+nguyên tắc I. Kiểm thử bắt buộc: `test/db/auth-functions.db.spec.ts` (quyền gọi, cột trả về, đăng ký
+đồng thời, mọi điều kiện hiệu lực).
+
+- `authTx(fn)` (`core/db/auth-tx.ts`): giao dịch `app` **không** đặt ngữ cảnh tenant – chỉ để gọi 4 hàm
+  trên, đọc/ghi bảng dùng chung `staff_users`, `staff_sessions`, `auth_throttle` và ghi `infra.audit_log`.
+  Bộ gác truy vấn vẫn chặn bảng tenant (dev/test ném `TENANT_CONTEXT_MISSING`). Không xuất qua `core`.
+- `runInAccountScope(accountId, fn)` (`core/auth/account-scope.ts`): chạy `fn` trong ngữ cảnh **con** có
+  `accountId` để dùng `tenantTx` – chỉ với `accountId` lấy từ CSDL sau khi danh tính đã xác minh. Đã gắn
+  tài khoản khác hoặc đang trong giao dịch → `TENANT_CONTEXT_CONFLICT`.
+- Quy tắc ranh giới `auth-tx-restricted`, `account-scope-restricted` giới hạn nơi được nhập hai hàm này
+  (`docs/auth.md`).
+
+**Chỉ mục duy nhất toàn cục (ngoại lệ có lý do của quy tắc `d` – cột đầu không phải `account_id`)**,
+khai báo ở `indexExceptions` của `modules/account/internal/db/schema.ts`:
+
+| Chỉ mục                                 | Lý do                                                        |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `users_email_normalized_key`            | một email chỉ có một tài khoản trên toàn hệ thống (FR-002)   |
+| `login_identities_provider_subject_key` | một danh tính nhà cung cấp chỉ thuộc một người dùng (FR-003) |
+| `sessions_token_hash_key`               | tra phiên theo mã trước khi biết tenant                      |
+| `auth_tokens_token_hash_key`            | tra mã một lần trước khi biết tenant                         |
+
 ## Kiểm tra quy ước (`pnpm db:check`)
 
 Quy tắc a–k: `specs/002-db-layer-tenant-rls/contracts/db-conventions.md`. Mã thoát 0 đạt / 1 có vi

@@ -1,3 +1,4 @@
+import { TEST_AUTH_ENV } from './helpers/auth-env';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getJson, startNode, waitForHttp, type RunningProcess } from './helpers/processes';
 
@@ -16,6 +17,7 @@ describe('Nhiều Worker song song với API', () => {
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: String(API_PORT),
+      ...TEST_AUTH_ENV,
       DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
       DATABASE_SYSTEM_URL: 'postgres://system:x@127.0.0.1:1/app',
     };
@@ -56,7 +58,9 @@ describe('Nhiều Worker song song với API', () => {
       body: '{}',
     });
     expect(res.status).toBe(404);
-    expect((await getJson(`http://127.0.0.1:${W1_PORT}/readyz`)).status).toBe(404);
+    // 003 FR-019: Worker có /readyz (không CSDL → 503), ngoài /healthz, /readyz là 404.
+    expect((await getJson(`http://127.0.0.1:${W1_PORT}/readyz`)).status).toBe(503);
+    expect((await getJson(`http://127.0.0.1:${W1_PORT}/api/v1/healthz`)).status).toBe(404);
   });
 
   it('dừng một Worker không ảnh hưởng Worker còn lại và API', async () => {

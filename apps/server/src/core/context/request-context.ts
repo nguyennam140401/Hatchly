@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { uuidV7 } from '../ids/uuid-v7';
+import type { Actor } from './actor.types';
 import { executionStorage, type ExecutionSource } from './execution-storage';
 
 /**
@@ -14,6 +15,8 @@ export interface ExecutionContext {
   readonly traceId: string;
   readonly accountId?: string;
   readonly source: ExecutionSource;
+  /** Người gọi đã xác thực (004) – đọc qua `currentActor()` của core/auth. */
+  readonly actor?: Readonly<Actor>;
 }
 
 /** Bí danh tương thích với mã của 001. */

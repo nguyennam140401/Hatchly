@@ -103,19 +103,94 @@ function buildForbiddenRules(manifest) {
       to: { path: aiPaths },
     },
     {
+      name: 'pgboss-only-in-queue',
+      severity: 'error',
+      comment:
+        'Thư viện pg-boss chỉ được dùng trong modules/queue/internal (bộ nối) và src/db (công cụ migration) – 003 FR-001. Module khác tạo việc qua enqueue()/defineJobType() của modules/queue/index.ts.',
+      from: {
+        pathNot: ['^apps/server/src/modules/queue/internal/', '^apps/server/src/db/'],
+      },
+      to: { path: packagePatternToPath('^pg-boss$') },
+    },
+    {
+      name: 'cron-parser-only-in-queue',
+      severity: 'error',
+      comment:
+        'cron-parser chỉ được dùng trong modules/queue/internal (bộ hẹn giờ). Module khác khai báo việc định kỳ bằng defineSchedule() của modules/queue/index.ts.',
+      from: { pathNot: '^apps/server/src/modules/queue/internal/' },
+      to: { path: packagePatternToPath('^cron-parser$') },
+    },
+    // bind-account-restricted: hai điều kiện, cùng mã quy tắc và gợi ý.
+    ...[
+      {
+        // Đường ghi accountId/actor: chỉ guard xác thực (004), việc nền, lõi context/db.
+        from: {
+          pathNot: [
+            '^apps/server/src/core/auth/access\\.guard\\.ts$',
+            '^apps/server/src/core/(context|db)/',
+            '^apps/server/src/modules/queue/',
+            '^apps/server/test/',
+          ],
+        },
+        to: { path: '^apps/server/src/core/context/bind-account\\.ts$' },
+      },
+      {
+        // Kho ngữ cảnh: thêm core/auth (runInAccountScope tạo ngữ cảnh con – 004 R4).
+        from: {
+          pathNot: [
+            '^apps/server/src/core/(auth|context|db)/',
+            '^apps/server/src/modules/queue/',
+            '^apps/server/test/',
+          ],
+        },
+        to: { path: '^apps/server/src/core/context/execution-storage\\.ts$' },
+      },
+    ].map((rule) => ({
       name: 'bind-account-restricted',
       severity: 'error',
       comment:
-        'Chỉ core/auth (guard xác thực), modules/queue (việc nền) và core/db được đặt accountId vào ngữ cảnh thực thi (002, FR-004). Module nghiệp vụ lấy tài khoản qua tenantTx/currentAccountId, không bao giờ từ tham số.',
+        'Chỉ core/auth/access.guard.ts (guard xác thực), modules/queue (việc nền) và core/db được đặt accountId vào ngữ cảnh thực thi (002, FR-004, 004). Module nghiệp vụ lấy tài khoản qua tenantTx/currentAccountId, người gọi qua currentActor(), không bao giờ từ tham số.',
+      ...rule,
+    })),
+    {
+      name: 'auth-tx-restricted',
+      severity: 'error',
+      comment:
+        'authTx (giao dịch app không tenant) chỉ dành cho core/auth và modules/account/internal/auth (004, R4). Module nghiệp vụ dùng tenantTx; cần dữ liệu dùng chung thì đi qua giao diện công khai của module sở hữu.',
       from: {
         pathNot: [
-          '^apps/server/src/core/(auth|context|db)/',
-          '^apps/server/src/modules/queue/',
+          '^apps/server/src/core/(auth|db)/',
+          '^apps/server/src/modules/account/internal/auth/',
           '^apps/server/test/',
         ],
       },
-      to: { path: '^apps/server/src/core/context/(bind-account|execution-storage)\\.ts$' },
+      to: { path: '^apps/server/src/core/db/auth-tx\\.ts$' },
     },
+    // account-scope-restricted: runInAccountScope chỉ cho module account; bộ nhớ đệm phiên thêm core/auth.
+    ...[
+      {
+        from: {
+          pathNot: ['^apps/server/src/modules/account/internal/auth/', '^apps/server/test/'],
+        },
+        to: { path: '^apps/server/src/core/auth/account-scope\\.ts$' },
+      },
+      {
+        from: {
+          pathNot: [
+            '^apps/server/src/core/auth/',
+            '^apps/server/src/modules/account/internal/auth/',
+            '^apps/server/test/',
+          ],
+        },
+        to: { path: '^apps/server/src/core/auth/session-cache\\.ts$' },
+      },
+    ].map((rule) => ({
+      name: 'account-scope-restricted',
+      severity: 'error',
+      comment:
+        'runInAccountScope và bộ nhớ đệm phiên chỉ dành cho modules/account/internal/auth (004, R4): mã tài khoản chỉ được đặt sau khi danh tính đã xác minh. Module khác dùng tenantTx với tài khoản của phiên.',
+      ...rule,
+    })),
     {
       name: 'no-unresolvable',
       severity: 'error',

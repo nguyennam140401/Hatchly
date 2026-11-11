@@ -18,7 +18,10 @@ export const auditLog = partitionedLogTable(
       .defaultNow(),
     /** NULL cho lần tìm kiếm xuyên tài khoản. Không khóa ngoại (giữ sau khi xóa tài khoản). */
     account_id: uuid('account_id'),
-    actor_type: text('actor_type', { enum: ['support', 'admin', 'system'] }).notNull(),
+    // 'user', 'anonymous': sự kiện xác thực (004, migration 0007).
+    actor_type: text('actor_type', {
+      enum: ['support', 'admin', 'system', 'user', 'anonymous'],
+    }).notNull(),
     actor_id: text('actor_id').notNull(),
     action: text('action').notNull(),
     /** Loại từ khóa tìm kiếm – KHÔNG lưu giá trị từ khóa. */

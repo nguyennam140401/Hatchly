@@ -5,6 +5,7 @@
 #   docker compose down                   # thêm -v để xóa dữ liệu PostgreSQL
 #
 # Mở ứng dụng: http://localhost:8080   ·   API trực tiếp: http://localhost:3000/healthz
+# Hộp thư dev (Mailpit): http://localhost:8025
 # Worker kiểm tra sống: http://localhost:3001/healthz
 #
 # API và Worker dùng CHUNG một ảnh (ADR-01), chỉ khác lệnh khởi động. Dịch vụ `migrate` (cùng ảnh)
@@ -23,6 +24,14 @@ x-server-env: &server-env
   DATABASE_APP_URL: postgres://app:app_dev_only@postgres:5432/app
   DATABASE_SYSTEM_URL: postgres://system:system_dev_only@postgres:5432/app
   DATABASE_SUPPORT_URL: postgres://support:support_dev_only@postgres:5432/app
+  # Xác thực (004, contracts/auth-ops.md mục 1) – API đọc, Worker bỏ qua. dev_only CHỈ dùng cục bộ.
+  WEB_BASE_URL: http://localhost:8080
+  WEB_ORIGINS: http://localhost:8080,http://localhost:5173
+  AUTH_THROTTLE_SECRET: dev_only_auth_throttle_secret_0123456789abcdef
+  TERMS_VERSION: '2026-11'
+  MAIL_TRANSPORT: smtp
+  SMTP_URL: smtp://mailpit:1025
+  MAIL_FROM: '"App" <no-reply@example.test>'
 
 services:
   api:
@@ -49,6 +58,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     restart: unless-stopped
 
   worker:
@@ -108,6 +119,15 @@ services:
       postgres:
         condition: service_healthy
     restart: 'no'
+
+  # Hộp thư giả CHỈ DÙNG CHO DEV (004, R9): nhận SMTP ở cổng 1025, xem thư ở http://localhost:8025.
+  # Không có trong hạ tầng thật – môi trường thật gửi qua Amazon SES (SMTP).
+  mailpit:
+    image: axllent/mailpit:v1.27.0
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    restart: unless-stopped
 
   # PostgreSQL cục bộ. Phiên bản đổi được bằng POSTGRES_IMAGE cho khớp môi trường thật (tối thiểu 13).
   postgres:

@@ -1,0 +1,43 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { AUTH_ERROR_MESSAGES, ERROR_CODES, type ErrorResponse } from '@app/shared/core';
+import { resolveTraceId } from '../context/request-context';
+
+// Chống giả mạo yêu cầu từ trang khác (FR-012a, R3). Chạy TRƯỚC guard cho mọi phương thức không an
+// toàn (POST, PUT, PATCH, DELETE) – kể cả điểm cuối công khai như đăng nhập. Chấp nhận khi `Origin`
+// thuộc WEB_ORIGINS, hoặc `Sec-Fetch-Site: same-origin`. Thiếu cả hai → 403 CSRF_REJECTED. Cùng với
+// cookie SameSite=Lax. Không cần mã CSRF đồng bộ vì SPA và API cùng site.
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/** Yêu cầu có được phép theo nguồn gửi không. */
+export function isOriginAllowed(
+  req: Pick<IncomingMessage, 'method' | 'headers'>,
+  allowedOrigins: ReadonlySet<string>,
+): boolean {
+  if (SAFE_METHODS.has((req.method ?? 'GET').toUpperCase())) return true;
+  const origin = req.headers.origin;
+  if (typeof origin === 'string' && origin !== 'null' && allowedOrigins.has(origin)) return true;
+  return req.headers['sec-fetch-site'] === 'same-origin';
+}
+
+/** Middleware Express/Node: từ chối 403 CSRF_REJECTED theo định dạng ErrorResponse chuẩn. */
+export function originCheckMiddleware(webOrigins: readonly string[]) {
+  const allowed = new Set(webOrigins);
+  return (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
+    if (isOriginAllowed(req, allowed)) {
+      next();
+      return;
+    }
+    const body: ErrorResponse = {
+      error: {
+        code: ERROR_CODES.CSRF_REJECTED,
+        message: AUTH_ERROR_MESSAGES.CSRF_REJECTED,
+        actions: [{ kind: 'retry', label: 'Tải lại trang' }],
+        support: { traceId: resolveTraceId(req, res), detail: 'origin_not_allowed' },
+      },
+    };
+    res.statusCode = 403;
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    res.end(JSON.stringify(body));
+  };
+}

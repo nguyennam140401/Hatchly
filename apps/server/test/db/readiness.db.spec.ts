@@ -1,5 +1,6 @@
 // contracts/db-commands.md mục 4, research R7: /readyz có kiểm tra `database`; chạy nhầm vai trò
 // `owner` → tiến trình ghi db.role_invalid và thoát mã 1, không in mật khẩu.
+import { TEST_AUTH_ENV } from '../helpers/auth-env';
 import { beforeAll, expect, it } from 'vitest';
 import { getJson, startNode, waitForHttp } from '../helpers/processes';
 import { dbUrls, describeDb } from './helpers/db';
@@ -15,6 +16,7 @@ describeDb('/readyz với CSDL thật', () => {
 
   it('DATABASE_APP_URL đúng vai trò app → 200, checks có database: pass', async () => {
     const proc = startNode(['dist/api.js'], {
+      ...TEST_AUTH_ENV,
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: String(PORT),
@@ -23,9 +25,20 @@ describeDb('/readyz với CSDL thật', () => {
     try {
       await proc.waitForLog('api.ready');
       await waitForHttp(`http://127.0.0.1:${PORT}/healthz`);
-      const res = await getJson(`http://127.0.0.1:${PORT}/readyz`);
+      // 003: bộ tạo việc của API khởi động nền ngay sau khi lắng nghe – chờ tối đa 15 giây.
+      let res = await getJson(`http://127.0.0.1:${PORT}/readyz`);
+      for (let i = 0; i < 30 && res.status !== 200; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        res = await getJson(`http://127.0.0.1:${PORT}/readyz`);
+      }
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ status: 'ready', checks: [{ name: 'database', status: 'pass' }] });
+      expect(res.body).toEqual({
+        status: 'ready',
+        checks: [
+          { name: 'database', status: 'pass' },
+          { name: 'queue', status: 'pass' },
+        ],
+      });
     } finally {
       proc.child.kill();
       await proc.waitForExit();
@@ -35,6 +48,7 @@ describeDb('/readyz với CSDL thật', () => {
   it('DATABASE_APP_URL dùng vai trò owner → db.role_invalid, thoát mã 1, không lộ mật khẩu', async () => {
     const ownerPassword = decodeURIComponent(new URL(dbUrls.owner).password);
     const proc = startNode(['dist/api.js'], {
+      ...TEST_AUTH_ENV,
       APP_ENV: 'test',
       LOG_LEVEL: 'info',
       API_PORT: String(PORT + 1),

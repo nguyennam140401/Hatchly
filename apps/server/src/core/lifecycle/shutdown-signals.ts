@@ -33,7 +33,8 @@ export function installShutdownSignals(
         await app.close();
         await options.afterClose?.();
         options.logger.log({ msg: `${options.unit}.stopped`, signal });
-        exit(0);
+        // Mã 0, trừ khi một thành phần đã đặt exitCode (vd hàng chờ hủy việc vì tắt quá hạn → 1).
+        exit(typeof process.exitCode === 'number' ? process.exitCode : 0);
       } catch (err) {
         options.logger.error({ msg: `${options.unit}.stop_failed`, err });
         exit(1);

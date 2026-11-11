@@ -12,6 +12,7 @@ const DEFAULT_STEPS = [
     'typecheck',
     'lint',
     'check:boundaries',
+    'check:secrets',
     'test',
     'check:web-bundle',
     'db:lint-migrations',
@@ -20,6 +21,13 @@ const DEFAULT_STEPS = [
   {
     name: 'test:db',
     command: 'pnpm test:db',
+    requiresEnv: 'TEST_DATABASE_ADMIN_URL',
+    skipReason: 'chưa có CSDL kiểm thử',
+  },
+  // Kiểm thử tích hợp hàng chờ trên PostgreSQL thật (003, FR-034).
+  {
+    name: 'test:queue',
+    command: 'pnpm test:queue',
     requiresEnv: 'TEST_DATABASE_ADMIN_URL',
     skipReason: 'chưa có CSDL kiểm thử',
   },
