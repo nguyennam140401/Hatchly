@@ -41,7 +41,7 @@
       "kind": "business",
       "schema": "content",
       "runsIn": ["api", "worker"],
-      "allowedDeps": ["account", "context", "media", "trends", "ai_gateway", "queue"]
+      "allowedDeps": ["account", "context", "media", "trends", "ai_gateway", "notifications", "queue"]
     },
     {
       "name": "approval",
@@ -50,7 +50,7 @@
       "schema": "approval",
       "reservedSchema": true,
       "runsIn": ["api"],
-      "allowedDeps": ["account", "content", "publishing", "queue"]
+      "allowedDeps": ["account", "content", "publishing", "notifications", "queue"]
     },
     {
       "name": "publishing",
@@ -74,7 +74,7 @@
       "kind": "gateway",
       "schema": "ai_gateway",
       "runsIn": ["api", "worker"],
-      "allowedDeps": ["account", "queue"]
+      "allowedDeps": ["account", "notifications", "queue"]
     },
     {
       "name": "notifications",

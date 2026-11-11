@@ -27,11 +27,16 @@
     "staff": "tsx --env-file-if-exists=.env src/ops/staff.ts",
     "dev:seed-auth": "tsx --env-file-if-exists=.env src/ops/seed-auth.ts",
     "test:queue": "vitest run --config vitest.queue.config.mts",
+    "test:infra": "vitest run --config vitest.infra.config.mts",
+    "test:e2e-fakes": "node --require ./test/helpers/deny-egress.cjs ./node_modules/vitest/vitest.mjs run --config vitest.db.config.mts test/e2e/fakes-flow.e2e.spec.ts",
     "test:queue-soak": "vitest run --config vitest.queue.config.mts test/queue/soak",
     "queue:sql": "tsx src/db/queue-sql.ts"
   },
   "dependencies": {
     "@app/shared": "workspace:*",
+    "@aws-sdk/client-s3": "3.1158.0",
+    "@aws-sdk/s3-presigned-post": "3.1158.0",
+    "@aws-sdk/s3-request-presigner": "3.1158.0",
     "@nestjs/common": "11.2.8",
     "@nestjs/core": "11.2.8",
     "@nestjs/platform-express": "11.2.8",

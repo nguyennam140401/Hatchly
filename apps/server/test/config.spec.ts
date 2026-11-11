@@ -7,7 +7,7 @@ import {
   loadConfigFrom,
 } from '../src/core/config/load-config';
 import { resolveAuthConfig } from '../src/core/config/auth-config';
-import { secret } from '../src/core/config/config.schema';
+import { AppConfigSchema, secret } from '../src/core/config/config.schema';
 import { TEST_AUTH_ENV } from './helpers/auth-env';
 
 const DB = { DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:5432/app' };
@@ -58,6 +58,17 @@ describe('loadConfig', () => {
       STAFF_ALLOWED_CIDRS: [],
       LOGIN_MAX_FAILURES_PER_EMAIL: 5,
       LOGIN_MAX_FAILURES_PER_IP: 30,
+      // 005: development/test mặc định bản giả lập + kho bộ nhớ (contracts/runtime-config.md).
+      PLATFORM_GATEWAY_DRIVER: 'fake',
+      AI_GATEWAY_DRIVER: 'fake',
+      NOTIFICATIONS_DRIVER: 'fake',
+      STORAGE_DRIVER: 'memory',
+      FAKE_STATE_STORE: 'memory',
+      S3_FORCE_PATH_STYLE: false,
+      AI_SYSTEM_WEEKLY_CAP_MICRO_USD: 2_000_000,
+      PLATFORM_SUBMIT_TIMEOUT_MS: 30_000,
+      AI_PROVIDER_TIMEOUT_MS: 40_000,
+      AI_FIRST_TOKEN_TIMEOUT_MS: 5_000,
       LOGIN_WINDOW_MINUTES: 15,
       LOGIN_BLOCK_MINUTES: 15,
       ARGON2_MEMORY_KIB: 19456,
@@ -99,7 +110,8 @@ describe('loadConfig', () => {
   });
 
   it('CORS_ORIGINS tách theo dấu phẩy', () => {
-    const config = loadConfig({
+    // 005: staging chưa có bản thật của các cổng → kiểm lược đồ thô (không qua chặn bản giả lập).
+    const config = loadConfigFrom(AppConfigSchema, {
       ...DB,
       APP_ENV: 'staging',
       CORS_ORIGINS: 'https://a.example.vn, https://b.example.vn',
@@ -214,7 +226,7 @@ describe('cấu hình xác thực của API (004)', () => {
     expect(auth.trustProxyHops).toBe(0);
     expect(auth.mail).toEqual({ transport: 'memory' });
     const staging = resolveAuthConfig(
-      loadConfig({
+      loadConfigFrom(AppConfigSchema, {
         ...base,
         ...TEST_AUTH_ENV,
         APP_ENV: 'staging',
@@ -228,8 +240,22 @@ describe('cấu hình xác thực của API (004)', () => {
 
   it('MAIL_TRANSPORT=memory ở production → bị từ chối', () => {
     expect(() =>
-      resolveAuthConfig(loadConfig({ ...base, ...TEST_AUTH_ENV, APP_ENV: 'production' })),
+      resolveAuthConfig(
+        loadConfigFrom(AppConfigSchema, { ...base, ...TEST_AUTH_ENV, APP_ENV: 'production' }),
+      ),
     ).toThrow(/MAIL_TRANSPORT/);
+    // 005: loadConfig chặn sớm hơn – MAIL_TRANSPORT=memory là thành phần giả ở production.
+    expect(() =>
+      loadConfig({
+        ...base,
+        ...TEST_AUTH_ENV,
+        APP_ENV: 'production',
+        PLATFORM_GATEWAY_DRIVER: 'fake',
+        AI_GATEWAY_DRIVER: 'fake',
+        NOTIFICATIONS_DRIVER: 'fake',
+        STORAGE_DRIVER: 'memory',
+      }),
+    ).toThrow(/MAIL_TRANSPORT=memory/);
   });
 
   it('MAIL_TRANSPORT=smtp thiếu SMTP_URL, MAIL_FROM → nêu tên biến', () => {

@@ -2,7 +2,7 @@
 // Mọi lệnh ghi chạy trên kết nối của tenantTx/systemTx → hoàn tác giao dịch = không có việc (FR-007).
 // `accountId` lấy từ giao dịch, `traceId` từ ExecutionContext – KHÔNG có tham số accountId (FR-008).
 import { getExecutionContext, uuidV7 } from '../../../core';
-import type { TxContext } from '../../../core/db/transaction';
+import type { Db, TxContext } from '../../../core/db/transaction';
 import { getJobType, validatePayload } from '../job-types';
 import type {
   ChangeResult,
@@ -170,6 +170,28 @@ export async function enqueue<P>(
   const accountId = checkContext(generic, tx);
   const job = prepare(generic, accountId, payload, opts);
   return sendPrepared(generic, job, accountId, txDatabase(tx));
+}
+
+/**
+ * Tạo việc theo TÊN loại việc đã đăng ký trong tiến trình (005, R9a) – lối phát thông báo của `account`
+ * mà không phụ thuộc module `notifications`. Chưa đăng ký → `QUEUE_JOB_TYPE_UNKNOWN`; dữ liệu sai khuôn
+ * → `QUEUE_PAYLOAD_INVALID` (cùng 3 lớp kiểm như `enqueue`). `tx` phải là giao dịch đang mở (kiểu `Db`
+ * của tenantTx/systemTx) – việc và dữ liệu nghiệp vụ cùng xác nhận/hoàn tác. Chỉ `account` được nhập
+ * (quy tắc ranh giới `enqueue-registered-only-account`, qua `modules/queue/enqueue-registered.ts`).
+ */
+export async function enqueueRegistered(
+  tx: Db,
+  typeName: string,
+  payload: unknown,
+  opts?: EnqueueOptions,
+): Promise<EnqueueResult> {
+  const current = requireCurrentTx();
+  if (current.db !== tx) throw queueError('QUEUE_TX_REQUIRED');
+  const def = getJobType(typeName);
+  if (def === undefined) throw queueError('QUEUE_JOB_TYPE_UNKNOWN');
+  const accountId = checkContext(def, current);
+  const job = prepare(def, accountId, payload, opts);
+  return sendPrepared(def, job, accountId, txDatabase(current));
 }
 
 /** Tạo việc với phong bì đặt sẵn (chạy lại việc hỏng – R14). Chỉ nội bộ module. */

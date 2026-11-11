@@ -15,6 +15,13 @@
       "when": 1794120321403,
       "tag": "0001_support_views",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794418214007,
+      "tag": "0002_gateway_fakes",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,6 @@
+{
+  "note": "modules/content nhập queue/enqueue-registered – chỉ account được dùng (005 R9a)",
+  "violations": [
+    "enqueue-registered-only-account"
+  ]
+}

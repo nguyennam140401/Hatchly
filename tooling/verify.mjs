@@ -31,6 +31,12 @@ const DEFAULT_STEPS = [
     requiresEnv: 'TEST_DATABASE_ADMIN_URL',
     skipReason: 'chưa có CSDL kiểm thử',
   },
+  // 005 (SC-009): nhật ký mẫu của các bước kiểm thử (apps/server/test-logs/*.ndjson) không được chứa
+  // mã quyền giả, lời nhắc, nội dung bài hay bí mật – chạy SAU mọi bước kiểm thử.
+  {
+    name: 'check:secrets:test-logs',
+    command: 'node tooling/scan-secrets.mjs apps/server/test-logs',
+  },
 ];
 
 function readSteps(argv) {

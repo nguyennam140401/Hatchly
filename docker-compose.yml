@@ -6,6 +6,8 @@
 #
 # Mở ứng dụng: http://localhost:8080   ·   API trực tiếp: http://localhost:3000/healthz
 # Hộp thư dev (Mailpit): http://localhost:8025
+# Kho tệp dev (MinIO, S3): API http://localhost:9000, console http://localhost:9001
+# MinIO và Mailpit CHỈ dùng ở dev – không có trong hạ tầng thật (thật: S3 + SES của nhà cung cấp, 005).
 # Worker kiểm tra sống: http://localhost:3001/healthz
 #
 # API và Worker dùng CHUNG một ảnh (ADR-01), chỉ khác lệnh khởi động. Dịch vụ `migrate` (cùng ảnh)
@@ -32,6 +34,20 @@ x-server-env: &server-env
   MAIL_TRANSPORT: smtp
   SMTP_URL: smtp://mailpit:1025
   MAIL_FROM: '"App" <no-reply@example.test>'
+  # Cổng + bản giả lập (005, contracts/runtime-config.md). Bản giả lập bị từ chối ở staging/production.
+  PLATFORM_GATEWAY_DRIVER: fake
+  AI_GATEWAY_DRIVER: fake
+  NOTIFICATIONS_DRIVER: fake
+  FAKE_STATE_STORE: sandbox
+  STORAGE_DRIVER: s3
+  S3_ENDPOINT: http://minio:9000
+  # Đường dẫn ký sẵn cho trình duyệt dùng địa chỉ máy chủ của nhà phát triển.
+  S3_PUBLIC_ENDPOINT: http://localhost:9000
+  S3_REGION: us-east-1
+  S3_BUCKET: app-dev
+  S3_ACCESS_KEY_ID: minio_dev_only
+  S3_SECRET_ACCESS_KEY: minio_secret_dev_only
+  S3_FORCE_PATH_STYLE: 'true'
 
 services:
   api:
@@ -86,6 +102,10 @@ services:
         condition: service_started # chỉ để ảnh được build trước
       migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   web:
@@ -129,6 +149,45 @@ services:
       - '8025:8025'
     restart: unless-stopped
 
+  # Kho tệp S3 CHỈ DÙNG CHO DEV (005, R13): MinIO RELEASE.2025-04-22 (bản đóng gói bitnamilegacy – ảnh
+  # minio/minio không còn phát hành công khai). Hỗ trợ POST policy + luật vòng đời theo nhãn.
+  minio:
+    image: bitnamilegacy/minio:2025.4.22
+    environment:
+      MINIO_ROOT_USER: minio_dev_only
+      MINIO_ROOT_PASSWORD: minio_secret_dev_only
+      # MinIO cấu hình CORS theo máy chủ (không theo bucket): chỉ SPA dev được gọi trực tiếp.
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:8080,http://localhost:5173
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - miniodata:/bitnami/minio/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Một lần: bucket app-dev, CORS cho SPA dev, luật vòng đời xóa tệp tạm (nhãn lifecycle=tmp) sau 1 ngày.
+  # Tệp tạm nằm ở tenants/{acc}/tmp/{jobId}/… nên không lọc được theo tiền tố – lọc theo nhãn đối tượng.
+  minio-init:
+    image: bitnamilegacy/minio-client:2025.4.16
+    entrypoint: ['/bin/sh', '/init/minio-init.sh']
+    environment:
+      MINIO_URL: http://minio:9000
+      MINIO_USER: minio_dev_only
+      MINIO_PASSWORD: minio_secret_dev_only
+      BUCKET: app-dev
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+    volumes:
+      - ./ops/dev/minio-init.sh:/init/minio-init.sh:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: 'no'
+
   # PostgreSQL cục bộ. Phiên bản đổi được bằng POSTGRES_IMAGE cho khớp môi trường thật (tối thiểu 13).
   postgres:
     image: ${POSTGRES_IMAGE:-postgres:17-alpine}
@@ -150,3 +209,4 @@ services:
 
 volumes:
   pgdata:
+  miniodata:

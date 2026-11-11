@@ -1,0 +1,7 @@
+{
+  "note": "@aws-sdk/* nhập ngoài core/storage/s3 (005 R13); gói không cài trong bộ mẫu nên còn no-unresolvable",
+  "violations": [
+    "aws-sdk-only-in-storage",
+    "no-unresolvable"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "sharedAllowedPackages": [
+    "zod"
+  ],
+  "aiProviderPackagePatterns": [
+    "^@anthropic-ai/",
+    "^openai$",
+    "^@google/genai$",
+    "^@mistralai/"
+  ],
+  "modules": [
+    {
+      "name": "account",
+      "title": "account",
+      "kind": "business",
+      "schema": "account",
+      "runsIn": [
+        "api",
+        "worker"
+      ],
+      "allowedDeps": [
+        "queue"
+      ]
+    },
+    {
+      "name": "content",
+      "title": "content",
+      "kind": "business",
+      "schema": "content",
+      "runsIn": [
+        "api",
+        "worker"
+      ],
+      "allowedDeps": [
+        "queue"
+      ]
+    },
+    {
+      "name": "queue",
+      "title": "queue",
+      "kind": "infra",
+      "schema": "infra",
+      "runsIn": [
+        "api",
+        "worker"
+      ],
+      "allowedDeps": []
+    }
+  ]
+}

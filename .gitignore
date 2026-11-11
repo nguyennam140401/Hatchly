@@ -34,6 +34,8 @@ test-results/
 playwright-report/
 blob-report/
 junit*.xml
+# Nhật ký mẫu của bộ kiểm thử (005, quét bí mật – SC-009)
+apps/server/test-logs/
 
 # ===== Cấu hình môi trường & bí mật =====
 .env
@@ -59,3 +61,5 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# Nhật ký mẫu cố ý chứa bí mật giả của công cụ quét (tooling/test/fixtures/secrets)
+!tooling/test/fixtures/secrets/*.log

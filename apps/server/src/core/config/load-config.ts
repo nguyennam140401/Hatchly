@@ -1,22 +1,10 @@
 import { toFieldErrors } from '@app/shared/core';
 import type { z } from 'zod';
+import { assertNoFakesInProduction, resolveGatewayDefaults } from './assert-no-fakes';
 import { AppConfigSchema, secretRegistry, type AppConfig } from './config.schema';
+import { ConfigError, type ConfigIssue } from './config-error';
 
-/** Một biến cấu hình thiếu/sai – chỉ có tên biến và lý do, KHÔNG có giá trị. */
-export interface ConfigIssue {
-  variable: string;
-  reason: string;
-}
-
-/** Lỗi cấu hình khi khởi động. Thông điệp chỉ chứa tên biến + lý do (nguyên tắc VII). */
-export class ConfigError extends Error {
-  constructor(readonly issues: ConfigIssue[]) {
-    super(
-      `Cấu hình môi trường chưa hợp lệ:\n${issues.map((i) => `  - ${i.variable}: ${i.reason}`).join('\n')}`,
-    );
-    this.name = 'ConfigError';
-  }
-}
+export { ConfigError, type ConfigIssue } from './config-error';
 
 type Env = Record<string, string | undefined>;
 
@@ -53,7 +41,10 @@ export function loadConfigFrom<S extends z.ZodObject>(schema: S, env: Env): z.in
 
 /** Đọc cấu hình của ứng dụng từ biến môi trường. */
 export function loadConfig(env: Env = process.env): AppConfig {
-  return loadConfigFrom(AppConfigSchema, env);
+  const config = resolveGatewayDefaults(loadConfigFrom(AppConfigSchema, env));
+  // staging/production không bao giờ chạy bản giả lập (005, SC-006) – API và Worker như nhau.
+  assertNoFakesInProduction(config);
+  return config;
 }
 
 /**

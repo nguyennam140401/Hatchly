@@ -11,7 +11,21 @@ import type { StaffRole } from '../../core';
  * Xác thực/phân quyền cho điểm cuối của module khác KHÔNG đi qua đây: dùng khai báo truy cập và
  * `currentActor()` của core (004).
  */
+/** Thành viên đang hoạt động của tài khoản trong ngữ cảnh (005 – người nhận thông báo). */
+export interface ActiveMember {
+  userId: string;
+  role: 'owner' | 'collaborator';
+  email: string;
+  displayName: string;
+}
+
 export interface AccountPublicApi {
+  /**
+   * Thành viên đang hoạt động (chủ + cộng tác viên) của tài khoản trong ngữ cảnh – đọc qua tenantTx,
+   * không nhận mã tài khoản (nguyên tắc I). Thành viên đã gỡ/khóa không có trong danh sách. Có ở cả API
+   * và Worker (005, R9 – Thông báo tra người nhận).
+   */
+  listActiveMembers(): Promise<ActiveMember[]>;
   /**
    * Thêm cộng tác viên vào tài khoản (ghế trống nhỏ nhất; đủ 2 → SEATS_FULL).
    * CHỈ cho kiểm thử, dữ liệu mẫu; luồng mời người dùng cuối ở WBS 4.4. `accountId` phải là tài

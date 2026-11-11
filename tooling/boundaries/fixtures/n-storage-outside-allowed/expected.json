@@ -1,0 +1,6 @@
+{
+  "note": "modules/content nhập core/storage – chỉ media, context, account và tầng ghép được dùng (005 R17)",
+  "violations": [
+    "storage-restricted"
+  ]
+}

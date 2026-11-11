@@ -14,6 +14,8 @@ import { runMigrations } from '../../src/db/migrate';
 import { dbUrls, describeDb } from './helpers/db';
 import '../../src/modules/queue/internal/db/schema';
 import './sandbox/schema';
+// 005: bảng trạng thái của bản giả lập (schema sandbox, migration dev).
+import '../../src/dev/sandbox/schema';
 // Bảng của module (đăng ký vào sổ khi nạp) – như db:check nạp mọi modules/*/internal/db/schema.ts.
 import '../../src/modules/account/internal/db/schema';
 

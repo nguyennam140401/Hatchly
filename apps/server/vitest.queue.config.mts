@@ -9,6 +9,8 @@ const soak = process.argv.some((arg) => arg.includes('soak'));
 export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
   test: {
+    // 005 (T011): nhật ký thao tác cổng → test-logs/*.ndjson để quét bí mật (SC-009).
+    setupFiles: ['./test/setup/log-capture.ts'],
     include: ['test/queue/**/*.queue.spec.ts'],
     exclude: soak ? ['**/node_modules/**'] : ['test/queue/soak/**', '**/node_modules/**'],
     globalSetup: ['./test/db/global-setup.ts'],

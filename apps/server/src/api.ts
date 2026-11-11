@@ -4,6 +4,12 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { ApiAppModule } from './app/api-app.module';
 import { configureApiApp } from './app/configure-api-app';
+import { DatabaseService } from './core/db/database';
+import {
+  assertSandboxSchemaReady,
+  logGatewaySelection,
+  readGatewaySelection,
+} from './core/gateways/selection';
 import { ConfigError, installShutdownSignals, loadConfig, ShutdownCoordinator } from './core';
 
 export async function bootstrapApi(env: NodeJS.ProcessEnv = process.env) {
@@ -12,6 +18,9 @@ export async function bootstrapApi(env: NodeJS.ProcessEnv = process.env) {
   const logger = app.get(Logger);
   app.useLogger(logger);
   app.flushLogs();
+  // 005 (US6-AS1): cùng lựa chọn bản cài đặt ở API và Worker; thiếu schema sandbox → dừng.
+  logGatewaySelection(logger, readGatewaySelection(config));
+  await assertSandboxSchemaReady(config, app.get(DatabaseService), logger);
 
   configureApiApp(app, config);
   const coordinator = app.get(ShutdownCoordinator);

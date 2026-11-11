@@ -6,7 +6,8 @@ process.env.APP_ENV ??= 'development';
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './test/db/sandbox/schema.ts',
+  // 005: bảng trạng thái của bản giả lập (src/dev – chạy được trong dist) + bảng mẫu của kiểm thử 002.
+  schema: ['./test/db/sandbox/schema.ts', './src/dev/sandbox/schema.ts'],
   out: './drizzle/migrations-dev',
   entities: { roles: true },
   migrations: { schema: 'infra', table: 'schema_migrations_dev' },

@@ -464,6 +464,8 @@ export function loadRegistry(includeSandbox: boolean): { sandboxLoaded: boolean 
       process.env.APP_ENV ??= 'development';
       try {
         require(sandbox);
+        // 005: bảng trạng thái của bản giả lập (src/dev/sandbox/schema.ts).
+        require(resolve(__dirname, '..', 'dev', 'sandbox', 'schema'));
         sandboxLoaded = true;
       } catch {
         sandboxLoaded = false;

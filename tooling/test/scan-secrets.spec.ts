@@ -21,6 +21,17 @@ describe('tooling/scan-secrets.mjs', () => {
     ]);
   });
 
+  it('005: chuỗi mồi (canary) chỉ bị bắt trong tệp nhật ký', () => {
+    const found = scan([join(dir, 'leaky-canary.ndjson')], '/').map((f) => [f.line, f.name]);
+    expect(found).toEqual([
+      [1, 'mã quyền giả lọt nhật ký'],
+      [2, 'lời nhắc AI lọt nhật ký'],
+      [3, 'nội dung bài lọt nhật ký'],
+    ]);
+    // Mã kiểm thử chứa chuỗi mồi là bình thường (không phải nhật ký).
+    expect(scan([join(dir, 'canary-in-source.ts')], '/')).toEqual([]);
+  });
+
   it('không bắt tên cookie hay tiền tố đứng một mình', () => {
     expect(scan([join(dir, 'clean.ts')], '/')).toEqual([]);
   });

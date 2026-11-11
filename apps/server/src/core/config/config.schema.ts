@@ -131,6 +131,34 @@ export const AppConfigSchema = z.object({
   QUEUE_SETTINGS_REFRESH_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
   /** Nhịp bộ hẹn giờ việc định kỳ. */
   QUEUE_SCHEDULER_TICK_MS: z.coerce.number().int().min(1000).max(30_000).default(10_000),
+
+  // ----- Cổng + bản giả lập (005, contracts/runtime-config.md mục 1) -----
+  // Bắt buộc ở staging/production (bản thật thêm giá trị `real` ở WBS 2.3/3.1/4.3); ở development/test
+  // thiếu thì `resolveGatewayDefaults` (load-config.ts) đặt bản giả lập / bộ nhớ.
+  PLATFORM_GATEWAY_DRIVER: z.enum(['fake']).optional(),
+  AI_GATEWAY_DRIVER: z.enum(['fake']).optional(),
+  NOTIFICATIONS_DRIVER: z.enum(['fake']).optional(),
+  STORAGE_DRIVER: z.enum(['memory', 's3']).optional(),
+  /** Nơi bản giả lập giữ trạng thái; bắt buộc khi có driver `fake` (mặc định `memory` ở dev/test). */
+  FAKE_STATE_STORE: z.enum(['memory', 'sandbox']).optional(),
+  /** Bắt buộc khi `STORAGE_DRIVER=s3`. */
+  S3_ENDPOINT: z.url().optional(),
+  /** Địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = S3_ENDPOINT. */
+  S3_PUBLIC_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().min(1).max(64).optional(),
+  S3_BUCKET: z.string().min(3).max(63).optional(),
+  S3_ACCESS_KEY_ID: secret(z.string().min(1).optional()),
+  S3_SECRET_ACCESS_KEY: secret(z.string().min(1).optional()),
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  /** Trần chi phí AI việc hệ thống (xu hướng) mỗi tuần, micro-USD. */
+  AI_SYSTEM_WEEKLY_CAP_MICRO_USD: z.coerce.number().int().min(0).default(2_000_000),
+  /** Hết thời gian chờ phản hồi `submit` → kết quả `unknown` (không bao giờ `transient`). */
+  PLATFORM_SUBMIT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(120_000).default(30_000),
+  AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(40_000),
+  AI_FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5_000),
 });
 
 /** Cú pháp CIDR IPv4/IPv6 (`địa chỉ/độ dài tiền tố`). */

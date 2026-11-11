@@ -7,10 +7,13 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiAppModule } from '../src/app/api-app.module';
 import { configureApiApp } from '../src/app/configure-api-app';
-import { loadConfig } from '../src/core/config/load-config';
+import { AppConfigSchema } from '../src/core/config/config.schema';
+import { loadConfig, loadConfigFrom } from '../src/core/config/load-config';
 
 async function startApi(appEnv: 'test' | 'production'): Promise<INestApplication> {
-  const config = loadConfig({
+  // 005: production chưa có bản thật của các cổng (loadConfig từ chối bản giả lập) → dựng từ lược đồ thô.
+  const load = appEnv === 'production' ? (env: Record<string, string>) => loadConfigFrom(AppConfigSchema, env) : loadConfig;
+  const config = load({
     APP_ENV: appEnv,
     LOG_LEVEL: 'fatal',
     ...TEST_AUTH_ENV,

@@ -11,17 +11,39 @@ import { SessionService } from './internal/auth/session.service';
 import { StaffAuthController } from './internal/auth/staff-auth.controller';
 import { StaffService } from './internal/auth/staff.service';
 import { ThrottleService } from './internal/auth/throttle.service';
+import { listActiveMembers } from './internal/members-directory';
 import { ACCOUNT_PUBLIC_API, type AccountPublicApi } from './public-api';
+
+/** Thao tác chỉ có ở API (cần phần xác thực) – Worker gọi nhầm thì báo rõ. */
+function apiOnly(name: string): () => Promise<never> {
+  return () => Promise.reject(new Error(`AccountPublicApi.${name} chỉ dùng được ở API`));
+}
 
 /**
  * Module Tài khoản & Gói (`account`).
  * Chỉ export provider thuộc giao diện công khai; mọi thứ khác nằm trong `internal/`.
- * Ở API: xác thực (004) – controller, dịch vụ, `SESSION_RESOLVER` cho AccessGuard. Worker: chưa có gì.
+ * Ở API: xác thực (004) – controller, dịch vụ, `SESSION_RESOLVER` cho AccessGuard. Worker: danh bạ
+ * thành viên (`listActiveMembers` – 005).
  */
 @Module({})
 export class AccountModule {
   static forUnit(unit: 'api' | 'worker'): DynamicModule {
-    if (unit === 'worker') return { module: AccountModule };
+    if (unit === 'worker') {
+      // Worker: chỉ phần không cần xác thực – danh bạ thành viên cho hàng chờ `notify` (005).
+      const workerApi: AccountPublicApi = {
+        listActiveMembers,
+        addMember: apiOnly('addMember'),
+        removeMember: apiOnly('removeMember'),
+        disableMember: apiOnly('disableMember'),
+        createVerifiedOwner: apiOnly('createVerifiedOwner'),
+        createStaff: apiOnly('createStaff'),
+      };
+      return {
+        module: AccountModule,
+        providers: [{ provide: ACCOUNT_PUBLIC_API, useValue: workerApi }],
+        exports: [ACCOUNT_PUBLIC_API],
+      };
+    }
     return {
       module: AccountModule,
       imports: [MailModule],
@@ -53,6 +75,7 @@ export class AccountModule {
             staff: StaffService,
             registration: RegistrationService,
           ): AccountPublicApi => ({
+            listActiveMembers,
             addMember: (input) => members.addMember(input),
             removeMember: (input) => members.removeMember(input),
             disableMember: (input) => members.disableMember(input),

@@ -3,7 +3,7 @@
 // đủ, khóa riêng, khóa truy cập AWS) – không bắt tên cookie hay tiền tố đứng một mình trong mã/kiểm thử.
 // Dùng: node tooling/scan-secrets.mjs [thư mục…]   (mặc định: tệp git theo dõi + tệp mới chưa ignore)
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 
 export const SECRET_PATTERNS = [
@@ -31,6 +31,7 @@ const TEXT_EXT = new Set([
   '.env',
   '.example',
   '.log',
+  '.ndjson',
   '.txt',
   '.html',
   '.css',
@@ -40,6 +41,8 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'dist-typ
 const ALLOW = [/^tooling\/test\/fixtures\/secrets\//];
 
 function walk(dir, out = []) {
+  // Thư mục chưa có (vd test-logs khi chưa chạy kiểm thử) → không có tệp.
+  if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);

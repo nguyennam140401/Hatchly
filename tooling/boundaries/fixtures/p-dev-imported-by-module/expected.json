@@ -1,0 +1,6 @@
+{
+  "note": "module (ngoài internal/fake) nhập src/dev; lõi nhập src/dev/sandbox (005 R17)",
+  "violations": [
+    "dev-only-restricted"
+  ]
+}

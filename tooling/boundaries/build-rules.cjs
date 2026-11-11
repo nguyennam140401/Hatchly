@@ -45,7 +45,12 @@ function buildForbiddenRules(manifest) {
       from: { path: `${MODULES}([^/]+)/` },
       to: {
         path: MODULES,
-        pathNot: [`${MODULES}$1/`, `${MODULES}[^/]+/index\\.ts$`],
+        // queue/enqueue-registered.ts: lối riêng của `account` (005 R9a) – quy tắc enqueue-registered-only-account.
+        pathNot: [
+          `${MODULES}$1/`,
+          `${MODULES}[^/]+/index\\.ts$`,
+          `${MODULES}queue/enqueue-registered\\.ts$`,
+        ],
       },
     },
     {
@@ -191,6 +196,65 @@ function buildForbiddenRules(manifest) {
         'runInAccountScope và bộ nhớ đệm phiên chỉ dành cho modules/account/internal/auth (004, R4): mã tài khoản chỉ được đặt sau khi danh tính đã xác minh. Module khác dùng tenantTx với tài khoản của phiên.',
       ...rule,
     })),
+    // ----- 005 (research R17) -----
+    {
+      name: 'storage-restricted',
+      severity: 'error',
+      comment:
+        'Kho tệp (core/storage) chỉ dành cho modules/media, modules/context, modules/account và tầng ghép (app/, dev/) – 005 R17. Module khác lấy đường dẫn tệp qua giao diện công khai của media.',
+      from: {
+        pathNot: [
+          '^apps/server/src/core/storage/',
+          '^apps/server/src/modules/(media|context|account)/',
+          '^apps/server/src/app/',
+          '^apps/server/src/dev/',
+          '^apps/server/test/',
+        ],
+      },
+      to: { path: '^apps/server/src/core/storage/' },
+    },
+    {
+      name: 'enqueue-registered-only-account',
+      severity: 'error',
+      comment:
+        'enqueueRegistered (tạo việc theo TÊN loại việc) chỉ dành cho modules/account để phát thông báo mà không phụ thuộc notifications (005 R9a). Module khác dùng enqueue(def, …) với loại việc khai báo bằng defineJobType, hoặc gọi giao diện công khai của module sở hữu.',
+      from: {
+        pathNot: ['^apps/server/src/modules/(account|queue)/', '^apps/server/test/'],
+      },
+      to: { path: '^apps/server/src/modules/queue/enqueue-registered\\.ts$' },
+    },
+    // dev-only-restricted: hai điều kiện, cùng mã quy tắc và gợi ý.
+    ...[
+      {
+        // Module chỉ được nhập src/dev từ bản giả lập của chính nó.
+        from: {
+          path: `${MODULES}`,
+          pathNot: `${MODULES}[^/]+/internal/fake/`,
+        },
+        to: { path: '^apps/server/src/dev/' },
+      },
+      {
+        // Bảng/kho giả lập (src/dev/sandbox) chỉ dành cho src/dev và internal/fake.
+        from: {
+          pathNot: ['^apps/server/src/dev/', `${MODULES}[^/]+/internal/fake/`, '^apps/server/test/'],
+        },
+        to: { path: '^apps/server/src/dev/sandbox/' },
+      },
+    ].map((rule) => ({
+      name: 'dev-only-restricted',
+      severity: 'error',
+      comment:
+        'Mã chỉ-dev (src/dev: schema sandbox, kho kịch bản, memoryTx, endpoint giả lập) chỉ được dùng từ src/dev, modules/*/internal/fake/** và tầng ghép (005 R17). Mã chạy ở production không được phụ thuộc bản giả lập.',
+      ...rule,
+    })),
+    {
+      name: 'aws-sdk-only-in-storage',
+      severity: 'error',
+      comment:
+        'SDK AWS (@aws-sdk/*) chỉ được dùng trong core/storage/s3/ (005 R13, FR-008). Dùng giao diện ObjectStorage của core/storage.',
+      from: { pathNot: '^apps/server/src/core/storage/s3/' },
+      to: { path: packagePatternToPath('^@aws-sdk/') },
+    },
     {
       name: 'no-unresolvable',
       severity: 'error',

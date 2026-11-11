@@ -12,6 +12,12 @@ import {
   ReadinessRegistry,
   ShutdownCoordinator,
 } from './core';
+import { DatabaseService } from './core/db/database';
+import {
+  assertSandboxSchemaReady,
+  logGatewaySelection,
+  readGatewaySelection,
+} from './core/gateways/selection';
 import { assertWorkerDatabaseConfig } from './core/config/load-config';
 import { WorkerHealthServer } from './core/health/worker-health-server';
 import { QueueLifecycle } from './modules/queue';
@@ -29,6 +35,9 @@ export async function bootstrapWorker(env: NodeJS.ProcessEnv = process.env) {
   const logger = app.get(Logger);
   app.useLogger(logger);
   app.flushLogs();
+  // 005 (US6-AS1): cùng lựa chọn bản cài đặt ở API và Worker; thiếu schema sandbox → dừng.
+  logGatewaySelection(logger, readGatewaySelection(config));
+  await assertSandboxSchemaReady(config, app.get(DatabaseService), logger);
 
   const coordinator = app.get(ShutdownCoordinator);
   const health = new WorkerHealthServer({
