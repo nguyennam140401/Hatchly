@@ -1,6 +1,11 @@
 import { AUTH_ERROR_MESSAGES, ERROR_CODES } from '@app/shared/core';
 import { AppError } from '../errors/app-error';
-import { PERMISSION_DENIED_MESSAGES, type Permission, type Role } from './permissions';
+import {
+  PERMISSION_CONTACT_OWNER_LABELS,
+  PERMISSION_DENIED_MESSAGES,
+  type Permission,
+  type Role,
+} from './permissions';
 
 // Lỗi của lớp chặn quyền (contracts/auth-http-api.md mục 3). Thông điệp tiếng Việt đời thường, luôn
 // kèm ít nhất một hành động khắc phục (nguyên tắc VI); mã gốc chỉ ở `support.detail`.
@@ -39,7 +44,10 @@ export function forbidden(missing: Permission, role: Role): AppError {
       role === 'collaborator'
         ? [
             { kind: 'navigate', label: 'Quay lại', href: '/' },
-            { kind: 'contact_owner', label: 'Nhờ chủ tài khoản' },
+            {
+              kind: 'contact_owner',
+              label: PERMISSION_CONTACT_OWNER_LABELS[missing] ?? 'Nhờ chủ tài khoản',
+            },
           ]
         : [{ kind: 'navigate', label: 'Quay lại', href: '/' }],
     detail: `missing_permission:${missing}`,

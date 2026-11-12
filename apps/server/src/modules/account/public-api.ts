@@ -38,6 +38,15 @@ export interface AccountPublicApi {
     email: string;
     password: string;
   }): Promise<{ accountId: string; userId: string; created: boolean }>;
+  /**
+   * Tên hiển thị và trạng thái của các người dùng thuộc tài khoản trong ngữ cảnh (006).
+   * Người không thuộc tài khoản này (hoặc mã không tồn tại) không có trong kết quả.
+   * Chạy trong tenantTx của người gọi – không nhận accountId; không ngữ cảnh → TENANT_CONTEXT_MISSING.
+   * Tối đa 100 mã mỗi lần (vượt → lỗi lập trình).
+   */
+  describeMembers(
+    userIds: readonly string[],
+  ): Promise<{ userId: string; displayName: string; status: 'active' | 'removed' | 'disabled' }[]>;
   /** Tạo nhân viên nội bộ (dùng bởi dữ liệu mẫu; vận hành dùng `pnpm staff`). */
   createStaff(input: {
     email: string;

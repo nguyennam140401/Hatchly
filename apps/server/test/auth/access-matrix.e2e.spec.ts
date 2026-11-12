@@ -9,7 +9,7 @@ import { createTestApp, type ErrorBody, type TestApp } from './helpers/app';
 import { createActors, type Actors } from './helpers/actors';
 import { AccessMatrixTestModule } from './support/access-matrix.module';
 
-// T057 (SC-003, FR-012): 5 loại người gọi × 13 quyền → 200/401/403 khớp 100% bảng FR-012.
+// T057 (SC-003, FR-012): 5 loại người gọi × mọi quyền (14 từ 006 – tự lấy PERMISSION_LIST) → 200/401/403 khớp 100% bảng FR-012.
 
 type State = 'anonymous' | 'owner' | 'collaborator' | 'support' | 'admin';
 const STATES: State[] = ['anonymous', 'owner', 'collaborator', 'support', 'admin'];
@@ -34,7 +34,7 @@ describeDb('Ma trận quyền (e2e)', () => {
     await t.close();
   });
 
-  it('5 trạng thái × 13 quyền khớp 100% bảng FR-012', async () => {
+  it('5 trạng thái × mọi quyền khớp 100% bảng FR-012', async () => {
     const mismatches: string[] = [];
     for (const state of STATES) {
       for (const permission of PERMISSION_LIST) {

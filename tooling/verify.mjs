@@ -31,6 +31,14 @@ const DEFAULT_STEPS = [
     requiresEnv: 'TEST_DATABASE_ADMIN_URL',
     skipReason: 'chưa có CSDL kiểm thử',
   },
+  // Kiểm thử trình duyệt (006, nhóm g): Playwright + Chromium trên CSDL tạm, API/web cổng riêng.
+  // Cài trình duyệt một lần: pnpm --filter @app/e2e exec playwright install chromium.
+  {
+    name: 'test:e2e',
+    command: 'pnpm test:e2e',
+    requiresEnv: 'TEST_DATABASE_ADMIN_URL',
+    skipReason: 'chưa có CSDL kiểm thử',
+  },
 ];
 
 function readSteps(argv) {

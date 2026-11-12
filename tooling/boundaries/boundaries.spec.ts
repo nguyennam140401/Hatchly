@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cruise, type ICruiseResult } from 'dependency-cruiser';
 import { describe, expect, it } from 'vitest';
+import { findCrossSchemaSql } from './cross-schema-sql.mjs';
 
 // SC-002: mọi mẫu vi phạm (a)–(f), SDK AI ngoài ai_gateway, hạ tầng nhập nghiệp vụ đều bị bắt;
 // mẫu `clean` không báo gì.
@@ -32,7 +33,10 @@ async function violationsOf(fixture: string): Promise<string[]> {
       },
     );
     const output = result.output as ICruiseResult;
-    return [...new Set(output.summary.violations.map((v) => v.rule.name))].sort();
+    const names = output.summary.violations.map((v) => v.rule.name);
+    // 006 R16: quy tắc quét SQL chạy ngoài dependency-cruiser (cùng lệnh check:boundaries).
+    if (findCrossSchemaSql(baseDir).length > 0) names.push('no-cross-schema-sql');
+    return [...new Set(names)].sort();
   } finally {
     process.chdir(previous);
   }
@@ -47,7 +51,7 @@ function dirExists(base: string, rel: string): boolean {
 }
 
 describe('Bộ mẫu ranh giới module', () => {
-  it('có đủ các trường hợp a–m và clean', () => {
+  it('có đủ các trường hợp a–n và clean', () => {
     expect(cases).toEqual(
       [
         'a-internal-import',
@@ -63,6 +67,7 @@ describe('Bộ mẫu ranh giới module', () => {
         'k-auth-tx-outside-auth',
         'l-account-scope-outside-account',
         'm-bind-account-in-core-auth',
+        'n-cross-schema-sql',
         'clean',
       ].sort(),
     );
@@ -73,5 +78,24 @@ describe('Bộ mẫu ranh giới module', () => {
       violations: string[];
     };
     expect(await violationsOf(fixture)).toEqual([...expected.violations].sort());
+  });
+});
+
+describe('no-cross-schema-sql (006 R16)', () => {
+  it('chỉ báo chuỗi SQL vào schema module khác, kèm tệp:dòng; bỏ qua chú thích, schema của mình, lời gọi hàm, chuỗi không phải SQL', () => {
+    const found = findCrossSchemaSql(join(FIXTURES, 'n-cross-schema-sql'));
+    expect(found).toEqual([
+      {
+        file: 'apps/server/src/modules/context/index.ts',
+        line: 4,
+        module: 'context',
+        schema: 'account',
+        ref: 'account.users',
+      },
+    ]);
+  });
+
+  it('kho thật không có vi phạm', () => {
+    expect(findCrossSchemaSql(join(here, '..', '..'))).toEqual([]);
   });
 });

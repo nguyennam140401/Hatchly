@@ -85,6 +85,20 @@
       "when": 1794324704560,
       "tag": "0011_audit_actor_types",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794484550082,
+      "tag": "0012_context_business_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794484558186,
+      "tag": "0013_context_profile_versions_immutable",
+      "breakpoints": true
     }
   ]
 }

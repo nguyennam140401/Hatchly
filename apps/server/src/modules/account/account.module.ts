@@ -11,12 +11,15 @@ import { SessionService } from './internal/auth/session.service';
 import { StaffAuthController } from './internal/auth/staff-auth.controller';
 import { StaffService } from './internal/auth/staff.service';
 import { ThrottleService } from './internal/auth/throttle.service';
+import { describeMembers } from './internal/members/describe-members';
 import { ACCOUNT_PUBLIC_API, type AccountPublicApi } from './public-api';
 
 /**
  * Module Tài khoản & Gói (`account`).
  * Chỉ export provider thuộc giao diện công khai; mọi thứ khác nằm trong `internal/`.
  * Ở API: xác thực (004) – controller, dịch vụ, `SESSION_RESOLVER` cho AccessGuard. Worker: chưa có gì.
+ * `global` ở API: module được phép (allowedDeps chứa `account`, kiểm bằng check:boundaries) tiêm
+ * `ACCOUNT_PUBLIC_API` mà không phải tự nhập lại AccountModule (006 – module `context`).
  */
 @Module({})
 export class AccountModule {
@@ -24,6 +27,7 @@ export class AccountModule {
     if (unit === 'worker') return { module: AccountModule };
     return {
       module: AccountModule,
+      global: true,
       imports: [MailModule],
       controllers: [CustomerAuthController, StaffAuthController],
       providers: [
@@ -57,6 +61,7 @@ export class AccountModule {
             removeMember: (input) => members.removeMember(input),
             disableMember: (input) => members.disableMember(input),
             createVerifiedOwner: (input) => registration.createVerifiedOwner(input),
+            describeMembers: (userIds) => describeMembers(userIds),
             createStaff: async (input) => ({ id: (await staff.create(input)).id }),
           }),
         },

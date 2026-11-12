@@ -150,6 +150,9 @@ export class Agent {
   patch(path: string, body?: unknown, headers?: Record<string, string>): Promise<TestResponse> {
     return this.send('patch', path, body ?? {}, headers);
   }
+  put(path: string, body?: unknown, headers?: Record<string, string>): Promise<TestResponse> {
+    return this.send('put', path, body ?? {}, headers);
+  }
   delete(path: string, headers?: Record<string, string>): Promise<TestResponse> {
     return this.send('delete', path, undefined, headers);
   }

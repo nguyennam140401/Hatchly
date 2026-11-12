@@ -63,6 +63,9 @@ pnpm test:db               # kiểm thử tích hợp trên CSDL tạm app_test_
 Hướng dẫn lớp CSDL (thêm bảng, ngữ cảnh tenant, migration tương thích ngược):
 [`apps/server/docs/database.md`](apps/server/docs/database.md).
 
+Dựng tính năng nghiệp vụ mới (màn hình → API → module → CSDL → việc nền) bằng cách chép module mẫu "Hồ sơ kinh
+doanh": [`docs/sample-module.md`](docs/sample-module.md).
+
 ### Chạy toàn bộ bằng container (docker compose)
 
 ```powershell

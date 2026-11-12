@@ -14,7 +14,12 @@ export {
 export { accounts, CURRENT_ACCOUNT_ID } from './tenant-root';
 export { currentAccountId, systemTx, tenantTx, type Db } from './transaction';
 export { supportSearch, supportViewAccount, type SupportActor } from './support';
-export { updateVersioned, versionConflict, type VersionedTable } from './versioned';
+export {
+  updateVersioned,
+  versionConflict,
+  type UpdateVersionedOptions,
+  type VersionedTable,
+} from './versioned';
 export {
   DbConnectionError,
   DbQueryError,

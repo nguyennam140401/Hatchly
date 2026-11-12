@@ -26,7 +26,8 @@ export {
 
 /** Lời giải thích tiếng Việt đời thường khi thiếu từng quyền (FR-017, nguyên tắc VI). */
 export const PERMISSION_DENIED_MESSAGES: Record<Permission, string> = {
-  'context.manage': 'Chỉ chủ tài khoản mới sửa được thông tin kinh doanh.',
+  'context.view': 'Bạn không có quyền xem hồ sơ kinh doanh.',
+  'context.edit': 'Chỉ chủ tài khoản mới sửa được hồ sơ kinh doanh.',
   'channel.manage': 'Chỉ chủ tài khoản mới kết nối được kênh.',
   'post.edit': 'Bạn không có quyền soạn hoặc sửa bài.',
   'media.upload': 'Bạn không có quyền tải ảnh, video lên.',
@@ -39,4 +40,12 @@ export const PERMISSION_DENIED_MESSAGES: Record<Permission, string> = {
   'support.lookup': 'Chỉ nhân viên hỗ trợ mới tra cứu được dữ liệu khách hàng.',
   'plan.manage': 'Chỉ quản trị viên mới thay đổi được gói dịch vụ.',
   'staff.manage': 'Chỉ quản trị viên mới quản lý được nhân viên.',
+};
+
+/**
+ * Nhãn hành động `contact_owner` riêng theo quyền (006 contracts/context-http-api.md mục 2); quyền
+ * không có ở đây dùng nhãn mặc định "Nhờ chủ tài khoản".
+ */
+export const PERMISSION_CONTACT_OWNER_LABELS: Partial<Record<Permission, string>> = {
+  'context.edit': 'Nhờ chủ tài khoản cập nhật',
 };

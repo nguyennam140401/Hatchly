@@ -1,0 +1,63 @@
+// Danh mục fixture truy cập chéo (006 R13, FR-023) – MỖI bảng `tenant` của ứng dụng phải có MỘT mục ở
+// đây hoặc trong `CROSS_TENANT_EXEMPT` (bảng đã có spec riêng). `cross-tenant-coverage.db.spec.ts` đọc
+// sổ đăng ký bảng và báo lỗi khi có bảng mới chưa khai báo – quên là bị bắt.
+// Chép mẫu: thêm bảng tenant mới → thêm một mục `{ table, insertRow, updateRow, … }` dưới đây.
+import { eq } from 'drizzle-orm';
+import type { PgTable } from 'drizzle-orm/pg-core';
+import type { Db } from '../../../src/core/db/transaction';
+import { uuidV7 } from '../../../src/core/ids/uuid-v7';
+import { businessProfiles, profileVersions } from '../../../src/modules/context/internal/db/schema';
+import type { CrossTenantOptions } from '../helpers/cross-tenant';
+
+/** Hồ sơ của tài khoản (lấy hoặc tạo) – dữ liệu cha cho `profile_versions`. */
+async function profileOf(db: Db, accountId: string): Promise<{ profileId: string }> {
+  const found = await db
+    .select({ id: businessProfiles.id })
+    .from(businessProfiles)
+    .where(eq(businessProfiles.account_id, accountId))
+    .limit(1);
+  if (found[0] !== undefined) return { profileId: found[0].id };
+  const id = uuidV7();
+  await db.insert(businessProfiles).values({ id, account_id: accountId });
+  return { profileId: id };
+}
+
+let versionSeq = 0;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- danh mục chứa nhiều kiểu bảng/cha
+type AnyFixture = CrossTenantOptions<PgTable, any>;
+
+/** `schema.table` → fixture. */
+export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
+  'context.business_profiles': {
+    table: businessProfiles,
+    onePerAccount: true,
+    insertRow: () => ({}),
+    updateRow: () => ({ updated_at: new Date() }),
+  } satisfies CrossTenantOptions<typeof businessProfiles>,
+  'context.profile_versions': {
+    table: profileVersions,
+    seedParent: profileOf,
+    insertRow: (parent: { profileId: string }) => ({
+      profile_id: parent.profileId,
+      version_number: ++versionSeq,
+      industry_code: 'fashion',
+      introduction: 'Giới thiệu thử',
+      saved_by_user_id: uuidV7(),
+    }),
+    updateRow: () => ({ tone: 'sửa' }),
+    appendOnly: { reason: 'Lịch sử bất biến – migration 0013 thu hồi UPDATE, DELETE của app' },
+  } satisfies CrossTenantOptions<typeof profileVersions, { profileId: string }>,
+};
+
+/** Bảng tenant đã có spec truy cập chéo riêng (không chạy lại ở đây) – lý do trỏ tệp spec. */
+export const CROSS_TENANT_EXEMPT: Record<string, string> = {
+  'account.accounts': 'bảng gốc tenant – test/db/accounts-isolation.db.spec.ts',
+  'account.users': 'mồi qua auth_register – test/db/auth-isolation.db.spec.ts',
+  'account.login_identities': 'test/db/auth-isolation.db.spec.ts',
+  'account.memberships': 'test/db/auth-isolation.db.spec.ts',
+  'account.sessions': 'test/db/auth-isolation.db.spec.ts',
+  'account.auth_tokens': 'test/db/auth-isolation.db.spec.ts',
+  'infra.dead_jobs': 'account_id cho phép NULL – test/db/dead-jobs-isolation.db.spec.ts',
+  'sandbox.tenant_notes': 'bảng mẫu chỉ có trong kiểm thử – test/db/tenant-isolation.db.spec.ts',
+};

@@ -2,6 +2,8 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 import { executionStorage } from '../../src/core/context/execution-storage';
 import { tenantTx } from '../../src/core/db/transaction';
 import { users } from '../../src/modules/account/internal/db/schema';
+import { QueueLifecycle } from '../../src/modules/queue';
+import { asOwner } from '../db/helpers/db';
 import { describeDb } from '../db/helpers/db';
 import {
   createTestApp,
@@ -37,6 +39,47 @@ describeDb('Chèn mã tài khoản (e2e)', () => {
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({ current: a.me.account.id, path: B, query: B, body: B });
     }
+  });
+
+  it('006: PUT /context/profile – accountId trong thân → 400; trong truy vấn → bỏ qua, lưu cho A', async () => {
+    await t.app.get(QueueLifecycle).whenStarted(15_000);
+    const B = b.me.account.id;
+    const fields = {
+      industryCode: 'fashion',
+      industryOther: null,
+      introduction: 'Tiệm của A',
+      products: null,
+      policies: null,
+      tone: null,
+      keywords: [],
+    };
+    for (const extra of [{ accountId: B }, { account_id: B }]) {
+      const res = await a.agent.put('/api/v1/context/profile', {
+        expectedVersion: 0,
+        fields,
+        ...extra,
+      });
+      expect(res.status).toBe(400);
+      expect((res.body as { error: { code: string } }).error.code).toBe('VALIDATION_FAILED');
+    }
+    const inFields = await a.agent.put('/api/v1/context/profile', {
+      expectedVersion: 0,
+      fields: { ...fields, accountId: B },
+    });
+    expect(inFields.status).toBe(400);
+    const res = await a.agent.put(`/api/v1/context/profile?accountId=${B}`, {
+      expectedVersion: 0,
+      fields,
+    });
+    expect(res.status).toBe(200);
+    const owners = await asOwner(async (c) => {
+      const r = await c.query<{ account_id: string }>(
+        'SELECT account_id FROM context.profile_versions WHERE account_id = ANY($1)',
+        [[a.me.account.id, B]],
+      );
+      return r.rows.map((row) => row.account_id);
+    });
+    expect(owners).toEqual([a.me.account.id]);
   });
 
   it('đọc qua tenantTx với ngữ cảnh của A chỉ thấy người dùng của A', async () => {

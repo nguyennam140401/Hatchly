@@ -7,7 +7,13 @@ export default defineConfig({
   plugins: [swc.vite({ module: { type: 'es6' } })],
   test: {
     // 004: e2e xác thực (test/auth/**/*.e2e.spec.ts) và lệnh vận hành (test/ops) cần CSDL thật.
-    include: ['test/db/**/*.db.spec.ts', 'test/auth/**/*.e2e.spec.ts', 'test/ops/**/*.spec.ts'],
+    // 006: kiểm thử của module nghiệp vụ cần CSDL (test/context/**: e2e API, hợp đồng công khai).
+    include: [
+      'test/db/**/*.db.spec.ts',
+      'test/auth/**/*.e2e.spec.ts',
+      'test/ops/**/*.spec.ts',
+      'test/context/**/*.spec.ts',
+    ],
     globalSetup: ['./test/db/global-setup.ts'],
     fileParallelism: false,
     testTimeout: 60_000,
