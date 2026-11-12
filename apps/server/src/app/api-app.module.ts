@@ -3,6 +3,7 @@ import { type AppConfig, CoreModule } from '../core';
 import { AuthModule, type AccessScanMode } from '../core/auth/auth.module';
 import { resolveAuthConfig } from '../core/config/auth-config';
 import { DatabaseModule } from '../core/db/database.module';
+import { StorageModule } from '../core/storage';
 import { DiagnosticsController } from '../core/diagnostics/diagnostics.controller';
 import { HealthController } from '../core/health/health.controller';
 import type { LogDestination } from '../core/logging/logging.module';
@@ -25,6 +26,8 @@ export class ApiAppModule {
       imports: [
         CoreModule.forRoot('api', config, { logDestination: options.logDestination }),
         DatabaseModule.forRoot('api', config),
+        // Kho tệp (005) – chọn bản cài đặt theo STORAGE_DRIVER.
+        StorageModule,
         AuthModule.forRoot(authConfig, { accessScan: options.accessScan }),
         ...buildModules('api'),
       ],

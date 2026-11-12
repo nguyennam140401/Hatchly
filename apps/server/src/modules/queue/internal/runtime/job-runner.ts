@@ -145,7 +145,7 @@ export async function runJob(
   let handlerError: unknown;
   try {
     handlerResult = await runWithJobContext(
-      { traceId: env.traceId, accountId: env.accountId ?? undefined },
+      { traceId: env.traceId, accountId: env.accountId ?? undefined, jobId: job.id },
       async () => {
         // Mã tài khoản trong dữ liệu lệch group_id (đã qua RLS) → không chạy bộ xử lý (hiến pháp I).
         if (env.accountMismatch) {

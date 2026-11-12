@@ -15,6 +15,8 @@ export interface ExecutionContext {
   readonly traceId: string;
   readonly accountId?: string;
   readonly source: ExecutionSource;
+  /** Mã việc nền đang chạy (005) – chỉ có khi `source = 'job'`. */
+  readonly jobId?: string;
   /** Người gọi đã xác thực (004) – đọc qua `currentActor()` của core/auth. */
   readonly actor?: Readonly<Actor>;
 }

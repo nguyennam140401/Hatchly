@@ -32,7 +32,7 @@ export function bindAccountToRequest(accountId: string): void {
 
 /** Chạy `fn` trong ngữ cảnh của một việc nền (Worker đặt lại ngữ cảnh tenant từ dữ liệu việc). */
 export function runWithJobContext<T>(
-  ctx: { traceId: string; accountId?: string | undefined },
+  ctx: { traceId: string; accountId?: string | undefined; jobId?: string | undefined },
   fn: () => Promise<T>,
 ): Promise<T> {
   return executionStorage.run(
@@ -40,6 +40,7 @@ export function runWithJobContext<T>(
       traceId: ctx.traceId,
       source: 'job',
       ...(ctx.accountId !== undefined ? { accountId: ctx.accountId } : {}),
+      ...(ctx.jobId !== undefined ? { jobId: ctx.jobId } : {}),
     },
     fn,
   );

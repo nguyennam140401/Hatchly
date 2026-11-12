@@ -149,9 +149,10 @@ export async function runJobInline<P>(
   if (registered === undefined) throw new Error(`Chưa đăng ký bộ xử lý cho ${def.name}`);
   const value = upgradePayload(def, payload, def.version);
   const traceId = uuidV7();
-  return runWithJobContext({ traceId, accountId: opts.accountId }, () =>
+  const jobId = uuidV7();
+  return runWithJobContext({ traceId, accountId: opts.accountId, jobId }, () =>
     registered.handler(value, {
-      jobId: uuidV7(),
+      jobId,
       type: def.name,
       queue: def.queue,
       attempt: opts.attempt ?? 1,

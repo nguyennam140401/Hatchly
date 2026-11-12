@@ -11,6 +11,8 @@ export interface MutableExecutionContext {
   traceId: string;
   accountId?: string;
   source: ExecutionSource;
+  /** Mã việc nền đang chạy (005 – tệp tạm `tenants/{acc}/tmp/{jobId}/…`); chỉ hàng chờ đặt. */
+  jobId?: string;
   /** Người gọi đã xác thực (004) – chỉ AccessGuard đặt qua bind-account.ts. */
   actor?: Actor;
 }
