@@ -1,8 +1,72 @@
-import { Module } from '@nestjs/common';
+import { type DynamicModule, Module } from '@nestjs/common';
+import { APP_CONFIG, type AppConfig, type Db } from '../../core';
+import type { Crossed } from './internal/budget/budget-store';
+import { makeFakeAiBundle, type FakeAiBundle } from './internal/fake';
+import { AiGatewayService } from './internal/gateway.service';
+import { defineStaleSystemSchedule, registerAiJobHandlers, scheduleStaleRelease } from './jobs';
+import { AI_GATEWAY, type AiGatewayPublicApi } from './public-api';
 
-/**
- * Module Cổng AI (`ai_gateway`).
- * Chỉ export provider thuộc giao diện công khai; mọi thứ khác nằm trong `internal/`.
- */
+// Module Cổng AI (005). Chọn bản cài đặt theo `AI_GATEWAY_DRIVER` (hiện chỉ `fake` – bản thật WBS 3.1) và
+// kho ngân sách theo `FAKE_STATE_STORE`. Worker: bộ xử lý trả giữ chỗ treo.
+
+export const AI_FAKE_BUNDLE = Symbol('AI_FAKE_BUNDLE');
+/** Hàm phát sự kiện ngưỡng trong giao dịch quyết toán – Thông báo nối vào ở T080. */
+export const AI_ON_CROSSED = Symbol('AI_ON_CROSSED');
+
+export type OnCrossed = (tx: Db, crossed: Crossed, cycleStart: string) => Promise<void>;
+
+function notConfigured(): never {
+  throw new Error('Cổng AI chưa được cấu hình bản cài đặt (AI_GATEWAY_DRIVER)');
+}
+
 @Module({})
-export class AiGatewayModule {}
+export class AiGatewayModule {
+  static forUnit(unit: 'api' | 'worker'): DynamicModule {
+    return {
+      module: AiGatewayModule,
+      providers: [
+        { provide: AI_ON_CROSSED, useValue: undefined },
+        {
+          provide: AI_FAKE_BUNDLE,
+          inject: [APP_CONFIG],
+          useFactory: async (config: AppConfig): Promise<FakeAiBundle | null> => {
+            if (config.AI_GATEWAY_DRIVER !== 'fake') return null;
+            const mode = config.FAKE_STATE_STORE ?? 'memory';
+            return makeFakeAiBundle(mode, {
+              systemWeeklyCap: config.AI_SYSTEM_WEEKLY_CAP_MICRO_USD,
+              // sandbox: hẹn việc trả giữ chỗ treo trong cùng giao dịch giữ chỗ.
+              ...(mode === 'sandbox' ? { onReserved: scheduleStaleRelease } : {}),
+            });
+          },
+        },
+        {
+          provide: AI_GATEWAY,
+          inject: [APP_CONFIG, AI_FAKE_BUNDLE, AI_ON_CROSSED],
+          useFactory: (
+            config: AppConfig,
+            bundle: FakeAiBundle | null,
+            onCrossed: OnCrossed | undefined,
+          ): AiGatewayPublicApi => {
+            if (bundle === null) {
+              return new Proxy({}, { get: () => notConfigured }) as AiGatewayPublicApi;
+            }
+            if (unit === 'worker') {
+              registerAiJobHandlers(bundle.store, onCrossed);
+              if (config.FAKE_STATE_STORE === 'sandbox') defineStaleSystemSchedule();
+            }
+            return new AiGatewayService({
+              store: bundle.store,
+              prices: bundle.prices,
+              primary: bundle.primary,
+              fallback: bundle.fallback,
+              providerTimeoutMs: config.AI_PROVIDER_TIMEOUT_MS,
+              firstTokenTimeoutMs: config.AI_FIRST_TOKEN_TIMEOUT_MS,
+              ...(onCrossed !== undefined ? { onCrossed } : {}),
+            });
+          },
+        },
+      ],
+      exports: [AI_GATEWAY, AI_FAKE_BUNDLE],
+    };
+  }
+}

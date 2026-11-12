@@ -1,0 +1,39 @@
+[
+  {
+    "modelTier": "default",
+    "modelId": "fake-default-1",
+    "provider": "fake",
+    "inputPerMTokMicroUsd": 3000000,
+    "outputPerMTokMicroUsd": 15000000,
+    "cachedInputPerMTokMicroUsd": 300000,
+    "effectiveFrom": "2026-01-01T00:00:00Z"
+  },
+  {
+    "modelTier": "cheap",
+    "modelId": "fake-cheap-1",
+    "provider": "fake",
+    "inputPerMTokMicroUsd": 250000,
+    "outputPerMTokMicroUsd": 1250000,
+    "cachedInputPerMTokMicroUsd": 25000,
+    "effectiveFrom": "2026-01-01T00:00:00Z"
+  },
+  {
+    "modelTier": "cheap_vision",
+    "modelId": "fake-cheap-vision-1",
+    "provider": "fake",
+    "inputPerMTokMicroUsd": 250000,
+    "outputPerMTokMicroUsd": 1250000,
+    "cachedInputPerMTokMicroUsd": 25000,
+    "effectiveFrom": "2026-01-01T00:00:00Z"
+  },
+  {
+    "modelTier": "stt",
+    "modelId": "fake-stt-1",
+    "provider": "fake",
+    "inputPerMTokMicroUsd": 0,
+    "outputPerMTokMicroUsd": 0,
+    "cachedInputPerMTokMicroUsd": 0,
+    "perAudioMinuteMicroUsd": 6000,
+    "effectiveFrom": "2026-01-01T00:00:00Z"
+  }
+]

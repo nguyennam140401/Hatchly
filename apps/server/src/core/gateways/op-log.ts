@@ -97,7 +97,8 @@ function outcomeOf(value: unknown): string {
 const tracer = trace.getTracer('app.gateways');
 
 /**
- * Chạy một thao tác cổng trong span `<component>.<op>` và ghi đúng một dòng nhật ký khi xong.
+ * Chạy một thao tác cổng trong span `<component>.<op>` và ghi đúng một dòng nhật ký khi xong. `attrs`
+ * được đọc khi kết thúc – thao tác có thể bổ sung thuộc tính an toàn trong lúc chạy.
  * Lỗi ném ra → `outcome: 'error'` + `error_name` (không thông điệp – có thể chứa dữ liệu), ném tiếp.
  */
 export async function withGatewayOp<T>(
@@ -109,11 +110,12 @@ export async function withGatewayOp<T>(
   const name = `${component}.${op}`;
   const started = performance.now();
   return tracer.startActiveSpan(name, async (span) => {
-    const safe = safeAttrs(attrs);
-    for (const [k, v] of Object.entries(safe)) span.setAttribute(k, v as string | number | boolean);
     try {
       const result = await fn();
       const outcome = outcomeOf(result);
+      // Thuộc tính đọc lúc kết thúc: thao tác được bổ sung (vd hạng mô hình, số token) khi chạy.
+      const safe = safeAttrs(attrs);
+      for (const [k, v] of Object.entries(safe)) span.setAttribute(k, v as string | number | boolean);
       span.setAttribute('outcome', outcome);
       sink.write({
         msg: name,
@@ -125,6 +127,7 @@ export async function withGatewayOp<T>(
       });
       return result;
     } catch (err) {
+      const safe = safeAttrs(attrs);
       span.setStatus({ code: SpanStatusCode.ERROR });
       sink.write({
         msg: name,
