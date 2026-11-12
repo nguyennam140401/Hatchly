@@ -15,7 +15,15 @@ export const SECRET_PATTERNS = [
   },
   { name: 'khóa riêng', re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
   { name: 'khóa truy cập AWS', re: /\bAKIA[0-9A-Z]{16}\b/ },
+  // 005 (SC-009): chuỗi mồi của bộ kiểm thử hợp đồng – CHỈ quét trong nhật ký (.ndjson/.log), vì mã
+  // kiểm thử cố ý chứa chúng. Thấy trong nhật ký = mã quyền / lời nhắc / nội dung bài bị ghi ra.
+  { name: 'mã quyền giả lọt nhật ký', re: /fake_tok_[A-Za-z0-9_-]{4,}/, logsOnly: true },
+  { name: 'lời nhắc AI lọt nhật ký', re: /PROMPT_CANARY_[A-Za-z0-9_]+/, logsOnly: true },
+  { name: 'nội dung bài lọt nhật ký', re: /POST_CANARY_[A-Za-z0-9_]+/, logsOnly: true },
 ];
+
+/** Tệp nhật ký (chịu thêm mẫu `logsOnly`). */
+const LOG_EXT = new Set(['.log', '.ndjson']);
 
 const TEXT_EXT = new Set([
   '.ts',
@@ -72,9 +80,11 @@ export function scanFiles(files, root = process.cwd()) {
     } catch {
       continue;
     }
+    const isLog = LOG_EXT.has(extname(file));
     const lines = text.split(/\r?\n/);
     lines.forEach((line, i) => {
       for (const p of SECRET_PATTERNS) {
+        if (p.logsOnly === true && !isLog) continue;
         if (p.re.test(line)) findings.push({ file: rel, line: i + 1, name: p.name });
       }
     });

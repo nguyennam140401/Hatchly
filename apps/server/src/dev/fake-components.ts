@@ -32,9 +32,11 @@ export interface ScenarioStore {
   clear(): Promise<void>;
   /**
    * Lấy kịch bản khớp `target` (khớp chính xác trước, rồi `*`; cũ nhất trước) và tiêu một lượt dùng bằng
-   * cập nhật có điều kiện (`remaining_uses > 0`); hết lượt → xóa. Không có → `null`.
+   * cập nhật có điều kiện (`remaining_uses > 0`); hết lượt → xóa. Không có → `null`. `specKey`: chỉ
+   * lấy kịch bản có khóa đó ở cấp gốc của `spec` (vd `submit`, `latencyMs`) – mỗi thao tác chỉ tiêu
+   * đúng loại bước của mình.
    */
-  take(component: FakeComponent, target: string): Promise<FakeScenario | null>;
+  take(component: FakeComponent, target: string, specKey?: string): Promise<FakeScenario | null>;
 }
 
 /** Tài khoản của ngữ cảnh hiện hành – thiếu → TenantContextError (như tenantTx). */

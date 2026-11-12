@@ -65,7 +65,7 @@ export class SandboxScenarioStore implements ScenarioStore {
     await tenantTx((db) => db.delete(fakeScenarios));
   }
 
-  take(component: FakeComponent, target: string): Promise<FakeScenario | null> {
+  take(component: FakeComponent, target: string, specKey?: string): Promise<FakeScenario | null> {
     return tenantTx(async (db) => {
       const [row] = await db
         .select()
@@ -74,6 +74,7 @@ export class SandboxScenarioStore implements ScenarioStore {
           and(
             eq(fakeScenarios.component, component),
             inArray(fakeScenarios.target, [target, '*']),
+            specKey === undefined ? undefined : sql`${fakeScenarios.spec} ? ${specKey}`,
           ),
         )
         .orderBy(

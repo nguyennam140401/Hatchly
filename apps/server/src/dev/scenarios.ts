@@ -70,13 +70,16 @@ export class MemoryScenarioStore implements ScenarioStore {
     });
   }
 
-  take(component: FakeComponent, target: string): Promise<FakeScenario | null> {
+  take(component: FakeComponent, target: string, specKey?: string): Promise<FakeScenario | null> {
     // Đồng bộ trong một lượt vòng lặp sự kiện → nguyên tử trong tiến trình.
     return syncPromise(() => {
       const rows = this.rows();
+      const keyOk = (r: FakeScenario) =>
+        specKey === undefined ||
+        (typeof r.spec === 'object' && r.spec !== null && specKey in r.spec);
       const pick =
-        rows.find((r) => r.component === component && r.target === target) ??
-        rows.find((r) => r.component === component && r.target === '*');
+        rows.find((r) => r.component === component && r.target === target && keyOk(r)) ??
+        rows.find((r) => r.component === component && r.target === '*' && keyOk(r));
       if (pick === undefined) return null;
       const taken = structuredClone(pick);
       if (pick.remainingUses !== null) {
