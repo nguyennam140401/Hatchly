@@ -29,11 +29,18 @@ export interface AiHarness {
   logText(): string;
   /** Có giao dịch CSDL thật (kiểm được giao dịch hủy, đo thời gian giữ chỗ). */
   hasRealTx: boolean;
+  /** Phát sự kiện ngưỡng qua Thông báo thật của chế độ (memory: bộ phát bộ nhớ; sandbox: hàng chờ). */
+  notify: {
+    onCrossed: (tx: Db, crossed: Crossed, cycleStart: string) => Promise<void>;
+    /** Số sự kiện `type` đã phát của tài khoản trong ngữ cảnh. */
+    count(type: 'ai_usage_80' | 'ai_usage_100'): Promise<number>;
+  };
 }
 
 export async function makeAiHarness(
   mode: FakeStateStore,
   createAccount: () => Promise<string>,
+  notify: AiHarness['notify'],
 ): Promise<AiHarness> {
   const bundle = await makeFakeAiBundle(mode, { systemWeeklyCap: 2_000_000 });
   return {
@@ -65,5 +72,6 @@ export async function makeAiHarness(
       }
     },
     hasRealTx: mode === 'sandbox',
+    notify,
   };
 }

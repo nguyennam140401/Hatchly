@@ -1,43 +1,14 @@
 // 005 T016: AccountPublicApi.listActiveMembers – chỉ thành viên đang hoạt động của tài khoản trong ngữ cảnh.
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { uuidV7 } from '../../src/core/ids/uuid-v7';
 import { listActiveMembers } from '../../src/modules/account/internal/members-directory';
 import {
-  asOwner,
   createAccount,
   describeDb,
   makeDatabase,
   withAccount,
   type TestDatabase,
 } from './helpers/db';
-
-/** Mồi một người dùng + tư cách thành viên (bằng `owner`). */
-export async function seedMember(
-  accountId: string,
-  opts: {
-    role: 'owner' | 'collaborator';
-    seat: number;
-    status?: 'active' | 'removed' | 'disabled';
-    userStatus?: 'active' | 'disabled';
-    name?: string;
-  },
-): Promise<{ userId: string; email: string }> {
-  const userId = uuidV7();
-  const email = `${opts.role}-${userId.slice(-8)}@example.test`;
-  await asOwner(async (c) => {
-    await c.query(
-      `INSERT INTO account.users (id, account_id, display_name, email, email_normalized, status,
-         terms_version, terms_accepted_at) VALUES ($1, $2, $3, $4, $4, $5, '2026-11', now())`,
-      [userId, accountId, opts.name ?? opts.role, email, opts.userStatus ?? 'active'],
-    );
-    await c.query(
-      `INSERT INTO account.memberships (id, account_id, user_id, role, seat, status)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-      [uuidV7(), accountId, userId, opts.role, opts.seat, opts.status ?? 'active'],
-    );
-  });
-  return { userId, email };
-}
+import { seedMember } from './helpers/members';
 
 describeDb('listActiveMembers (005 R9)', () => {
   let database: TestDatabase;

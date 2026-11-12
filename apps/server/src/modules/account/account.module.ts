@@ -40,12 +40,15 @@ export class AccountModule {
       };
       return {
         module: AccountModule,
+        global: true,
         providers: [{ provide: ACCOUNT_PUBLIC_API, useValue: workerApi }],
         exports: [ACCOUNT_PUBLIC_API],
       };
     }
     return {
       module: AccountModule,
+      // Global: Thông báo (005) tiêm ACCOUNT_PUBLIC_API để tra người nhận; ranh giới do manifest kiểm.
+      global: true,
       imports: [MailModule],
       controllers: [CustomerAuthController, StaffAuthController],
       providers: [

@@ -370,6 +370,78 @@ export function describeAiGatewayContract(
     });
   });
 
+  describe('12. sự kiện 80% / 100% (T080)', () => {
+    it('mỗi mốc đúng 1 sự kiện trong chu kỳ; chu kỳ mới phát lại được', async () => {
+      await withAccount(async () => {
+        const g = h().gateway({ onCrossed: h().notify.onCrossed });
+        await h().fake.setBudget({ used: 3_199_000, cycleStart: '2026-11-01' });
+        await h().fake.script([{ actualCostMultiplier: 40, outputTokens: 40 }], 'primary');
+        await g.generate(req({ maxOutputTokens: 40 })); // vượt 80%
+        await g.generate(req({ maxOutputTokens: 40 })); // vẫn trên 80% – không phát lại
+        expect(await h().notify.count('ai_usage_80')).toBe(1);
+        expect(await h().notify.count('ai_usage_100')).toBe(0);
+        await h().fake.setBudget({ used: 3_999_000 });
+        await h().fake.script([{ actualCostMultiplier: 100, outputTokens: 40 }], 'primary');
+        await g.generate(req({ maxOutputTokens: 40 }));
+        expect(await h().notify.count('ai_usage_100')).toBe(1);
+        expect(await h().notify.count('ai_usage_80')).toBe(1);
+        // Chu kỳ mới: cờ mới → phát lại được.
+        await h().fake.setBudget({ used: 3_199_000, cycleStart: '2026-12-01' });
+        await h().fake.script([{ actualCostMultiplier: 40, outputTokens: 40 }], 'primary');
+        await g.generate(req({ maxOutputTokens: 40 }));
+        expect(await h().notify.count('ai_usage_80')).toBe(2);
+      });
+    });
+  });
+
+  describe('13. sự kiện cùng giao dịch quyết toán (chỉ sandbox)', () => {
+    it('emit ném → không cờ, không sổ, không sự kiện; quyết toán lại → đúng 1 sự kiện', async (ctx) => {
+      if (!h().hasRealTx) {
+        ctx.skip(); // memory: không có giao dịch thật để hủy (research R9b)
+        return;
+      }
+      await withAccount(async () => {
+        let fail = true;
+        const g = h().gateway({
+          onCrossed: async (tx, crossed, cycle) => {
+            await h().notify.onCrossed(tx, crossed, cycle);
+            if (fail) throw new Error('emit lỗi');
+          },
+        });
+        await h().fake.setBudget({ used: 3_199_000, cycleStart: '2026-11-01' });
+        await h().fake.script([{ actualCostMultiplier: 40, outputTokens: 40 }], 'primary');
+        await g.generate(req({ maxOutputTokens: 40 })); // nhà cung cấp đã trả lời → vẫn trả kết quả
+        const b = await h().fake.getBudget();
+        expect(b).toMatchObject({ notified80: false, used: 3_199_000 });
+        expect(b.reserved).toBeGreaterThan(0); // giữ chỗ còn `calling`, chờ releaseStale
+        expect(await h().fake.ledger()).toEqual([]);
+        expect(await h().notify.count('ai_usage_80')).toBe(0);
+        expect((await h().fake.reservations()).map((r) => r.state)).toEqual(['calling']);
+        // Gỡ lỗi, quyết toán lại (như releaseStale) → đúng 1 sự kiện.
+        fail = false;
+        const [r] = await h().fake.reservations();
+        await h().bundle.store.settle(
+          r!.id,
+          r!.estimateMicroUsd + 5_000, // chi phí thực vượt mốc 80% (như lần gọi bị hủy)
+          {
+            task: 'post_generation',
+            modelTier: 'default',
+            modelId: 'm',
+            provider: 'primary',
+            inputTokens: 0,
+            outputTokens: 0,
+            cachedInputTokens: 0,
+            traceId: null,
+          },
+          { onCrossed: (tx, crossed) => h().notify.onCrossed(tx, crossed, '2026-11-01') },
+        );
+        expect(await h().notify.count('ai_usage_80')).toBe(1);
+        expect((await h().fake.getBudget()).notified80).toBe(true);
+      });
+      expect(h().logText()).toContain('ai.settle_failed');
+    });
+  });
+
   describe('nhật ký', () => {
     it('không chứa lời nhắc, văn bản kết quả hay số tiền', () => {
       const logs = h().logText();

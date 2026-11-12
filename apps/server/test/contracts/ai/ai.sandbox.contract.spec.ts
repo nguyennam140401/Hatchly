@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { createAccount, describeDb, makeDatabase, withAccount, type TestDatabase } from '../../db/helpers/db';
+import { currentAccountId } from '../../../src/core/db/transaction';
+import { makeOnCrossed } from '../../../src/modules/ai_gateway/ai_gateway.module';
+import { QueueEmitter } from '../../../src/modules/notifications/internal/emit';
+import { jobs } from '../../queue/helpers/queue-db';
+import { startTestProducer } from '../../support/queue-test-kit';
 import { describeAiGatewayContract } from './ai-gateway.contract';
 import { makeAiHarness, type AiHarness } from './harness';
 
@@ -8,14 +13,26 @@ import { makeAiHarness, type AiHarness } from './harness';
 
 let harness: AiHarness;
 let database: TestDatabase;
+let stopProducer: () => Promise<void>;
 
 describeDb('Cổng AI – bản giả lập (sandbox)', () => {
   beforeAll(async () => {
     // unit worker: có bể system cho ngân sách hệ thống (systemTx).
     database = makeDatabase({ unit: 'worker', poolMax: 10 });
-    harness = await makeAiHarness('sandbox', () => createAccount());
+    stopProducer = await startTestProducer();
+    harness = await makeAiHarness('sandbox', () => createAccount(), {
+      onCrossed: makeOnCrossed(new QueueEmitter()),
+      count: async (type) =>
+        (
+          await jobs(
+            "data->>'type' = 'notifications.deliver' AND data->>'accountId' = $1 AND data->'payload'->'event'->>'type' = $2",
+            [currentAccountId(), type],
+          )
+        ).length,
+    });
   });
   afterAll(async () => {
+    await stopProducer();
     await database.close();
   });
 

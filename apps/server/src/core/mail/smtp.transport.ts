@@ -1,10 +1,23 @@
 import { createTransport, type Transporter } from 'nodemailer';
-import type { MailMessage, Mailer } from './mailer';
+import { sendViaDeliver, type MailDeliveryResult, type MailMessage, type Mailer } from './mailer';
 
 // Gửi thư qua SMTP (môi trường thật: Amazon SES; dev: Mailpit). Thư viện bọc sau giao diện `Mailer`
 // (nguyên tắc IX). Lỗi chỉ giữ mã, không giữ thông điệp gốc (có thể chứa máy chủ/người dùng SMTP).
 
 const SEND_TIMEOUT_MS = 10_000;
+const PERMANENT_CODES = new Set([550, 551, 552, 553, 554]);
+
+/** Phân loại lỗi SMTP (005, R14): 550–554 → permanent; 4xx, lỗi mạng, còn lại → transient. */
+export function classifySmtpError(err: unknown): MailDeliveryResult {
+  const e = (err ?? {}) as { responseCode?: unknown; code?: unknown };
+  const responseCode = typeof e.responseCode === 'number' ? e.responseCode : undefined;
+  if (responseCode !== undefined && PERMANENT_CODES.has(responseCode)) {
+    return { kind: 'permanent', code: String(responseCode) };
+  }
+  if (responseCode !== undefined) return { kind: 'transient', code: String(responseCode) };
+  const code = typeof e.code === 'string' ? e.code.replace(/[^A-Z0-9_]/g, '').slice(0, 32) : '';
+  return { kind: 'transient', code: code === '' ? 'UNKNOWN' : code };
+}
 
 export class SmtpMailTransport implements Mailer {
   private readonly transporter: Transporter;
@@ -33,13 +46,18 @@ export class SmtpMailTransport implements Mailer {
     });
   }
 
-  async send(message: MailMessage): Promise<void> {
+  async deliver(message: MailMessage): Promise<MailDeliveryResult> {
     try {
-      await this.transporter.sendMail({ from: this.from, ...message });
+      const info = (await this.transporter.sendMail({ from: this.from, ...message })) as {
+        messageId?: unknown;
+      };
+      return { kind: 'sent', messageId: typeof info.messageId === 'string' ? info.messageId : '' };
     } catch (err) {
-      const code = (err as { code?: unknown } | null)?.code;
-      const error = new Error(`MAIL_SEND_FAILED:${typeof code === 'string' ? code : 'UNKNOWN'}`);
-      throw error;
+      return classifySmtpError(err);
     }
+  }
+
+  send(message: MailMessage): Promise<void> {
+    return sendViaDeliver(this, message);
   }
 }

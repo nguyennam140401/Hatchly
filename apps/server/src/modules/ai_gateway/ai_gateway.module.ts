@@ -4,6 +4,7 @@ import type { Crossed } from './internal/budget/budget-store';
 import { makeFakeAiBundle, type FakeAiBundle } from './internal/fake';
 import { AiGatewayService } from './internal/gateway.service';
 import { defineStaleSystemSchedule, registerAiJobHandlers, scheduleStaleRelease } from './jobs';
+import { NOTIFICATIONS, type NotificationsPublicApi } from '../notifications';
 import { AI_GATEWAY, type AiGatewayPublicApi } from './public-api';
 
 // Module Cổng AI (005). Chọn bản cài đặt theo `AI_GATEWAY_DRIVER` (hiện chỉ `fake` – bản thật WBS 3.1) và
@@ -15,6 +16,19 @@ export const AI_ON_CROSSED = Symbol('AI_ON_CROSSED');
 
 export type OnCrossed = (tx: Db, crossed: Crossed, cycleStart: string) => Promise<void>;
 
+/** Phát `ai_usage_80` / `ai_usage_100` cho từng mốc vừa vượt, trên cùng `tx` của quyết toán. */
+export function makeOnCrossed(notifications: NotificationsPublicApi): OnCrossed {
+  return async (tx, crossed, cycleStart) => {
+    for (const p of crossed) {
+      await notifications.emit(tx, {
+        type: p === 80 ? 'ai_usage_80' : 'ai_usage_100',
+        refs: { cycleStart },
+        params: { percent: p },
+      });
+    }
+  };
+}
+
 function notConfigured(): never {
   throw new Error('Cổng AI chưa được cấu hình bản cài đặt (AI_GATEWAY_DRIVER)');
 }
@@ -25,7 +39,13 @@ export class AiGatewayModule {
     return {
       module: AiGatewayModule,
       providers: [
-        { provide: AI_ON_CROSSED, useValue: undefined },
+        {
+          // Sự kiện 80/100% tạo TRONG giao dịch quyết toán (nguyên tắc IV, research R7) – không bao giờ
+          // emit sau khi settle đã trả.
+          provide: AI_ON_CROSSED,
+          inject: [NOTIFICATIONS],
+          useFactory: (notifications: NotificationsPublicApi): OnCrossed => makeOnCrossed(notifications),
+        },
         {
           provide: AI_FAKE_BUNDLE,
           inject: [APP_CONFIG],

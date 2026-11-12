@@ -49,6 +49,6 @@ export {
 } from './auth/actor';
 export { SESSION_RESOLVER, type Resolved, type SessionResolver } from './auth/session-resolver';
 export { MailModule } from './mail/mail.module';
-export { MAILER, type MailMessage, type Mailer } from './mail/mailer';
+export { MAILER, type MailDeliveryResult, type MailMessage, type Mailer } from './mail/mailer';
 export { MemoryMailTransport } from './mail/memory.transport';
 export { ZodValidationPipe } from './validation/zod-validation.pipe';

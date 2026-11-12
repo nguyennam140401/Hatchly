@@ -1,3 +1,2 @@
-// Hợp đồng web ↔ API của module Thông báo; hợp đồng nội bộ/hỗ trợ đặt ở internal-support.ts.
-// Lối vào: `@app/shared/notifications`. Thêm hợp đồng mới chỉ chạm thư mục này (FR-015).
-export {};
+// Hợp đồng dùng chung của module Thông báo (005). Lối vào: `@app/shared/notifications`.
+export * from './events';

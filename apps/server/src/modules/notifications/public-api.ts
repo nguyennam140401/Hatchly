@@ -1,10 +1,18 @@
+import type { NotificationEvent } from '@app/shared/notifications';
+import type { Db } from '../../core';
+
 /**
- * Giao diện công khai của module Thông báo (`notifications`) – giữ chỗ, chưa có thao tác.
+ * Giao diện công khai của module Thông báo (`notifications`) – 005, contracts/notifications.md mục 2.
  *
- * Trách nhiệm (ADD mục 6): Thông báo trong ứng dụng và email (SMTP) kèm cách khắc phục; nhắc quyền truy cập sắp hết hạn.
- *
- * Module khác chỉ được dùng module này qua `index.ts` (quy tắc no-internal-cross-module) và chỉ khi
- * có `notifications` trong `allowedDeps` của mình ở modules.manifest.json.
+ * Phát TRONG giao dịch nghiệp vụ hiện tại (`tx` bắt buộc): giao dịch hủy → không có thông báo (FR-042).
+ * Không có tham số kênh, người nhận hay khóa chống trùng – Thông báo tự quyết theo danh mục (FR-041, FR-043).
+ * Sự kiện sai khuôn hoặc có trường bị cấm (số tiền, mã quyền, nội dung bài…) → NotificationEventInvalidError.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- giữ chỗ tới khi có thao tác đầu tiên
-export interface NotificationsPublicApi {}
+export interface NotificationsPublicApi {
+  emit(tx: Db, event: NotificationEvent): Promise<{ status: 'queued' | 'duplicate_pending' }>;
+}
+
+/** Token NestJS của NotificationsPublicApi. */
+export const NOTIFICATIONS = Symbol('NOTIFICATIONS');
+
+export type { NotificationEvent, NotificationType } from '@app/shared/notifications';
