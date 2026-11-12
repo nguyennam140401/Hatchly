@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { asOwner, describeDb } from '../db/helpers/db';
+import { QueueLifecycle } from '../../src/modules/queue';
 import {
   createTestApp,
+  registerAndVerify,
   tokenFromMail,
   uniqueEmail,
   waitForMail,
@@ -103,5 +105,37 @@ describeDb('Không lộ bí mật xác thực (e2e)', () => {
     expect(haystacks.logs).not.toContain(email);
     // Cookie bị che trong nhật ký yêu cầu.
     expect(haystacks.logs).not.toMatch(/__Host-(staff_)?sid=[A-Za-z0-9_-]{10,}/);
+  });
+
+  it('006 FR-020: lưu hồ sơ kinh doanh (thành công, 400, 409) – nhật ký không chứa nội dung hồ sơ', async () => {
+    await t.app.get(QueueLifecycle).whenStarted(15_000);
+    const { agent } = await registerAndVerify(t);
+    const SECRET = 'Nội-dung-hồ-sơ-thử-7f3a';
+    const fields = {
+      industryCode: 'other',
+      industryOther: `Ngành ${SECRET}`,
+      introduction: `Giới thiệu ${SECRET}`,
+      products: `SP ${SECRET}`,
+      policies: null,
+      tone: null,
+      keywords: [`kw-${SECRET}`],
+    };
+    const before = t.rawLogs.length;
+    expect(
+      (await agent.put('/api/v1/context/profile', { expectedVersion: 0, fields })).status,
+    ).toBe(200);
+    // 400: từ khóa trùng – thông điệp lỗi CÓ giá trị người dùng nhưng nhật ký thì không.
+    const bad = await agent.put('/api/v1/context/profile', {
+      expectedVersion: 1,
+      fields: { ...fields, keywords: [`kw-${SECRET}`, `KW-${SECRET}`] },
+    });
+    expect(bad.status).toBe(400);
+    expect(
+      (await agent.put('/api/v1/context/profile', { expectedVersion: 0, fields })).status,
+    ).toBe(409);
+    const logs = t.rawLogs.slice(before).join('\n');
+    expect(logs).toContain('request.rejected');
+    expect(logs).toContain('context.profile.saved');
+    expect(logs).not.toContain(SECRET);
   });
 });

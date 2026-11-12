@@ -304,7 +304,8 @@ lại liên kết lần 2 → bị từ chối.
 
   | Quyền | owner | collaborator | support | admin |
   |---|---|---|---|---|
-  | Xem/sửa ngữ cảnh kinh doanh | ✔ | – | – | – |
+  | Xem ngữ cảnh kinh doanh (`context.view`) – *sửa đổi bởi 006, xem ghi chú dưới bảng* | ✔ | ✔ | – | – |
+  | Sửa ngữ cảnh kinh doanh (`context.edit`) – *sửa đổi bởi 006* | ✔ | – | – | – |
   | Kết nối/ngắt kênh | ✔ | – | – | – |
   | Soạn, sửa bài; tải media | ✔ | ✔ | – | – |
   | Duyệt bài, lên lịch bài mới duyệt | ✔ | – | – | – |
@@ -317,6 +318,11 @@ lại liên kết lần 2 → bị từ chối.
 
   "Xem nhật ký đăng" của cộng tác viên: đặc tả mục 3 ghi "xem trạng thái" – coi là gồm nhật ký đăng của
   tài khoản mình. Không vai trò nào xem được mã quyền truy cập nền tảng.
+
+  **Sửa đổi 2026-11-11 (đặc tả 006, Clarifications Q1–Q2):** dòng "Xem/sửa ngữ cảnh kinh doanh" (mã cũ
+  `context.manage`) được tách thành `context.view` (chủ + cộng tác viên, theo UI/UX U5) và `context.edit`
+  (chỉ chủ); hỗ trợ/quản trị không xem hồ sơ kinh doanh. Mã nguồn đổi khi implement 006. Danh mục chuẩn có mã
+  và mốc neo: `TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#dt-3-1-danh-muc-quyen`.
 - **FR-013**: Mỗi điểm cuối API MUST khai báo rõ một trong: "công khai", "khách hàng + danh sách quyền",
   hoặc "nội bộ + danh sách quyền". Lớp chặn quyền dùng chung MUST kiểm tra trước khi chạy nghiệp vụ;
   điểm cuối không khai báo MUST bị từ chối mặc định, và kiểm tra tự động MUST báo lỗi trong CI khi có

@@ -93,7 +93,7 @@ export interface RequestOptions {
 
 /** Gọi API JSON; 2xx → dữ liệu đã kiểm theo `schema` (204 → undefined); còn lại ném ApiError. */
 export async function apiRequest<T>(
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   options: RequestOptions & { body?: unknown; schema?: ResponseSchema<T> } = {},
 ): Promise<T> {

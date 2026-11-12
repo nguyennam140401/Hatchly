@@ -1,5 +1,6 @@
 import type { HealthResponse } from '@app/shared/core';
 import { useCallback, useContext, useEffect, useState, type CSSProperties } from 'react';
+import { Link } from 'react-router';
 import { authApi } from '../features/auth/auth-api';
 import { SessionContext } from '../features/auth/session';
 import { getHealth } from '../lib/api-client';
@@ -65,6 +66,19 @@ export function StartPage() {
           style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}
         >
           <span style={{ alignSelf: 'center' }}>Xin chào, {session.me.user.displayName}</span>
+          <Link
+            to="/business-profile"
+            style={{
+              ...retryButton,
+              background: '#fff',
+              color: '#1d4ed8',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            Hồ sơ kinh doanh
+          </Link>
           <a
             href="/settings/security"
             style={{

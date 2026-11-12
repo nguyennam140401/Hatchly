@@ -51,8 +51,14 @@ chứng minh guard bỏ qua mọi giá trị do người dùng gửi.
 
 ## Thêm quyền mới
 
-1. Thêm **một dòng** vào `packages/shared/src/auth/permissions.ts` kèm chú thích truy vết FR. Đây là nguồn
-   duy nhất – web dùng cùng bảng để ẩn/hiện nút (chỉ là trải nghiệm, API vẫn tự chặn).
+0. Ghi quyền vào **danh mục quyền nghiệp vụ** trước: Đặc tả yêu cầu mục 3.1
+   (`TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#dt-3-1-danh-muc-quyen`), kèm nguồn quyết định. Mỗi quyền
+   có mốc neo `#pq-<mã, dấu chấm thành gạch ngang>` (vd `#pq-context-view`); chú thích trong mã, spec, plan
+   trỏ thẳng vào mốc đó. Không đổi tên hay xóa mã đã dùng – quyền bỏ đi ghi "Ngừng dùng" kèm quyền thay thế.
+   Quy ước đặt tên: `<module>.view` cho xem, `<module>.edit` cho sửa khi hai quyền khác vai trò (mẫu: hồ sơ
+   kinh doanh, đặc tả 006); `<module>.manage` chỉ khi chỉ một vai trò được cả xem lẫn sửa.
+1. Thêm **một dòng** vào `packages/shared/src/auth/permissions.ts` kèm chú thích truy vết FR và mốc neo. Đây là
+   nguồn duy nhất trong mã – web dùng cùng bảng để ẩn/hiện nút (chỉ là trải nghiệm, API vẫn tự chặn).
 2. Thêm lời giải thích vào `PERMISSION_DENIED_MESSAGES` (`apps/server/src/core/auth/permissions.ts`) –
    kiểu `Record<Permission, string>` bắt buộc đủ.
 3. Cập nhật bảng mong đợi ở `test/auth/permissions.spec.ts`. Ma trận e2e

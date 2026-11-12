@@ -57,6 +57,30 @@ describeDb('Khóa lạc quan – updateVersioned', () => {
     expect(err.actions[0]).toEqual({ kind: 'retry', label: 'Tải lại' });
   });
 
+  it('006 R3: thông điệp và nhãn xung đột tùy chỉnh theo ngữ cảnh (mặc định cũ giữ nguyên)', async () => {
+    const [id] = await seedNotes(a, 1);
+    const err = await withAccount(a, () =>
+      tenantTx((db) =>
+        updateVersioned(
+          db,
+          tenantNotes,
+          { id: id!, expectedVersion: 99 },
+          { title: 'x' },
+          {
+            conflictMessage: 'Hồ sơ vừa được cập nhật ở nơi khác. Tải bản mới nhất để xem.',
+            conflictActionLabel: 'Tải bản mới nhất',
+          },
+        ),
+      ),
+    ).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AppError);
+    expect((err as AppError).code).toBe('VERSION_CONFLICT');
+    expect((err as AppError).message).toBe(
+      'Hồ sơ vừa được cập nhật ở nơi khác. Tải bản mới nhất để xem.',
+    );
+    expect((err as AppError).actions[0]).toEqual({ kind: 'retry', label: 'Tải bản mới nhất' });
+  });
+
   it('bảng không có cột version → lỗi lúc gọi', async () => {
     await expect(
       withAccount(a, () =>

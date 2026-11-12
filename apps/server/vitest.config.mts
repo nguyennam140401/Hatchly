@@ -8,7 +8,7 @@ export default defineConfig({
     // 005 (T011): nhật ký thao tác cổng → test-logs/*.ndjson để quét bí mật (SC-009).
     setupFiles: ['./test/setup/log-capture.ts'],
     include: ['test/**/*.spec.ts'],
-    // Chạy riêng: CSDL + e2e xác thực + lệnh vận hành bằng `pnpm test:db`, hàng chờ bằng `pnpm test:queue`.
+    // Chạy riêng: CSDL + e2e xác thực + lệnh vận hành + test/context (006) bằng `pnpm test:db`, hàng chờ bằng `pnpm test:queue`.
     exclude: [
       'test/db/**',
       'test/queue/**',
@@ -18,6 +18,7 @@ export default defineConfig({
       'test/contracts/**/*.sandbox.contract.spec.ts',
       'test/contracts/**/*.infra.contract.spec.ts',
       'test/e2e/**',
+      'test/context/**',
       '**/node_modules/**',
     ],
     globalSetup: ['./test/global-setup.ts'],

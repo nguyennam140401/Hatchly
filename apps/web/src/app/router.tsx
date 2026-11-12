@@ -6,6 +6,8 @@ import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { SecuritySettingsPage } from '../features/auth/SecuritySettingsPage';
 import { StaffLoginPage } from '../features/auth/StaffLoginPage';
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage';
+import { BusinessProfilePage } from '../features/context/BusinessProfilePage';
+import { VersionDetailPage } from '../features/context/VersionDetailPage';
 import { SessionGate } from './SessionGate';
 import { StartPage } from './StartPage';
 
@@ -24,6 +26,9 @@ export const appRoutes: RouteObject[] = [
     children: [
       { path: '/', element: <StartPage /> },
       { path: '/settings/security', element: <SecuritySettingsPage /> },
+      // 006: hồ sơ kinh doanh (quyền context.view; sửa khi có context.edit – API tự chặn).
+      { path: '/business-profile', element: <BusinessProfilePage /> },
+      { path: '/business-profile/versions/:versionId', element: <VersionDetailPage /> },
     ],
   },
 ];

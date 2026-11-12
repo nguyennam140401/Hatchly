@@ -4,8 +4,16 @@
 // Đổi quyền của vai trò có sẵn phải được review theo nguyên tắc VI.
 
 export const PERMISSIONS = {
-  /** Ngữ cảnh kinh doanh (FR-01). */
-  'context.manage': { owner: true, collaborator: false, support: false, admin: false },
+  /**
+   * Xem hồ sơ kinh doanh (FR-01, 006 R9) –
+   * TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#pq-context-view.
+   */
+  'context.view': { owner: true, collaborator: true, support: false, admin: false },
+  /**
+   * Sửa hồ sơ kinh doanh – chỉ chủ (FR-01, 006 R9) –
+   * TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#pq-context-edit.
+   */
+  'context.edit': { owner: true, collaborator: false, support: false, admin: false },
   /** Kết nối/ngắt kênh (FR-02). */
   'channel.manage': { owner: true, collaborator: false, support: false, admin: false },
   /** Soạn, sửa bài (FR-05). */

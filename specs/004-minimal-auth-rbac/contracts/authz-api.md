@@ -5,6 +5,10 @@ thể chỉnh nhỏ ở bước tasks, miễn giữ nguyên hành vi.
 
 ## 1. Danh mục quyền (FR-012)
 
+> **Sửa đổi 2026-11-11 (006):** `context.manage` sẽ được tách thành `context.view` (owner + collaborator) và
+> `context.edit` (owner) khi implement 006. Danh mục chuẩn, có mã và mốc neo từng quyền:
+> `TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#dt-3-1-danh-muc-quyen`.
+
 ```ts
 export const PERMISSIONS = {
   'context.manage':   { owner: true,  collaborator: false, support: false, admin: false },

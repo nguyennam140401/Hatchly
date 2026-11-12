@@ -18,6 +18,7 @@ import './sandbox/schema';
 import '../../src/dev/sandbox/schema';
 // Bảng của module (đăng ký vào sổ khi nạp) – như db:check nạp mọi modules/*/internal/db/schema.ts.
 import '../../src/modules/account/internal/db/schema';
+import '../../src/modules/context/internal/db/schema';
 
 const FIXTURES = join(__dirname, 'fixtures', 'conventions');
 const fixtures = readdirSync(FIXTURES)

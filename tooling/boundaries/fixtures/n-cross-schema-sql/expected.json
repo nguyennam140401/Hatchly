@@ -1,0 +1,4 @@
+{
+  "note": "module context viết SQL vào schema account của module khác (006 R16). Ca import modules/<m>/internal/** từ module khác đã có ở a-internal-import (không tạo trùng).",
+  "violations": ["no-cross-schema-sql"]
+}

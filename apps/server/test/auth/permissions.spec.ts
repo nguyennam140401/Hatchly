@@ -10,7 +10,8 @@ import {
 
 const EXPECTED = {
   owner: [
-    'context.manage',
+    'context.view',
+    'context.edit',
     'channel.manage',
     'post.edit',
     'media.upload',
@@ -21,14 +22,39 @@ const EXPECTED = {
     'members.manage',
     'account.delete',
   ],
-  collaborator: ['post.edit', 'media.upload', 'post.reschedule', 'post.republish', 'status.view'],
+  collaborator: [
+    'context.view',
+    'post.edit',
+    'media.upload',
+    'post.reschedule',
+    'post.republish',
+    'status.view',
+  ],
   support: ['support.lookup'],
   admin: ['support.lookup', 'plan.manage', 'staff.manage'],
 } as const;
 
 describe('Danh mục quyền', () => {
-  it('có đúng 13 quyền', () => {
-    expect(PERMISSION_LIST).toHaveLength(13);
+  it('có đúng 14 quyền (006: context.manage tách thành context.view + context.edit)', () => {
+    expect(PERMISSION_LIST).toHaveLength(14);
+    expect(PERMISSION_LIST as string[]).not.toContain('context.manage');
+  });
+
+  it('hồ sơ kinh doanh: chủ xem + sửa, cộng tác viên chỉ xem, nội bộ không có gì (FR-008, FR-012)', () => {
+    expect(roleHasPermission('owner', 'context.view')).toBe(true);
+    expect(roleHasPermission('owner', 'context.edit')).toBe(true);
+    expect(roleHasPermission('collaborator', 'context.view')).toBe(true);
+    expect(roleHasPermission('collaborator', 'context.edit')).toBe(false);
+    for (const role of ['support', 'admin'] as const) {
+      expect(roleHasPermission(role, 'context.view')).toBe(false);
+      expect(roleHasPermission(role, 'context.edit')).toBe(false);
+    }
+    expect(PERMISSION_DENIED_MESSAGES['context.view']).toBe(
+      'Bạn không có quyền xem hồ sơ kinh doanh.',
+    );
+    expect(PERMISSION_DENIED_MESSAGES['context.edit']).toBe(
+      'Chỉ chủ tài khoản mới sửa được hồ sơ kinh doanh.',
+    );
   });
 
   it.each(Object.entries(EXPECTED))(

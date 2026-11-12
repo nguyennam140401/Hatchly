@@ -17,7 +17,7 @@
       "kind": "business",
       "schema": "context",
       "runsIn": ["api", "worker"],
-      "allowedDeps": ["ai_gateway", "queue"]
+      "allowedDeps": ["account", "ai_gateway", "queue"]
     },
     {
       "name": "media",

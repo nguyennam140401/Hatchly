@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { ERROR_CODES, type ErrorResponse } from '@app/shared/core';
 import type { Request, Response } from 'express';
-import { resolveTraceId } from '../context/request-context';
+import { routeTemplate } from '../auth/access.guard';
+import { getExecutionContext, resolveTraceId } from '../context/request-context';
 import { DbConnectionError, DbPolicyViolationError, TenantContextError } from '../db/errors';
 import { AppError } from './app-error';
 
@@ -104,6 +105,26 @@ export class ErrorFilter implements ExceptionFilter {
       mapped = fromHttpException(exception);
     } else {
       mapped = internal();
+    }
+
+    if (exception instanceof AppError && mapped.status >= 400 && mapped.status < 500) {
+      // 006 R14: mọi từ chối nghiệp vụ (hợp lệ, xung đột, quyền…) một dòng có cấu trúc. Chỉ mã lỗi,
+      // route MẪU (không giá trị tham số) và đường dẫn ô lỗi – KHÔNG thân yêu cầu, KHÔNG thông điệp
+      // của fieldErrors (có thể chứa giá trị người dùng nhập, vd từ khóa bị trùng).
+      this.logger.warn({
+        msg: 'request.rejected',
+        event: 'request.rejected',
+        code: mapped.code,
+        reason: mapped.code.toLowerCase(),
+        status: mapped.status,
+        method: req.method,
+        route: routeTemplate(req),
+        account_id: getExecutionContext()?.accountId ?? null,
+        trace_id: traceId,
+        ...(mapped.fieldErrors !== undefined
+          ? { fields: mapped.fieldErrors.map((f) => f.path.join('.')) }
+          : {}),
+      });
     }
 
     if (mapped.status >= 500 && !(exception instanceof AppError)) {

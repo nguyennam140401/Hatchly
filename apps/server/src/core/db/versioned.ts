@@ -10,14 +10,27 @@ import type { Db } from './transaction';
 
 export type VersionedTable = PgTable & { id: AnyPgColumn; version: AnyPgColumn };
 
-/** Lỗi xung đột phiên bản: HTTP 409, hành động "Tải lại". */
-export function versionConflict(): AppError {
+/**
+ * Lỗi xung đột phiên bản: HTTP 409, hành động `retry`. Thông điệp/nhãn mặc định nói về "Bài" (002);
+ * module khác truyền câu đúng ngữ cảnh của mình (006 R3) – vd hồ sơ kinh doanh.
+ */
+export function versionConflict(
+  message = 'Bài vừa được người khác sửa. Tải lại để xem bản mới nhất.',
+  actionLabel = 'Tải lại',
+): AppError {
   return new AppError({
     code: ERROR_CODES.VERSION_CONFLICT,
     httpStatus: 409,
-    message: 'Bài vừa được người khác sửa. Tải lại để xem bản mới nhất.',
-    actions: [{ kind: 'retry', label: 'Tải lại' }],
+    message,
+    actions: [{ kind: 'retry', label: actionLabel }],
   });
+}
+
+export interface UpdateVersionedOptions {
+  /** Thông điệp xung đột theo ngữ cảnh (mặc định: thông điệp "Bài…" của 002). */
+  conflictMessage?: string;
+  /** Nhãn hành động `retry` (mặc định "Tải lại"). */
+  conflictActionLabel?: string;
 }
 
 /**
@@ -29,6 +42,7 @@ export async function updateVersioned<T extends VersionedTable>(
   table: T,
   key: { id: string; expectedVersion: number },
   values: PgUpdateSetSource<T>,
+  options: UpdateVersionedOptions = {},
 ): Promise<T['$inferSelect']> {
   const columns = table as unknown as Record<string, AnyPgColumn | undefined>;
   const version = columns.version;
@@ -45,6 +59,8 @@ export async function updateVersioned<T extends VersionedTable>(
     .where(and(eq(id, key.id), eq(version, key.expectedVersion)))
     .returning()) as T['$inferSelect'][];
   const row = rows[0];
-  if (row === undefined) throw versionConflict();
+  if (row === undefined) {
+    throw versionConflict(options.conflictMessage, options.conflictActionLabel);
+  }
   return row;
 }

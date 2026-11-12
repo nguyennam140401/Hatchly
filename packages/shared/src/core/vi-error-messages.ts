@@ -80,6 +80,12 @@ function translate(issue: Issue): string {
       return `Giá trị phải là bội số của ${issue.divisor}.`;
     case 'unrecognized_keys':
       return 'Có thông tin không được hỗ trợ.';
+    case 'custom': {
+      // Chỉ dùng thông điệp do lược đồ chủ động đặt bằng `viIssue` (006) – thông điệp mặc định
+      // tiếng Anh của Zod ("Invalid input") không bao giờ lọt ra người dùng.
+      const vi = (issue.params as { viMessage?: unknown } | undefined)?.viMessage;
+      return typeof vi === 'string' && vi !== '' ? vi : FALLBACK;
+    }
     default:
       return FALLBACK;
   }
@@ -112,6 +118,17 @@ export type AuthErrorCode = keyof typeof AUTH_ERROR_MESSAGES;
 export function loginThrottledMessage(retryAfterSeconds: number): string {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return AUTH_ERROR_MESSAGES.LOGIN_THROTTLED.replace('{n}', String(minutes));
+}
+
+/**
+ * Lỗi tùy chỉnh có thông điệp tiếng Việt (dùng trong `superRefine`): `ctx.addIssue(viIssue(msg, path))`.
+ * `toFieldErrors` giữ nguyên thông điệp này – web và API ra cùng câu chữ.
+ */
+export function viIssue(
+  message: string,
+  path: (string | number)[] = [],
+): { code: 'custom'; message: string; path: (string | number)[]; params: { viMessage: string } } {
+  return { code: 'custom', message, path, params: { viMessage: message } };
 }
 
 /** Chuyển lỗi Zod thành danh sách lỗi theo ô, thông điệp tiếng Việt. */

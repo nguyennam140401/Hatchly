@@ -33,6 +33,7 @@
     "test:queue": "pnpm --filter @app/server test:queue",
     "test:infra": "pnpm --filter @app/server test:infra",
     "test:queue-soak": "pnpm --filter @app/server test:queue-soak",
+    "test:e2e": "pnpm --filter @app/e2e test:e2e",
     "queue:sql": "pnpm --filter @app/server queue:sql"
   },
   "devDependencies": {
