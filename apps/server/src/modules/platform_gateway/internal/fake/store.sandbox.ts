@@ -93,7 +93,8 @@ export class SandboxFakePlatformStore implements FakePlatformStore {
           where: sql`status <> 'disconnected'`,
         })
         .returning();
-      if (inserted[0] !== undefined) return { connection: toConnection(inserted[0]), created: true };
+      if (inserted[0] !== undefined)
+        return { connection: toConnection(inserted[0]), created: true };
       const [live] = await db
         .select()
         .from(pgFakeConnections)
@@ -164,9 +165,14 @@ export class SandboxFakePlatformStore implements FakePlatformStore {
             gt(pgFakeOauthStates.expires_at, now),
           ),
         )
-        .returning({ userId: pgFakeOauthStates.user_id, channelType: pgFakeOauthStates.channel_type }),
+        .returning({
+          userId: pgFakeOauthStates.user_id,
+          channelType: pgFakeOauthStates.channel_type,
+        }),
     );
-    return row === undefined ? null : { userId: row.userId, channelType: row.channelType as ChannelType };
+    return row === undefined
+      ? null
+      : { userId: row.userId, channelType: row.channelType as ChannelType };
   }
 
   async createSelection(s: {
@@ -252,7 +258,8 @@ export class SandboxFakePlatformStore implements FakePlatformStore {
         })
         .returning(),
     );
-    return toPost(row!);
+    if (row === undefined) throw new Error('Không đọc lại được bài giả vừa ghi');
+    return toPost(row);
   }
 
   async findByProcessingId(processingId: string): Promise<FakePost | null> {
@@ -322,7 +329,7 @@ export class SandboxFakePlatformStore implements FakePlatformStore {
         .from(pgFakePosts)
         .where(and(eq(pgFakePosts.content_hash, contentHash), eq(pgFakePosts.state, 'published'))),
     );
-    return Number(row?.n ?? 0);
+    return row?.n ?? 0;
   }
 
   async reset(): Promise<void> {

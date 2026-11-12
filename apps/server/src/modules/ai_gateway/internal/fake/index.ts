@@ -74,7 +74,8 @@ export function fakeAi(mode: FakeStateStore, store: FakeBudgetStore) {
     },
     async reset() {
       const scenarios = await getScenarioStore(mode);
-      for (const s of await scenarios.list()) if (s.component === 'ai') await scenarios.delete(s.id);
+      for (const s of await scenarios.list())
+        if (s.component === 'ai') await scenarios.delete(s.id);
       await store.reset();
     },
   };

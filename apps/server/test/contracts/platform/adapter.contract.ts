@@ -38,10 +38,10 @@ export function describePlatformAdapterContract(
       }
       expect(adapter.capabilities).toEqual(
         expect.objectContaining({
-          reconcile: expect.any(Boolean),
-          asyncProcessing: expect.any(Boolean),
-          tokenRefresh: expect.any(Boolean),
-          reportsQuota: expect.any(Boolean),
+          reconcile: expect.any(Boolean) as unknown,
+          asyncProcessing: expect.any(Boolean) as unknown,
+          tokenRefresh: expect.any(Boolean) as unknown,
+          reportsQuota: expect.any(Boolean) as unknown,
         }),
       );
     });
@@ -53,8 +53,8 @@ export function describePlatformAdapterContract(
       expect(h(base.replace('https://example.vn/menu?id=1', 'https://fb.me/abc'))).toBe(h(base));
       expect(h(base.normalize('NFD'))).toBe(h(base));
       expect(h(`  ${base.replace(/ /g, '   ')}\n`)).toBe(h(base));
-      expect(h(base.replace('Gió', 'G​ió'))).toBe(h(base));
-      expect(h(base.replace(/ /g, ' '))).toBe(h(base));
+      expect(h(base.replace('Gió', 'G\u200Bió'))).toBe(h(base));
+      expect(h(base.replace(/ /g, '\u00A0'))).toBe(h(base));
       expect(h(base.replace('Gió', 'GIÓ'))).not.toBe(h(base));
       expect(h(base.replace('Gió', 'Mây'))).not.toBe(h(base));
     });
@@ -75,7 +75,9 @@ export function describePlatformAdapterContract(
         const connectionId = await h.createConnection(adapter.channelType);
         const cred = await vault.decrypt(await vault.encrypt(newFakeToken()));
         const ctx = { connectionId };
-        expect(AccountCheckShape.safeParse(await adapter.checkAccount(cred, ctx)).success).toBe(true);
+        expect(AccountCheckShape.safeParse(await adapter.checkAccount(cred, ctx)).success).toBe(
+          true,
+        );
         const text = `Bài thử ${connectionId}`;
         const submitted = await adapter.submit(cred, {
           text,
@@ -96,7 +98,9 @@ export function describePlatformAdapterContract(
           to: new Date(Date.now() + 60_000),
         });
         expect(ReconcileResultShape.safeParse(rec).success).toBe(true);
-        expect(RefreshTokenShape.safeParse(await adapter.refreshToken(cred, ctx)).success).toBe(true);
+        expect(RefreshTokenShape.safeParse(await adapter.refreshToken(cred, ctx)).success).toBe(
+          true,
+        );
         const rules = adapter.mediaRules();
         expect(rules.maxItems).toBeGreaterThan(0);
         expect(adapter.authorizeUrl('st', 'http://app.test/cb')).toContain('st');

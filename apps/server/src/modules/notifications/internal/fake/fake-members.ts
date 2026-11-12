@@ -10,15 +10,23 @@ export class FakeAccountMembers implements MembersDirectory {
   private readonly byAccount = new Map<string, ActiveMember[]>();
 
   set(members: ActiveMember[]): void {
-    this.byAccount.set(requireFakeAccount(), members.map((m) => ({ ...m })));
+    this.byAccount.set(
+      requireFakeAccount(),
+      members.map((m) => ({ ...m })),
+    );
   }
 
   remove(userId: string): void {
     const accountId = requireFakeAccount();
-    this.byAccount.set(accountId, (this.byAccount.get(accountId) ?? []).filter((m) => m.userId !== userId));
+    this.byAccount.set(
+      accountId,
+      (this.byAccount.get(accountId) ?? []).filter((m) => m.userId !== userId),
+    );
   }
 
   listActiveMembers(): Promise<ActiveMember[]> {
-    return syncPromise(() => (this.byAccount.get(requireFakeAccount()) ?? []).map((m) => ({ ...m })));
+    return syncPromise(() =>
+      (this.byAccount.get(requireFakeAccount()) ?? []).map((m) => ({ ...m })),
+    );
   }
 }

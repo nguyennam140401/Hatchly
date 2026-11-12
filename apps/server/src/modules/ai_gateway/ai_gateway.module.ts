@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig, type Db } from '../../core';
+import { notConfiguredProxy } from '../../core/gateways/not-configured';
 import type { Crossed } from './internal/budget/budget-store';
 import { makeFakeAiBundle, type FakeAiBundle } from './internal/fake';
 import { AiGatewayService } from './internal/gateway.service';
@@ -29,10 +30,6 @@ export function makeOnCrossed(notifications: NotificationsPublicApi): OnCrossed 
   };
 }
 
-function notConfigured(): never {
-  throw new Error('Cổng AI chưa được cấu hình bản cài đặt (AI_GATEWAY_DRIVER)');
-}
-
 @Module({})
 export class AiGatewayModule {
   static forUnit(unit: 'api' | 'worker'): DynamicModule {
@@ -44,7 +41,8 @@ export class AiGatewayModule {
           // emit sau khi settle đã trả.
           provide: AI_ON_CROSSED,
           inject: [NOTIFICATIONS],
-          useFactory: (notifications: NotificationsPublicApi): OnCrossed => makeOnCrossed(notifications),
+          useFactory: (notifications: NotificationsPublicApi): OnCrossed =>
+            makeOnCrossed(notifications),
         },
         {
           provide: AI_FAKE_BUNDLE,
@@ -68,7 +66,7 @@ export class AiGatewayModule {
             onCrossed: OnCrossed | undefined,
           ): AiGatewayPublicApi => {
             if (bundle === null) {
-              return new Proxy({}, { get: () => notConfigured }) as AiGatewayPublicApi;
+              return notConfiguredProxy<AiGatewayPublicApi>('AI_GATEWAY_DRIVER', 'Cổng AI');
             }
             if (unit === 'worker') {
               registerAiJobHandlers(bundle.store, onCrossed);

@@ -39,12 +39,18 @@ function text(event: NotificationEvent): { titleVi: string; bodyVi: string } {
       titleVi: 'Có bài chờ bạn duyệt',
       bodyVi: `Cộng tác viên vừa gửi ${event.type === 'post_pending_review' ? event.refs.postIds.length : 1} bài chờ duyệt. Mở để xem và duyệt.`,
     }),
-    post_returned: () => ({ titleVi: 'Bài được trả lại để sửa', bodyVi: `Chủ tài khoản đã trả lại ${quote(p.postTitle)} để bạn chỉnh sửa.` }),
+    post_returned: () => ({
+      titleVi: 'Bài được trả lại để sửa',
+      bodyVi: `Chủ tài khoản đã trả lại ${quote(p.postTitle)} để bạn chỉnh sửa.`,
+    }),
     approved_post_rescheduled: () => ({
       titleVi: 'Bài đã duyệt được đổi giờ đăng',
       bodyVi: `Giờ đăng của ${quote(p.postTitle)} vừa được thay đổi. Bài không cần duyệt lại.`,
     }),
-    batch_generation_done: () => ({ titleVi: 'Đã tạo xong các bài nháp', bodyVi: 'AI đã tạo xong loạt bài nháp bạn yêu cầu. Mở kế hoạch để xem và sửa.' }),
+    batch_generation_done: () => ({
+      titleVi: 'Đã tạo xong các bài nháp',
+      bodyVi: 'AI đã tạo xong loạt bài nháp bạn yêu cầu. Mở kế hoạch để xem và sửa.',
+    }),
     publish_needs_action: () => ({
       titleVi: 'Bài cần bạn kiểm tra',
       bodyVi:
@@ -58,14 +64,22 @@ function text(event: NotificationEvent): { titleVi: string; bodyVi: string } {
     }),
     ai_usage_80: () => ({
       titleVi: 'Bạn đã dùng 80% giới hạn AI của chu kỳ',
-      bodyVi: 'Khi dùng hết, các chức năng AI tạm dừng đến chu kỳ sau. Bạn vẫn soạn, duyệt và đăng bài bình thường.',
+      bodyVi:
+        'Khi dùng hết, các chức năng AI tạm dừng đến chu kỳ sau. Bạn vẫn soạn, duyệt và đăng bài bình thường.',
     }),
     ai_usage_100: () => ({
       titleVi: 'Đã dùng hết giới hạn AI của chu kỳ',
-      bodyVi: 'Các chức năng AI tạm dừng đến chu kỳ sau. Bạn vẫn soạn tay, duyệt, lên lịch và đăng bài bình thường.',
+      bodyVi:
+        'Các chức năng AI tạm dừng đến chu kỳ sau. Bạn vẫn soạn tay, duyệt, lên lịch và đăng bài bình thường.',
     }),
-    plan_expiring: () => ({ titleVi: 'Gói dịch vụ sắp hết hạn', bodyVi: 'Gói của bạn sắp hết hạn. Gia hạn để không gián đoạn việc đăng bài.' }),
-    data_deletion_scheduled: () => ({ titleVi: 'Dữ liệu sắp bị xóa', bodyVi: 'Dữ liệu tài khoản đã được lên lịch xóa. Liên hệ hỗ trợ nếu đây là nhầm lẫn.' }),
+    plan_expiring: () => ({
+      titleVi: 'Gói dịch vụ sắp hết hạn',
+      bodyVi: 'Gói của bạn sắp hết hạn. Gia hạn để không gián đoạn việc đăng bài.',
+    }),
+    data_deletion_scheduled: () => ({
+      titleVi: 'Dữ liệu sắp bị xóa',
+      bodyVi: 'Dữ liệu tài khoản đã được lên lịch xóa. Liên hệ hỗ trợ nếu đây là nhầm lẫn.',
+    }),
   };
   return t[event.type]();
 }

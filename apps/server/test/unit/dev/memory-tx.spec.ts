@@ -13,8 +13,8 @@ describe('memoryTx', () => {
     expect(isMemoryTx({})).toBe(false);
     expect(isMemoryTx(null)).toBe(false);
     expect(() => tx.select()).toThrow('memoryTx không chạy được SQL – sai chế độ FAKE_STATE_STORE');
-    expect(() => tx.execute).toThrow(/sai chế độ FAKE_STATE_STORE/);
-    expect(() => tx.$client).toThrow(/sai chế độ/);
+    expect(() => Reflect.get(tx, 'execute')).toThrow(/sai chế độ FAKE_STATE_STORE/);
+    expect(() => Reflect.get(tx, '$client')).toThrow(/sai chế độ/);
   });
 
   it('await / in gỡ lỗi không ném', async () => {
@@ -33,8 +33,18 @@ describe('MemoryScenarioStore', () => {
     const a = uuidV7();
     await inAccount(a, async () => {
       await store.put({ component: 'platform', target: '*', spec: { n: 'any' } });
-      await store.put({ component: 'platform', target: 'connection:1', spec: { n: 1 }, remainingUses: 1 });
-      await store.put({ component: 'platform', target: 'connection:1', spec: { n: 2 }, remainingUses: 2 });
+      await store.put({
+        component: 'platform',
+        target: 'connection:1',
+        spec: { n: 1 },
+        remainingUses: 1,
+      });
+      await store.put({
+        component: 'platform',
+        target: 'connection:1',
+        spec: { n: 2 },
+        remainingUses: 2,
+      });
       expect((await store.take('platform', 'connection:1'))?.spec).toEqual({ n: 1 });
       expect((await store.take('platform', 'connection:1'))?.spec).toEqual({ n: 2 });
       expect((await store.take('platform', 'connection:1'))?.spec).toEqual({ n: 2 });

@@ -33,5 +33,7 @@ export async function seedMember(
 
 /** Gỡ thành viên (như thao tác của account – trạng thái `removed`). */
 export async function removeSeededMember(userId: string): Promise<void> {
-  await asOwner((c) => c.query("UPDATE account.memberships SET status = 'removed' WHERE user_id = $1", [userId]));
+  await asOwner((c) =>
+    c.query("UPDATE account.memberships SET status = 'removed' WHERE user_id = $1", [userId]),
+  );
 }

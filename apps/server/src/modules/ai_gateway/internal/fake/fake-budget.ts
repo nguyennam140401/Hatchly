@@ -15,10 +15,20 @@ export interface FakeBudgetView {
 
 export interface FakeBudgetControl {
   /** Đặt ngân sách chu kỳ của tài khoản trong ngữ cảnh (chu kỳ mới → thành chu kỳ hiện hành). */
-  setBudget(b: { used?: number; reserved?: number; cap?: number; cycleStart?: string }): Promise<FakeBudgetView>;
+  setBudget(b: {
+    used?: number | undefined;
+    reserved?: number | undefined;
+    cap?: number | undefined;
+    cycleStart?: string | undefined;
+  }): Promise<FakeBudgetView>;
   getBudget(): Promise<FakeBudgetView>;
   /** Ngân sách tuần hệ thống (ngữ cảnh không tài khoản). */
-  setSystemBudget(b: { used?: number; reserved?: number; cap?: number; weekStart?: string }): Promise<void>;
+  setSystemBudget(b: {
+    used?: number;
+    reserved?: number;
+    cap?: number;
+    weekStart?: string;
+  }): Promise<void>;
   ledger(): Promise<CostLedgerEntry[]>;
   reservations(): Promise<Reservation[]>;
   /** Lùi `reservedAt`/`calledAt` của mọi giữ chỗ đang mở (mô phỏng thời gian trôi). */

@@ -21,8 +21,17 @@ import type {
 } from '../adapters/adapter';
 import { makeClassifier } from '../adapters/classify';
 import { contentHashOf } from '../adapters/content-hash';
-import { newFakeToken, revealCredential, type DecryptedCredential } from '../vault/credential-vault';
-import { defaultFakePages, FAKE_CHANNELS, FAKE_ERROR_TABLE, type FakeChannelSpec } from './channels';
+import {
+  newFakeToken,
+  revealCredential,
+  type DecryptedCredential,
+} from '../vault/credential-vault';
+import {
+  defaultFakePages,
+  FAKE_CHANNELS,
+  FAKE_ERROR_TABLE,
+  type FakeChannelSpec,
+} from './channels';
 import type { FakePostStore } from './post-store';
 import { FakeOauthPages, FakeStep } from './scenarios';
 
@@ -42,11 +51,14 @@ function rid(prefix: string): string {
 function alterText(text: string, how: 'shorten_links' | 'nfd' | 'whitespace'): string {
   switch (how) {
     case 'shorten_links':
-      return text.replace(/https?:\/\/\S+/g, () => `https://fb.me/${randomBytes(3).toString('hex')}`);
+      return text.replace(
+        /https?:\/\/\S+/g,
+        () => `https://fb.me/${randomBytes(3).toString('hex')}`,
+      );
     case 'nfd':
       return text.normalize('NFD');
     case 'whitespace':
-      return `​ ${text.replace(/ /g, '   ')}\n`;
+      return `\u200B ${text.replace(/ /g, '  \u00A0')}\n`;
   }
 }
 
@@ -105,7 +117,10 @@ export class FakePlatformAdapter implements PlatformAdapter {
     return this.classify(rawCode);
   }
 
-  async checkAccount(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<AccountCheckResult> {
+  async checkAccount(
+    cred: DecryptedCredential,
+    ctx: AdapterCallContext,
+  ): Promise<AccountCheckResult> {
     await this.latency(ctx.connectionId);
     const s = await this.step(ctx.connectionId, 'check');
     const scripted = s !== undefined && 'check' in s ? s.check : undefined;
@@ -159,7 +174,11 @@ export class FakePlatformAdapter implements PlatformAdapter {
       case 'processing_then_failed': {
         if (!this.capabilities.asyncProcessing) {
           const post = await this.insertPublished(base);
-          return { kind: 'published', platformPostId: post.platformPostId, permalink: post.permalink };
+          return {
+            kind: 'published',
+            platformPostId: post.platformPostId,
+            permalink: post.permalink,
+          };
         }
         const processingId = rid('proc');
         await this.posts.insertPost({
@@ -175,12 +194,20 @@ export class FakePlatformAdapter implements PlatformAdapter {
       }
       case 'published': {
         const post = await this.insertPublished(base);
-        return { kind: 'published', platformPostId: post.platformPostId, permalink: post.permalink };
+        return {
+          kind: 'published',
+          platformPostId: post.platformPostId,
+          permalink: post.permalink,
+        };
       }
     }
   }
 
-  private insertPublished(base: { connectionId: string; contentHash: string; storedTextHash: string }) {
+  private insertPublished(base: {
+    connectionId: string;
+    contentHash: string;
+    storedTextHash: string;
+  }) {
     const platformPostId = rid('post');
     return this.posts.insertPost({
       ...base,
@@ -200,7 +227,7 @@ export class FakePlatformAdapter implements PlatformAdapter {
   ): Promise<CheckStatusResult> {
     await this.latency(ctx.connectionId);
     const post = await this.posts.findByProcessingId(processingId);
-    if (post === null || post.connectionId !== ctx.connectionId) {
+    if (post?.connectionId !== ctx.connectionId) {
       return { kind: 'failed', error: this.classify('FAKE_PROCESSING_NOT_FOUND') };
     }
     switch (post.processingOutcome) {
@@ -241,15 +268,24 @@ export class FakePlatformAdapter implements PlatformAdapter {
       return { kind: 'unsupported', reason: 'platform_unavailable' };
     }
     // Dấu đã được tính lại trên chữ nền tảng lưu (stored_text_hash) bằng chính contentHash().
-    const post = await this.posts.findPublishedByStoredHash(q.connectionId, q.contentHash, q.from, q.to);
+    const post = await this.posts.findPublishedByStoredHash(
+      q.connectionId,
+      q.contentHash,
+      q.from,
+      q.to,
+    );
     if (post === null) return { kind: 'not_found' };
     return { kind: 'found', platformPostId: post.platformPostId, permalink: post.permalink };
   }
 
-  async refreshToken(_cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RefreshTokenResult> {
+  async refreshToken(
+    _cred: DecryptedCredential,
+    ctx: AdapterCallContext,
+  ): Promise<RefreshTokenResult> {
     await this.latency(ctx.connectionId);
     const s = await this.step(ctx.connectionId, 'refresh');
-    const ok = s !== undefined && 'refresh' in s ? s.refresh === 'ok' : this.capabilities.tokenRefresh;
+    const ok =
+      s !== undefined && 'refresh' in s ? s.refresh === 'ok' : this.capabilities.tokenRefresh;
     if (!ok) return { kind: 'failed', error: this.classify('FAKE_TOKEN_EXPIRED') };
     return { kind: 'refreshed', tokenExpiresAt: new Date(Date.now() + 60 * DAY_MS) };
   }
@@ -260,7 +296,7 @@ export class FakePlatformAdapter implements PlatformAdapter {
   }
 
   async exchangeCallback(params: CallbackParams): Promise<{ candidates: ConnectionCandidate[] }> {
-    if (params.code === undefined || !params.code.startsWith('fake_code_')) {
+    if (!params.code?.startsWith('fake_code_')) {
       return { candidates: [] };
     }
     const store = await this.scenarios();
@@ -275,7 +311,9 @@ export class FakePlatformAdapter implements PlatformAdapter {
       candidates: pages.map((p) => ({
         externalId: p.externalId,
         displayName: p.displayName,
-        accessToken: p.eligible ? newFakeToken() : `${NOT_PROFESSIONAL_PREFIX}${newFakeToken().slice(9)}`,
+        accessToken: p.eligible
+          ? newFakeToken()
+          : `${NOT_PROFESSIONAL_PREFIX}${newFakeToken().slice(9)}`,
         tokenExpiresAt: expires,
       })),
     };

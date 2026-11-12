@@ -26,9 +26,7 @@ const UNKNOWN_REMEDIES: ClassifiedError['remedies'] = [
 
 /** Giữ `[A-Za-z0-9_.:-]`, cắt ≤ 64 ký tự; rỗng → `UNKNOWN`. */
 export function sanitizeRawCode(raw: string): string {
-  const cleaned = String(raw)
-    .replace(/[^A-Za-z0-9_.:-]/g, '')
-    .slice(0, 64);
+  const cleaned = raw.replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 64);
   return cleaned === '' ? 'UNKNOWN' : cleaned;
 }
 

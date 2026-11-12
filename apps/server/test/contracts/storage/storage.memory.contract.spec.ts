@@ -1,5 +1,8 @@
 import { describe, expect } from 'vitest';
-import { MemoryObjectStorage, UploadRejected } from '../../../src/core/storage/memory/memory-storage';
+import {
+  MemoryObjectStorage,
+  UploadRejected,
+} from '../../../src/core/storage/memory/memory-storage';
 import { describeObjectStorageContract } from './object-storage.contract';
 
 // 005 T082: kho tệp bộ nhớ (pnpm test) – `simulateBrowserUpload`, đồng hồ tiêm được.
@@ -13,7 +16,11 @@ describe('Kho tệp – memory', () => {
     now: () => Date.now() + offsetMs,
     async upload(p, bytes, contentType, fields) {
       try {
-        await storage.simulateBrowserUpload({ fields: { ...p.fields, ...fields } }, bytes, contentType);
+        await storage.simulateBrowserUpload(
+          { fields: { ...p.fields, ...fields } },
+          bytes,
+          contentType,
+        );
         return true;
       } catch (err) {
         if (err instanceof UploadRejected) return false;

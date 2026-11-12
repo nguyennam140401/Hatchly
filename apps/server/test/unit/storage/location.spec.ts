@@ -12,7 +12,9 @@ import { TEST_LOG_DIR } from '../../setup/log-capture';
 
 const acc = uuidV7();
 const inAcc = <T>(fn: () => T, jobId?: string) =>
-  runWithJobContext({ traceId: uuidV7(), accountId: acc, ...(jobId ? { jobId } : {}) }, async () => fn());
+  runWithJobContext({ traceId: uuidV7(), accountId: acc, ...(jobId ? { jobId } : {}) }, async () =>
+    fn(),
+  );
 
 describe('StorageLocation', () => {
   it('5 khuôn khóa, mọi khóa (kể cả job_tmp) dưới tenants/{acc}/', async () => {
@@ -42,8 +44,12 @@ describe('StorageLocation', () => {
     expect(() => loc.mediaOriginal('abc')).toThrow(InvalidRequestError);
     expect(() => loc.mediaNormalized(uuidV7(), 'X')).toThrow(InvalidRequestError);
     expect(() => loc.mediaNormalized(uuidV7(), 'a'.repeat(41))).toThrow(InvalidRequestError);
-    expect(() => resolveKey(loc.mediaOriginal(uuidV7()))).toThrow(expect.objectContaining({ name: 'TenantContextError' }));
-    await expect(inAcc(() => loc.jobTmp('a.mp3'))).rejects.toMatchObject({ name: 'TenantContextError' });
+    expect(() => resolveKey(loc.mediaOriginal(uuidV7()))).toThrow(
+      expect.objectContaining({ name: 'TenantContextError' }),
+    );
+    await expect(inAcc(() => loc.jobTmp('a.mp3'))).rejects.toMatchObject({
+      name: 'TenantContextError',
+    });
   });
 
   it('kiểm lần hai: khóa ngoài tiền tố → StorageAccessDenied + storage.access_denied chỉ có kind', async () => {
@@ -58,7 +64,11 @@ describe('StorageLocation', () => {
     });
     expect(err).toBeInstanceOf(StorageAccessDenied);
     expect(err?.message).not.toContain('tenants/');
-    await expect(inAcc(() => assertKeyInScope(`tenants/${acc}/../x`, 'job_tmp'))).rejects.toBeInstanceOf(StorageAccessDenied);
+    await expect(
+      inAcc(() => {
+        assertKeyInScope(`tenants/${acc}/../x`, 'job_tmp');
+      }),
+    ).rejects.toBeInstanceOf(StorageAccessDenied);
     const log = readFileSync(resolve(TEST_LOG_DIR, 'location.spec.ndjson'), 'utf8');
     vexpect(log).toContain('storage.access_denied');
     vexpect(log).toContain('"storage_kind":"media_original"');

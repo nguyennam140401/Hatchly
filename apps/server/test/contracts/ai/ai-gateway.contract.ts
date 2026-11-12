@@ -9,7 +9,10 @@ import type { AiHarness } from './harness';
 const CAP = 4_000_000;
 const req = (over: Partial<AiRequest> = {}): AiRequest => ({
   task: 'post_generation',
-  prompt: { system: 'Bạn là trợ lý viết bài.', delta: 'PROMPT_CANARY_1 Viết bài khai trương quán cà phê.' },
+  prompt: {
+    system: 'Bạn là trợ lý viết bài.',
+    delta: 'PROMPT_CANARY_1 Viết bài khai trương quán cà phê.',
+  },
   maxOutputTokens: 400,
   ...over,
 });
@@ -126,10 +129,13 @@ export function describeAiGatewayContract(
         const rand = seeded(20261112);
         let violations = 0;
         const observe = async () => {
-          const s = await store.usage({ scope: 'account', cycleStart: await store.currentCycleStart() });
+          const s = await store.usage({
+            scope: 'account',
+            cycleStart: await store.currentCycleStart(),
+          });
           if (s.used + s.reserved > s.cap || s.reserved < 0) violations++;
         };
-        const wrap = <K extends 'reserve' | 'release' | 'settle' | 'markCalling'>(k: K) => {
+        const wrap = (k: 'reserve' | 'release' | 'settle' | 'markCalling') => {
           const original = store[k].bind(store) as (...a: unknown[]) => Promise<unknown>;
           (store as unknown as Record<string, unknown>)[k] = async (...a: unknown[]) => {
             const r = await original(...a);
@@ -187,10 +193,17 @@ export function describeAiGatewayContract(
         expect((await g.generate(req())).modelTier).toBe('cheap');
         expect((await g.generate(req({ task: 'topic_suggestion' }))).modelTier).toBe('cheap');
         expect(
-          (await g.generate(req({ task: 'image_labeling', images: [{ url: 'https://x/1.jpg', bytes: 1 }] }))).modelTier,
+          (
+            await g.generate(
+              req({ task: 'image_labeling', images: [{ url: 'https://x/1.jpg', bytes: 1 }] }),
+            )
+          ).modelTier,
         ).toBe('cheap_vision');
         expect((await g.generate(req({ task: 'video_labeling' }))).modelTier).toBe('cheap_vision');
-        expect((await g.transcribe({ audioUrl: 'https://x/a.mp3', durationSec: 10, language: 'vi' })).modelTier).toBe('stt');
+        expect(
+          (await g.transcribe({ audioUrl: 'https://x/a.mp3', durationSec: 10, language: 'vi' }))
+            .modelTier,
+        ).toBe('stt');
       });
     });
   });
@@ -218,7 +231,10 @@ export function describeAiGatewayContract(
         expect((err as AiError).code).toBe('AI_PROVIDER_UNAVAILABLE');
         expect((err as AiError).retryable).toBe(true);
         expect((await h().fake.getBudget()).reserved).toBe(0);
-        expect((await h().fake.reservations()).map((r) => r.state)).toEqual(['released', 'released']);
+        expect((await h().fake.reservations()).map((r) => r.state)).toEqual([
+          'released',
+          'released',
+        ]);
         expect(await h().fake.ledger()).toEqual([]);
       });
     });
@@ -255,9 +271,11 @@ export function describeAiGatewayContract(
         const g = h().gateway({ providerTimeoutMs: 10_000, firstTokenTimeoutMs: 5_000 });
         await h().fake.script([{ firstTokenMs: 2_000 }], 'primary');
         const s = g.generateStream(req());
-        setTimeout(() => s.cancel(), 50);
-        for await (const _ of s) {
-          // không có chữ nào
+        setTimeout(() => {
+          s.cancel();
+        }, 50);
+        for await (const chunk of s) {
+          expect(chunk).toBeUndefined(); // không có chữ nào
         }
         await s.result;
         expect(await h().fake.ledger()).toEqual([]);
@@ -321,24 +339,47 @@ export function describeAiGatewayContract(
       await withAccount(async () => {
         const store = h().bundle.store;
         const key = { scope: 'account' as const, cycleStart: await store.currentCycleStart() };
-        const held = await store.reserve(key, 1_000, { task: 'post_generation', modelTier: 'default' });
-        const calling = await store.reserve(key, 5_000, { task: 'post_generation', modelTier: 'default' });
+        const held = await store.reserve(key, 1_000, {
+          task: 'post_generation',
+          modelTier: 'default',
+        });
+        const calling = await store.reserve(key, 5_000, {
+          task: 'post_generation',
+          modelTier: 'default',
+        });
         if (!held.ok || !calling.ok) throw new Error('giữ chỗ phải thành công');
         await store.markCalling(calling.reservationId); // nhà cung cấp đã nhận, tiến trình "chết" trước settle
-        const fresh = await store.reserve(key, 7, { task: 'post_generation', modelTier: 'default' });
+        const fresh = await store.reserve(key, 7, {
+          task: 'post_generation',
+          modelTier: 'default',
+        });
         await h().fake.ageReservations(16 * 60_000);
         if (fresh.ok) await store.release(fresh.reservationId);
-        const fresh2 = await store.reserve(key, 9, { task: 'post_generation', modelTier: 'default' });
+        const fresh2 = await store.reserve(key, 9, {
+          task: 'post_generation',
+          modelTier: 'default',
+        });
 
-        expect(await store.releaseStale(15 * 60_000)).toEqual({ released: 1, settledAtEstimate: 1 });
+        expect(await store.releaseStale(15 * 60_000)).toEqual({
+          released: 1,
+          settledAtEstimate: 1,
+        });
         const b = await h().fake.getBudget();
         expect(b.used).toBe(5_000);
         expect(b.reserved).toBe(9); // giữ chỗ < 15 phút không bị đụng
         const ledger = await h().fake.ledger();
         expect(ledger).toHaveLength(1);
-        expect(ledger[0]).toMatchObject({ anomaly: 'unsettled', costMicroUsd: 5_000, inputTokens: 0, outputTokens: 0 });
+        expect(ledger[0]).toMatchObject({
+          anomaly: 'unsettled',
+          costMicroUsd: 5_000,
+          inputTokens: 0,
+          outputTokens: 0,
+        });
 
-        expect(await store.releaseStale(15 * 60_000)).toEqual({ released: 0, settledAtEstimate: 0 });
+        expect(await store.releaseStale(15 * 60_000)).toEqual({
+          released: 0,
+          settledAtEstimate: 0,
+        });
         expect(await h().fake.getBudget()).toMatchObject({ used: 5_000, reserved: 9 });
         if (fresh2.ok) await store.release(fresh2.reservationId);
       });
@@ -350,7 +391,11 @@ export function describeAiGatewayContract(
     it('trong ngữ cảnh tài khoản → ném; ngoài → ngân sách tuần, không chạm tài khoản', async () => {
       const accountId = await h().newAccount();
       const g = h().gateway();
-      const sys = { ...req({ task: 'trend_summary' }), task: 'trend_summary' as const, industryId: '01900000-0000-7000-8000-000000000001' };
+      const sys = {
+        ...req({ task: 'trend_summary' }),
+        task: 'trend_summary' as const,
+        industryId: '01900000-0000-7000-8000-000000000001',
+      };
       await h().inAccount(accountId, async () => {
         await expect(g.system.generate(sys)).rejects.toBeInstanceOf(SystemContextRequiredError);
       });

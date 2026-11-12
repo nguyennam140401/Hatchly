@@ -4,7 +4,10 @@ import type { AiTask, ModelTier } from '../public-api';
 // dựa trên `used + reserved` của ảnh chụp đọc khi giữ chỗ; lời gọi đẩy qua ngưỡng mềm vẫn dùng `default`
 // (chấp nhận vượt tối đa một lời gọi).
 
-export function pickTier(task: AiTask, snapshot: { used: number; reserved: number; softLimit: number }): ModelTier {
+export function pickTier(
+  task: AiTask,
+  snapshot: { used: number; reserved: number; softLimit: number },
+): ModelTier {
   switch (task) {
     case 'image_labeling':
     case 'video_labeling':

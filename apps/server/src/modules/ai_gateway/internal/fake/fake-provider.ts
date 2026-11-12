@@ -68,7 +68,11 @@ export class FakeAiProvider implements AiProviderAdapter {
     return parsed.success ? parsed.data : {};
   }
 
-  private async begin(kind: FakeProviderCall['kind'], model: string, task: string): Promise<FakeAiStep> {
+  private async begin(
+    kind: FakeProviderCall['kind'],
+    model: string,
+    task: string,
+  ): Promise<FakeAiStep> {
     const call = { provider: this.provider, kind, model, task };
     this.calls.push(call);
     await this.onCall?.(call);
@@ -95,7 +99,12 @@ export class FakeAiProvider implements AiProviderAdapter {
     }
   }
 
-  async complete(model: string, p: OrderedPrompt, maxOut: number, signal: AbortSignal): Promise<ProviderResult> {
+  async complete(
+    model: string,
+    p: OrderedPrompt,
+    maxOut: number,
+    signal: AbortSignal,
+  ): Promise<ProviderResult> {
     const s = await this.begin('complete', model, p.task);
     if (s.latencyMs !== undefined) await wait(s.latencyMs, signal);
     await this.fail(s, signal);
@@ -164,11 +173,13 @@ export class FakeAiProvider implements AiProviderAdapter {
         let i = 0;
         for (;;) {
           if (i < chunks.length) {
-            yield { delta: chunks[i++]! };
+            const chunk = chunks[i++];
+            if (chunk !== undefined) yield { delta: chunk };
             continue;
           }
           if (done) {
-            if (failure !== undefined) throw failure instanceof Error ? failure : new Error(String(failure));
+            if (failure !== undefined)
+              throw failure instanceof Error ? failure : new Error('FAKE_STREAM_FAILED');
             return;
           }
           await new Promise<void>((r) => (notify = r));
@@ -181,6 +192,12 @@ export class FakeAiProvider implements AiProviderAdapter {
     const s = await this.begin('transcribe', model, 'transcription');
     if (s.latencyMs !== undefined) await wait(s.latencyMs, signal);
     await this.fail(s, signal);
-    return { text: '[fake:transcription] xin chào', inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, modelId: model };
+    return {
+      text: '[fake:transcription] xin chào',
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedInputTokens: 0,
+      modelId: model,
+    };
   }
 }

@@ -45,7 +45,8 @@ export class NotificationsModule {
           ): NotificationsPublicApi => {
             if (store === null) {
               return {
-                emit: () => Promise.reject(new Error('Thông báo chưa được cấu hình (NOTIFICATIONS_DRIVER)')),
+                emit: () =>
+                  Promise.reject(new Error('Thông báo chưa được cấu hình (NOTIFICATIONS_DRIVER)')),
               };
             }
             if (unit === 'worker' && !handlerRegistered) {

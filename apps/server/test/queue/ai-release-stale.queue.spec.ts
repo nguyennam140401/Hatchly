@@ -30,7 +30,10 @@ describeDb('Việc trả giữ chỗ AI treo (005)', () => {
     database = makeDatabase();
     stopProducer = await startTestProducer();
     await resetQueues();
-    bundle = await makeFakeAiBundle('sandbox', { systemWeeklyCap: 2_000_000, onReserved: scheduleStaleRelease });
+    bundle = await makeFakeAiBundle('sandbox', {
+      systemWeeklyCap: 2_000_000,
+      onReserved: scheduleStaleRelease,
+    });
     registerAiJobHandlers(bundle.store);
   });
   afterAll(async () => {
@@ -43,14 +46,24 @@ describeDb('Việc trả giữ chỗ AI treo (005)', () => {
     const store = bundle.store;
     const ids = await withAccount(a, async () => {
       const key = { scope: 'account' as const, cycleStart: await store.currentCycleStart() };
-      const held = await store.reserve(key, 1_000, { task: 'post_generation', modelTier: 'default' });
-      const calling = await store.reserve(key, 5_000, { task: 'post_generation', modelTier: 'default' });
+      const held = await store.reserve(key, 1_000, {
+        task: 'post_generation',
+        modelTier: 'default',
+      });
+      const calling = await store.reserve(key, 5_000, {
+        task: 'post_generation',
+        modelTier: 'default',
+      });
       if (!held.ok || !calling.ok) throw new Error('giữ chỗ phải thành công');
       await store.markCalling(calling.reservationId);
       await bundle.store.ageReservations(16 * 60_000);
       const young = await store.reserve(key, 7, { task: 'post_generation', modelTier: 'default' });
       if (!young.ok) throw new Error('giữ chỗ phải thành công');
-      return { held: held.reservationId, calling: calling.reservationId, young: young.reservationId };
+      return {
+        held: held.reservationId,
+        calling: calling.reservationId,
+        young: young.reservationId,
+      };
     });
     const scheduled = await jobs("data->>'type' = 'ai_gateway.release_stale'");
     expect(scheduled).toHaveLength(3);
@@ -70,7 +83,11 @@ describeDb('Việc trả giữ chỗ AI treo (005)', () => {
     }
     await withAccount(a, async () => {
       const states = Object.fromEntries((await store.reservations()).map((r) => [r.id, r.state]));
-      expect(states).toEqual({ [ids.held]: 'released', [ids.calling]: 'settled', [ids.young]: 'held' });
+      expect(states).toEqual({
+        [ids.held]: 'released',
+        [ids.calling]: 'settled',
+        [ids.young]: 'held',
+      });
       expect(await bundle.store.getBudget()).toMatchObject({ used: 5_000, reserved: 7 });
       const ledger = await store.ledger();
       expect(ledger).toHaveLength(1);
@@ -78,15 +95,19 @@ describeDb('Việc trả giữ chỗ AI treo (005)', () => {
     });
 
     // Chạy lại hai lần cho cùng kết quả (hiến pháp V).
-    await expectIdempotent(releaseStaleJob, { reservationId: ids.held }, {
-      accountId: a,
-      snapshot: () =>
-        withAccount(a, async () => ({
-          budget: await bundle.store.getBudget(),
-          ledger: (await store.ledger()).length,
-          states: (await store.reservations()).map((r) => r.state).sort(),
-        })),
-    });
+    await expectIdempotent(
+      releaseStaleJob,
+      { reservationId: ids.held },
+      {
+        accountId: a,
+        snapshot: () =>
+          withAccount(a, async () => ({
+            budget: await bundle.store.getBudget(),
+            ledger: (await store.ledger()).length,
+            states: (await store.reservations()).map((r) => r.state).sort(),
+          })),
+      },
+    );
   });
 
   it('giao dịch giữ chỗ hủy → không có việc hẹn', async () => {

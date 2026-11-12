@@ -30,7 +30,10 @@ export interface FakeNotifyControl {
   reset(): Promise<void>;
 }
 
-export function fakeNotify(store: NotificationStore, deps: Omit<DeliverDeps, 'store'>): FakeNotifyControl {
+export function fakeNotify(
+  store: NotificationStore,
+  deps: Omit<DeliverDeps, 'store'>,
+): FakeNotifyControl {
   return {
     delivered: (f) => store.delivered(f),
     events: () => store.events(),

@@ -20,6 +20,7 @@ import {
   type SignedUrl,
 } from '../storage';
 
+/* eslint-disable @typescript-eslint/require-await -- bản bộ nhớ đồng bộ, giữ chữ ký async của ObjectStorage */
 // Kho tệp TRONG BỘ NHỚ (005, contracts/storage.md mục 3) – chỉ kiểm thử. Đường dẫn tải lên `memory://…`
 // ký HMAC + hạn; `simulateBrowserUpload` "dùng" đường dẫn như trình duyệt và kiểm ĐÚNG các điều kiện của
 // POST policy (khóa chính xác, Content-Type chính xác, 1 ≤ kích thước ≤ maxBytes, còn hạn).
@@ -84,7 +85,12 @@ export class MemoryObjectStorage implements ObjectStorage {
         'x-max-bytes': String(opts.maxBytes),
         'x-expires': String(expiresAt.getTime()),
       };
-      const signature = this.sign([fields.key, fields['Content-Type'], fields['x-max-bytes'], fields['x-expires']]);
+      const signature = this.sign([
+        fields.key,
+        fields['Content-Type'],
+        fields['x-max-bytes'],
+        fields['x-expires'],
+      ]);
       return Promise.resolve({
         url: 'memory://upload',
         fields: { ...fields, 'x-signature': signature },
@@ -98,16 +104,30 @@ export class MemoryObjectStorage implements ObjectStorage {
   }
 
   /** "Trình duyệt" dùng đường dẫn ký sẵn (bộ hợp đồng – FR-053). Không cần ngữ cảnh tài khoản. */
-  simulateBrowserUpload(upload: { fields: Record<string, string> }, bytes: Buffer, contentType: string): Promise<void> {
+  simulateBrowserUpload(
+    upload: { fields: Record<string, string> },
+    bytes: Buffer,
+    contentType: string,
+  ): Promise<void> {
     const f = upload.fields;
-    const parts = [f.key ?? '', f['Content-Type'] ?? '', f['x-max-bytes'] ?? '', f['x-expires'] ?? ''];
-    if (!this.verify(parts, f['x-signature'] ?? '')) return Promise.reject(new UploadRejected('signature'));
-    if (this.now().getTime() > Number(f['x-expires'])) return Promise.reject(new UploadRejected('expired'));
-    if (contentType !== f['Content-Type']) return Promise.reject(new UploadRejected('content_type'));
+    const parts = [
+      f.key ?? '',
+      f['Content-Type'] ?? '',
+      f['x-max-bytes'] ?? '',
+      f['x-expires'] ?? '',
+    ];
+    if (!this.verify(parts, f['x-signature'] ?? ''))
+      return Promise.reject(new UploadRejected('signature'));
+    if (this.now().getTime() > Number(f['x-expires']))
+      return Promise.reject(new UploadRejected('expired'));
+    if (contentType !== f['Content-Type'])
+      return Promise.reject(new UploadRejected('content_type'));
     if (bytes.length < 1 || bytes.length > Number(f['x-max-bytes'])) {
       return Promise.reject(new UploadRejected('size'));
     }
-    this.objects.set(f.key!, {
+    const key = f.key;
+    if (key === undefined) return Promise.reject(new UploadRejected('signature'));
+    this.objects.set(key, {
       body: Buffer.from(bytes),
       contentType,
       createdAt: this.now(),
@@ -157,7 +177,12 @@ export class MemoryObjectStorage implements ObjectStorage {
     const src = this.objects.get(this.key(from));
     const dst = this.key(to);
     if (src === undefined) throw new Error('NoSuchKey');
-    this.objects.set(dst, { ...src, body: Buffer.from(src.body), createdAt: this.now(), tags: to.kind === 'job_tmp' ? { [TMP_TAG.key]: TMP_TAG.value } : {} });
+    this.objects.set(dst, {
+      ...src,
+      body: Buffer.from(src.body),
+      createdAt: this.now(),
+      tags: to.kind === 'job_tmp' ? { [TMP_TAG.key]: TMP_TAG.value } : {},
+    });
   }
 
   async delete(l: StorageLocation): Promise<void> {
@@ -170,16 +195,23 @@ export class MemoryObjectStorage implements ObjectStorage {
   ): Promise<{ items: { loc: StorageLocation; bytes: number }[]; next?: string }> {
     const p = resolvePrefix(prefix);
     const limit = Math.min(Math.max(opts?.limit ?? 1000, 1), 1000);
-    const keys = [...this.objects.keys()].filter((k) => k.startsWith(p) && (opts?.after === undefined || k > opts.after)).sort();
+    const keys = [...this.objects.keys()]
+      .filter((k) => k.startsWith(p) && (opts?.after === undefined || k > opts.after))
+      .sort();
     const page = keys.slice(0, limit);
     const items = page.flatMap((k) => {
       const l = locationFromKey(k);
-      return l === null ? [] : [{ loc: l, bytes: this.objects.get(k)!.body.length }];
+      return l === null ? [] : [{ loc: l, bytes: this.objects.get(k)?.body.length ?? 0 }];
     });
-    return { items, ...(keys.length > limit ? { next: page[page.length - 1]! } : {}) };
+    const last = page.at(-1);
+    return { items, ...(keys.length > limit && last !== undefined ? { next: last } : {}) };
   }
 
-  async signedUrl(l: StorageLocation, purpose: 'preview' | 'public', ttlSec?: number): Promise<SignedUrl> {
+  async signedUrl(
+    l: StorageLocation,
+    purpose: 'preview' | 'public',
+    ttlSec?: number,
+  ): Promise<SignedUrl> {
     const ttl = checkSignedUrl(l, purpose, ttlSec);
     const key = this.key(l);
     const expiresAt = new Date(this.now().getTime() + ttl * 1000);
@@ -215,7 +247,10 @@ export class MemoryObjectStorage implements ObjectStorage {
   sweepExpired(): number {
     let n = 0;
     for (const [k, o] of this.objects) {
-      if (o.tags[TMP_TAG.key] === TMP_TAG.value && this.now().getTime() - o.createdAt.getTime() > DAY_MS) {
+      if (
+        o.tags[TMP_TAG.key] === TMP_TAG.value &&
+        this.now().getTime() - o.createdAt.getTime() > DAY_MS
+      ) {
         this.objects.delete(k);
         n++;
       }

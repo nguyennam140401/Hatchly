@@ -12,7 +12,11 @@ import { registerJobHandler } from '../../../src/modules/queue';
 import { createAccount } from '../../db/helpers/db';
 import { removeSeededMember, seedMember } from '../../db/helpers/members';
 import { jobs, waitFor } from '../../queue/helpers/queue-db';
-import { startTestProducer, startTestWorkers, type TestWorkers } from '../../support/queue-test-kit';
+import {
+  startTestProducer,
+  startTestWorkers,
+  type TestWorkers,
+} from '../../support/queue-test-kit';
 import type { NotifyHarness } from './harness';
 
 // Harness `sandbox` (005, R9b): `tx()` = tenantTx thật; `flush()` = runtime Worker THẬT trong tiến trình
@@ -56,7 +60,12 @@ export async function makeSandboxNotifyHarness(): Promise<{
       return {
         accountId,
         owner: { userId: o.userId, role: 'owner', email: o.email, displayName: 'Chủ' },
-        collaborator: { userId: c.userId, role: 'collaborator', email: c.email, displayName: 'CTV' },
+        collaborator: {
+          userId: c.userId,
+          role: 'collaborator',
+          email: c.email,
+          displayName: 'CTV',
+        },
       };
     },
     inAccount: (accountId, fn) => runWithJobContext({ traceId: uuidV7(), accountId }, fn),

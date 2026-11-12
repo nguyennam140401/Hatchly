@@ -2,7 +2,12 @@
 // Lối vào: `@app/shared/platform_gateway`. KHÔNG có trường mã quyền nào (nguyên tắc VII).
 import { z } from 'zod';
 
-export const CHANNEL_TYPE_VALUES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const;
+export const CHANNEL_TYPE_VALUES = [
+  'facebook_page',
+  'instagram',
+  'zalo_oa',
+  'test_channel',
+] as const;
 export const ChannelType = z.enum(CHANNEL_TYPE_VALUES);
 export type ChannelType = z.infer<typeof ChannelType>;
 

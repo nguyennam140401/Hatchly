@@ -42,7 +42,8 @@ export class SandboxScenarioStore implements ScenarioStore {
           created_at: sql`clock_timestamp()`,
         })
         .returning();
-      return toScenario(row!);
+      if (row === undefined) throw new Error('Không đọc lại được kịch bản vừa ghi');
+      return toScenario(row);
     });
   }
 

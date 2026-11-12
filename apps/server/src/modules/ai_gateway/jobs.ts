@@ -74,7 +74,9 @@ export function registerAiJobHandlers(
     const cycleStart = await store.currentCycleStart();
     await store.releaseStale(
       STALE_RESERVATION_MS,
-      onCrossed === undefined ? undefined : { onCrossed: (tx, crossed) => onCrossed(tx, crossed, cycleStart) },
+      onCrossed === undefined
+        ? undefined
+        : { onCrossed: (tx, crossed) => onCrossed(tx, crossed, cycleStart) },
     );
   });
   registerJobHandler(releaseStaleSystemJob, async () => {

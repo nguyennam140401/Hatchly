@@ -15,7 +15,13 @@ const MB = 1_000_000;
 const PHOTO_VIDEO: MediaRules = {
   maxItems: 10,
   image: { formats: ['jpeg', 'png', 'webp'], maxBytes: 8 * MB, minAspect: 0.5, maxAspect: 2 },
-  video: { formats: ['mp4', 'mov'], maxBytes: 1000 * MB, maxDurationSec: 1200, minAspect: 0.5, maxAspect: 2 },
+  video: {
+    formats: ['mp4', 'mov'],
+    maxBytes: 1000 * MB,
+    maxDurationSec: 1200,
+    minAspect: 0.5,
+    maxAspect: 2,
+  },
   allowMixed: true,
 };
 
@@ -42,7 +48,13 @@ export const FAKE_CHANNELS: Partial<Record<ChannelType, FakeChannelSpec>> = {
     mediaRules: {
       maxItems: 10,
       image: { formats: ['jpeg'], maxBytes: 8 * MB, minAspect: 0.8, maxAspect: 1.91 },
-      video: { formats: ['mp4', 'mov'], maxBytes: 300 * MB, maxDurationSec: 900, minAspect: 0.5625, maxAspect: 1.91 },
+      video: {
+        formats: ['mp4', 'mov'],
+        maxBytes: 300 * MB,
+        maxDurationSec: 900,
+        minAspect: 0.5625,
+        maxAspect: 1.91,
+      },
       allowMixed: true,
     },
     accountType: 'professional',
@@ -117,7 +129,8 @@ export const FAKE_ERROR_TABLE: ErrorTable = {
   },
   FAKE_SERVER_ERROR_AFTER_SEND: {
     category: 'unknown',
-    messageVi: 'Nền tảng báo lỗi sau khi đã nhận bài. Chưa rõ bài đã lên hay chưa – vui lòng kiểm tra trên trang.',
+    messageVi:
+      'Nền tảng báo lỗi sau khi đã nhận bài. Chưa rõ bài đã lên hay chưa – vui lòng kiểm tra trên trang.',
     remedies: [{ action: 'check_on_platform', labelVi: 'Kiểm tra trên trang' }],
   },
   FAKE_NOT_PROFESSIONAL: {

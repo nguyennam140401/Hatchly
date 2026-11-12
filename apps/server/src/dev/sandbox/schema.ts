@@ -32,7 +32,6 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () =>
 // Dùng chung: kịch bản giả lập (contracts/runtime-config.md mục 3)
 // ---------------------------------------------------------------------------------------------
 
-
 /** Kịch bản theo tài khoản: `target` = `connection:{id}`, `oauth`, `*`…; hết `remaining_uses` → tự xóa. */
 export const fakeScenarios = tenantTable(
   sandbox,
@@ -134,10 +133,7 @@ export const pgFakePosts = tenantTable(
       t.connection_id,
       t.content_hash,
     ),
-    check(
-      'pg_fake_posts_state_check',
-      sql`${t.state} IN ('processing', 'published', 'failed')`,
-    ),
+    check('pg_fake_posts_state_check', sql`${t.state} IN ('processing', 'published', 'failed')`),
   ],
 );
 

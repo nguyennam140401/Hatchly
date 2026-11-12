@@ -25,7 +25,11 @@ export class MemoryNotificationStore implements NotificationStore {
     return { accountId, s };
   }
 
-  insertEvent(e: { dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }): Promise<boolean> {
+  insertEvent(e: {
+    dedupeKey: string;
+    type: NotificationType;
+    refs: Record<string, unknown>;
+  }): Promise<boolean> {
     return syncPromise(() => {
       const { s } = this.state();
       if (s.events.has(e.dedupeKey)) return false;
@@ -38,7 +42,10 @@ export class MemoryNotificationStore implements NotificationStore {
     return syncPromise(() => {
       const { accountId, s } = this.state();
       const existing = s.notifications.find(
-        (x) => x.dedupeKey === n.dedupeKey && x.recipientUserId === n.recipientUserId && x.channel === n.channel,
+        (x) =>
+          x.dedupeKey === n.dedupeKey &&
+          x.recipientUserId === n.recipientUserId &&
+          x.channel === n.channel,
       );
       if (existing !== undefined) return structuredClone(existing);
       const row: DeliveredNotification = {
@@ -68,7 +75,9 @@ export class MemoryNotificationStore implements NotificationStore {
     );
   }
 
-  events(): Promise<{ dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }[]> {
+  events(): Promise<
+    { dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }[]
+  > {
     return syncPromise(() => [...this.state().s.events.values()].map((e) => structuredClone(e)));
   }
 

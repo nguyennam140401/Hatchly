@@ -12,7 +12,13 @@ import {
   type ModelTier,
   type TranscribeRequest,
 } from '../public-api';
-import type { BudgetKey, BudgetStore, Crossed, LedgerDraft, SettleHooks } from './budget/budget-store';
+import type {
+  BudgetKey,
+  BudgetStore,
+  Crossed,
+  LedgerDraft,
+  SettleHooks,
+} from './budget/budget-store';
 import { nextCycleStartsAt, weekStart } from './budget/system-budget';
 import { AiError, SystemContextRequiredError } from './errors';
 import {
@@ -54,13 +60,21 @@ export function validateAiRequest(req: AiRequest, scope: 'account' | 'system'): 
   if (!(AI_TASKS as readonly string[]).includes(req.task)) throw invalid();
   if (req.task === 'transcription') throw invalid();
   if ((req.task === 'trend_summary') !== (scope === 'system')) throw invalid();
-  if (!Number.isInteger(req.maxOutputTokens) || req.maxOutputTokens < 1 || req.maxOutputTokens > 8192) {
+  if (
+    !Number.isInteger(req.maxOutputTokens) ||
+    req.maxOutputTokens < 1 ||
+    req.maxOutputTokens > 8192
+  ) {
     throw invalid();
   }
   const images = req.images ?? [];
   if (images.length > 0 && !LABEL_TASKS.has(req.task)) throw invalid();
   if (images.length > 8) throw invalid();
-  if (typeof req.prompt?.system !== 'string' || typeof req.prompt.delta !== 'string') throw invalid();
+  if (
+    typeof (req.prompt as AiRequest['prompt'] | undefined)?.system !== 'string' ||
+    typeof req.prompt.delta !== 'string'
+  )
+    throw invalid();
 }
 
 export function orderPrompt(req: AiRequest): OrderedPrompt {
@@ -100,7 +114,11 @@ export class AiGatewayService implements AiGatewayPublicApi {
     return { key: { scope: 'account', cycleStart }, cycleStart };
   }
 
-  private async prepare(req: AiRequest, key: BudgetKey, cycleStart: string | null): Promise<Prepared> {
+  private async prepare(
+    req: AiRequest,
+    key: BudgetKey,
+    cycleStart: string | null,
+  ): Promise<Prepared> {
     const snapshot = await this.opts.store.usage(key);
     const tier = pickTier(req.task, snapshot);
     const price = this.opts.prices.priceFor(tier);
@@ -108,7 +126,14 @@ export class AiGatewayService implements AiGatewayPublicApi {
     const inTok =
       (await this.opts.primary.countInputTokens(price.modelId, prompt)) +
       prompt.images.length * IMAGE_INPUT_TOKENS;
-    return { key, tier, price, estimate: estimateTokens(price, inTok, req.maxOutputTokens), prompt, cycleStart };
+    return {
+      key,
+      tier,
+      price,
+      estimate: estimateTokens(price, inTok, req.maxOutputTokens),
+      prompt,
+      cycleStart,
+    };
   }
 
   private hooks(cycleStart: string | null): SettleHooks | undefined {
@@ -134,7 +159,10 @@ export class AiGatewayService implements AiGatewayPublicApi {
         return;
       } catch {
         if (attempt === 2) {
-          gatewayEvent('warn', 'ai.settle_failed', { task: ledger.task, model_tier: ledger.modelTier });
+          gatewayEvent('warn', 'ai.settle_failed', {
+            task: ledger.task,
+            model_tier: ledger.modelTier,
+          });
         }
       }
     }
@@ -147,9 +175,13 @@ export class AiGatewayService implements AiGatewayPublicApi {
     outer: AbortSignal | undefined,
   ): Promise<ProviderResult> {
     const controller = new AbortController();
-    const onAbort = () => controller.abort();
+    const onAbort = () => {
+      controller.abort();
+    };
     outer?.addEventListener('abort', onAbort);
-    const timer = setTimeout(() => controller.abort(), this.opts.providerTimeoutMs);
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, this.opts.providerTimeoutMs);
     try {
       return await call(provider, controller.signal);
     } finally {
@@ -169,7 +201,11 @@ export class AiGatewayService implements AiGatewayPublicApi {
     attrs: Record<string, unknown>,
   ): Promise<{ result: ProviderResult; reservationId: string; provider: AiProviderAdapter }> {
     for (const [i, provider] of [this.opts.primary, this.opts.fallback].entries()) {
-      const r = await this.opts.store.reserve(p.key, p.estimate, { task, modelTier: p.tier, industryId });
+      const r = await this.opts.store.reserve(p.key, p.estimate, {
+        task,
+        modelTier: p.tier,
+        industryId,
+      });
       if (!r.ok) {
         if (exhausted === 'AI_SYSTEM_BUDGET_EXHAUSTED') {
           gatewayEvent('warn', 'ai.system_budget_exhausted', { task });
@@ -221,7 +257,15 @@ export class AiGatewayService implements AiGatewayPublicApi {
     await this.settle(
       reservationId,
       actualTokensCost(p.price, usage),
-      { task: req.task, modelTier: p.tier, modelId: result.modelId, provider: provider.provider, ...usage, traceId, industryId },
+      {
+        task: req.task,
+        modelTier: p.tier,
+        modelId: result.modelId,
+        provider: provider.provider,
+        ...usage,
+        traceId,
+        industryId,
+      },
       p.estimate,
       cycleStart,
     );
@@ -238,7 +282,9 @@ export class AiGatewayService implements AiGatewayPublicApi {
     });
   }
 
-  private systemGenerate(req: AiRequest & { task: 'trend_summary'; industryId: string }): Promise<AiResult> {
+  private systemGenerate(
+    req: AiRequest & { task: 'trend_summary'; industryId: string },
+  ): Promise<AiResult> {
     const attrs: Record<string, unknown> = { task: req.task };
     return withGatewayOp('ai_gateway', 'system.generate', attrs, async () => {
       if (currentAccountId() !== null) throw new SystemContextRequiredError();
@@ -259,7 +305,11 @@ export class AiGatewayService implements AiGatewayPublicApi {
     const attrs: Record<string, unknown> = { task: 'transcription', model_tier: 'stt' };
     return withGatewayOp('ai_gateway', 'transcribe', attrs, async () => {
       if (currentAccountId() === null) throw new AiError('AI_INVALID_REQUEST');
-      if (!Number.isFinite(req.durationSec) || req.durationSec < 0 || req.language !== 'vi') {
+      if (
+        !Number.isFinite(req.durationSec) ||
+        req.durationSec < 0 ||
+        (req.language as string) !== 'vi'
+      ) {
         throw new AiError('AI_INVALID_REQUEST');
       }
       const { key, cycleStart } = await this.keyForAccount();
@@ -288,7 +338,14 @@ export class AiGatewayService implements AiGatewayPublicApi {
       await this.settle(
         reservationId,
         estimate,
-        { task: 'transcription', modelTier: 'stt', modelId: result.modelId, provider: provider.provider, ...usage, traceId },
+        {
+          task: 'transcription',
+          modelTier: 'stt',
+          modelId: result.modelId,
+          provider: provider.provider,
+          ...usage,
+          traceId,
+        },
         estimate,
         cycleStart,
       );
@@ -308,108 +365,142 @@ export class AiGatewayService implements AiGatewayPublicApi {
     };
     const attrs: Record<string, unknown> = { task: req.task };
 
-    const result = withGatewayOp('ai_gateway', 'generateStream', attrs, async (): Promise<AiResult> => {
-      try {
-        if (currentAccountId() === null) throw new AiError('AI_INVALID_REQUEST');
-        validateAiRequest(req, 'account');
-        const { key, cycleStart } = await this.keyForAccount();
-        const p = await this.prepare(req, key, cycleStart);
-        attrs.model_tier = p.tier;
-        const traceId = this.traceId(req);
-        for (const [i, provider] of [this.opts.primary, this.opts.fallback].entries()) {
-          const r = await this.opts.store.reserve(p.key, p.estimate, { task: req.task, modelTier: p.tier });
-          if (!r.ok) throw new AiError('AI_BUDGET_EXHAUSTED');
-          await this.opts.store.markCalling(r.reservationId);
-          const attempt = new AbortController();
-          const onAbort = () => attempt.abort();
-          controller.signal.addEventListener('abort', onAbort);
-          let received = '';
-          let firstTimer: NodeJS.Timeout | undefined = setTimeout(
-            () => attempt.abort(),
-            this.opts.firstTokenTimeoutMs,
-          );
-          const total = setTimeout(() => attempt.abort(), this.opts.providerTimeoutMs);
-          const stream = provider.stream(p.price.modelId, p.prompt, req.maxOutputTokens, attempt.signal);
-          try {
-            for await (const chunk of stream) {
-              if (firstTimer !== undefined) {
-                clearTimeout(firstTimer);
-                firstTimer = undefined;
-              }
-              received += chunk.delta;
-              queue.push(chunk.delta);
-              notify();
-            }
-            const final = await stream.final;
-            const usage = {
-              inputTokens: final.inputTokens,
-              outputTokens: final.outputTokens,
-              cachedInputTokens: final.cachedInputTokens,
+    const result = withGatewayOp(
+      'ai_gateway',
+      'generateStream',
+      attrs,
+      async (): Promise<AiResult> => {
+        try {
+          if (currentAccountId() === null) throw new AiError('AI_INVALID_REQUEST');
+          validateAiRequest(req, 'account');
+          const { key, cycleStart } = await this.keyForAccount();
+          const p = await this.prepare(req, key, cycleStart);
+          attrs.model_tier = p.tier;
+          const traceId = this.traceId(req);
+          for (const [i, provider] of [this.opts.primary, this.opts.fallback].entries()) {
+            const r = await this.opts.store.reserve(p.key, p.estimate, {
+              task: req.task,
+              modelTier: p.tier,
+            });
+            if (!r.ok) throw new AiError('AI_BUDGET_EXHAUSTED');
+            await this.opts.store.markCalling(r.reservationId);
+            const attempt = new AbortController();
+            const onAbort = () => {
+              attempt.abort();
             };
-            attrs.fallback = i === 1;
-            attrs.output_tokens = usage.outputTokens;
-            await this.settle(
-              r.reservationId,
-              actualTokensCost(p.price, usage),
-              { task: req.task, modelTier: p.tier, modelId: final.modelId, provider: provider.provider, ...usage, traceId },
-              p.estimate,
-              cycleStart,
+            controller.signal.addEventListener('abort', onAbort);
+            let received = '';
+            let firstTimer: NodeJS.Timeout | undefined = setTimeout(() => {
+              attempt.abort();
+            }, this.opts.firstTokenTimeoutMs);
+            const total = setTimeout(() => {
+              attempt.abort();
+            }, this.opts.providerTimeoutMs);
+            const stream = provider.stream(
+              p.price.modelId,
+              p.prompt,
+              req.maxOutputTokens,
+              attempt.signal,
             );
-            return { text: final.text, modelTier: p.tier, usage, traceId };
-          } catch {
-            if (received.length > 0) {
-              // Đã có đầu ra (bị hủy / đứt giữa chừng) → quyết toán phần đã sinh, phần còn lại trả.
-              const outputTokens = Math.ceil(received.length / 4);
-              const usage = { inputTokens: 0, outputTokens, cachedInputTokens: 0 };
-              const inTok = await this.opts.primary.countInputTokens(p.price.modelId, p.prompt);
-              usage.inputTokens = inTok;
+            try {
+              for await (const chunk of stream) {
+                if (firstTimer !== undefined) {
+                  clearTimeout(firstTimer);
+                  firstTimer = undefined;
+                }
+                received += chunk.delta;
+                queue.push(chunk.delta);
+                notify();
+              }
+              const final = await stream.final;
+              const usage = {
+                inputTokens: final.inputTokens,
+                outputTokens: final.outputTokens,
+                cachedInputTokens: final.cachedInputTokens,
+              };
+              attrs.fallback = i === 1;
+              attrs.output_tokens = usage.outputTokens;
               await this.settle(
                 r.reservationId,
-                Math.min(actualTokensCost(p.price, usage), p.estimate),
-                { task: req.task, modelTier: p.tier, modelId: p.price.modelId, provider: provider.provider, ...usage, traceId },
+                actualTokensCost(p.price, usage),
+                {
+                  task: req.task,
+                  modelTier: p.tier,
+                  modelId: final.modelId,
+                  provider: provider.provider,
+                  ...usage,
+                  traceId,
+                },
                 p.estimate,
                 cycleStart,
               );
-              return { text: received, modelTier: p.tier, usage, traceId };
+              return { text: final.text, modelTier: p.tier, usage, traceId };
+            } catch {
+              if (received.length > 0) {
+                // Đã có đầu ra (bị hủy / đứt giữa chừng) → quyết toán phần đã sinh, phần còn lại trả.
+                const outputTokens = Math.ceil(received.length / 4);
+                const usage = { inputTokens: 0, outputTokens, cachedInputTokens: 0 };
+                const inTok = await this.opts.primary.countInputTokens(p.price.modelId, p.prompt);
+                usage.inputTokens = inTok;
+                await this.settle(
+                  r.reservationId,
+                  Math.min(actualTokensCost(p.price, usage), p.estimate),
+                  {
+                    task: req.task,
+                    modelTier: p.tier,
+                    modelId: p.price.modelId,
+                    provider: provider.provider,
+                    ...usage,
+                    traceId,
+                  },
+                  p.estimate,
+                  cycleStart,
+                );
+                return { text: received, modelTier: p.tier, usage, traceId };
+              }
+              await this.opts.store.release(r.reservationId);
+              if (controller.signal.aborted) {
+                return {
+                  text: '',
+                  modelTier: p.tier,
+                  usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 },
+                  traceId,
+                };
+              }
+            } finally {
+              if (firstTimer !== undefined) clearTimeout(firstTimer);
+              clearTimeout(total);
+              controller.signal.removeEventListener('abort', onAbort);
             }
-            await this.opts.store.release(r.reservationId);
-            if (controller.signal.aborted) {
-              return {
-                text: '',
-                modelTier: p.tier,
-                usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 },
-                traceId,
-              };
-            }
-          } finally {
-            if (firstTimer !== undefined) clearTimeout(firstTimer);
-            clearTimeout(total);
-            controller.signal.removeEventListener('abort', onAbort);
           }
+          throw new AiError('AI_PROVIDER_UNAVAILABLE');
+        } catch (err) {
+          failure = err;
+          throw err;
+        } finally {
+          finished = true;
+          notify();
         }
-        throw new AiError('AI_PROVIDER_UNAVAILABLE');
-      } catch (err) {
-        failure = err;
-        throw err;
-      } finally {
-        finished = true;
-        notify();
-      }
-    });
+      },
+    );
     result.catch(() => undefined);
 
     return {
       result,
-      cancel: () => controller.abort(),
+      cancel: () => {
+        controller.abort();
+      },
       async *[Symbol.asyncIterator]() {
         let i = 0;
         for (;;) {
           if (i < queue.length) {
-            yield { delta: queue[i++]! };
+            const chunk = queue[i++];
+            if (chunk !== undefined) yield { delta: chunk };
             continue;
           }
           if (finished) {
-            if (failure !== undefined) throw failure instanceof Error ? failure : new Error(String(failure));
+            if (failure !== undefined)
+              throw failure instanceof Error ? failure : new AiError('AI_PROVIDER_UNAVAILABLE');
             return;
           }
           await new Promise<void>((r) => (wake = r));
@@ -423,7 +514,8 @@ export class AiGatewayService implements AiGatewayPublicApi {
       const { key, cycleStart } = await this.keyForAccount();
       const s = await this.opts.store.usage(key);
       const spent = s.used + s.reserved;
-      const percent = s.cap <= 0 ? 100 : Math.min(100, Math.max(0, Math.floor((spent * 100) / s.cap)));
+      const percent =
+        s.cap <= 0 ? 100 : Math.min(100, Math.max(0, Math.floor((spent * 100) / s.cap)));
       const minEstimate = minCallEstimate(this.opts.prices.priceFor('cheap_vision'));
       const state: AiUsage['state'] =
         spent >= s.cap || s.cap - spent < minEstimate

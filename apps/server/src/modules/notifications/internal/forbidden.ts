@@ -27,7 +27,8 @@ export function assertNoForbidden(raw: unknown): void {
   const params = (raw as { params?: unknown } | null)?.params;
   if (params !== null && typeof params === 'object') {
     for (const v of Object.values(params)) {
-      if (typeof v === 'string' && MONEY_TEXT.test(v)) throw new NotificationEventInvalidError('money_text');
+      if (typeof v === 'string' && MONEY_TEXT.test(v))
+        throw new NotificationEventInvalidError('money_text');
     }
   }
 }

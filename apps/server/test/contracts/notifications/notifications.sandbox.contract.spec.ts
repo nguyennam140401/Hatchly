@@ -33,7 +33,10 @@ describeDb('Thông báo – bản giả lập (sandbox)', () => {
     await harness.inAccount(acc.accountId, async () => {
       await tenantTx((tx) =>
         enqueueRegistered(tx, NOTIFY_DELIVER_JOB, {
-          event: NotificationEventSchema.parse({ type: 'plan_expiring', refs: { subscriptionId: acc.owner.userId, expiresOn: '2026-12-31' } }),
+          event: NotificationEventSchema.parse({
+            type: 'plan_expiring',
+            refs: { subscriptionId: acc.owner.userId, expiresOn: '2026-12-31' },
+          }),
         }),
       );
       await harness.flush();

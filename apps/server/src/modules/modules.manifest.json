@@ -41,7 +41,15 @@
       "kind": "business",
       "schema": "content",
       "runsIn": ["api", "worker"],
-      "allowedDeps": ["account", "context", "media", "trends", "ai_gateway", "notifications", "queue"]
+      "allowedDeps": [
+        "account",
+        "context",
+        "media",
+        "trends",
+        "ai_gateway",
+        "notifications",
+        "queue"
+      ]
     },
     {
       "name": "approval",

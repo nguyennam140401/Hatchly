@@ -57,7 +57,10 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
         await harness().script(`connection:${id}`, [{ submit: 'timeout_before_publish' }]);
         const t = text('as2');
         const hash = g.contentHash('facebook_page', t);
-        expect(await submit(g, id, t)).toMatchObject({ kind: 'failed', error: { category: 'unknown' } });
+        expect(await submit(g, id, t)).toMatchObject({
+          kind: 'failed',
+          error: { category: 'unknown' },
+        });
         expect(await g.reconcile({ connectionId: id, contentHash: hash, ...win() })).toEqual({
           kind: 'not_found',
         });
@@ -71,9 +74,10 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
         const g = gw();
         const id = await connect('zalo_oa');
         expect(g.capabilities('zalo_oa').reconcile).toBe(false);
-        expect(
-          await g.reconcile({ connectionId: id, contentHash: 'ch1:x', ...win() }),
-        ).toEqual({ kind: 'unsupported', reason: 'capability' });
+        expect(await g.reconcile({ connectionId: id, contentHash: 'ch1:x', ...win() })).toEqual({
+          kind: 'unsupported',
+          reason: 'capability',
+        });
       });
     });
 
@@ -129,7 +133,15 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
         const { channelType, rules } = await g.mediaRules(id);
         expect(channelType).toBe('zalo_oa');
         const v = validateMedia(rules, [
-          { mediaId: 'm1', kind: 'video', format: 'mp4', bytes: 1, width: 1, height: 1, durationSec: 1 },
+          {
+            mediaId: 'm1',
+            kind: 'video',
+            format: 'mp4',
+            bytes: 1,
+            width: 1,
+            height: 1,
+            durationSec: 1,
+          },
         ]);
         expect(v.length).toBeGreaterThan(0);
         expect(v[0]?.messageVi).toMatch(/video/);
@@ -172,7 +184,11 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
           const t = text(`alter_${how}`) + ' Phở Hà Nội';
           await submit(g, id, t);
           expect(
-            await g.reconcile({ connectionId: id, contentHash: g.contentHash('facebook_page', t), ...win() }),
+            await g.reconcile({
+              connectionId: id,
+              contentHash: g.contentHash('facebook_page', t),
+              ...win(),
+            }),
             how,
           ).toMatchObject({ kind: 'found' });
         }
@@ -193,7 +209,12 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
           }),
         ).toEqual({ kind: 'unsupported', reason: 'window_too_large' });
         await expect(
-          g.reconcile({ connectionId: id, contentHash: 'ch1:x', from: to, to: new Date(to.getTime() - 1) }),
+          g.reconcile({
+            connectionId: id,
+            contentHash: 'ch1:x',
+            from: to,
+            to: new Date(to.getTime() - 1),
+          }),
         ).rejects.toBeInstanceOf(InvalidRequestError);
       });
     });
@@ -274,21 +295,31 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
         expect(out.kind).toBe('selection');
         if (out.kind !== 'selection') return;
         const sel = await c.getSelection(out.selectionId);
-        expect(sel.candidates.map((x) => x.check.kind)).toEqual(['eligible', 'eligible', 'ineligible']);
+        expect(sel.candidates.map((x) => x.check.kind)).toEqual([
+          'eligible',
+          'eligible',
+          'ineligible',
+        ]);
         expect(JSON.stringify(sel)).not.toContain('fake_tok_');
         const first = await c.saveConnection(out.selectionId, sel.candidates[0]!.externalId);
         expect(first.created).toBe(true);
         expect(JSON.stringify(first)).not.toContain('fake_tok_');
 
         const again = await c.startConnect('facebook_page', redirect);
-        const out2 = await c.handleCallback('facebook_page', { state: stateOf(again.authorizeUrl), code: 'fake_code_2' });
+        const out2 = await c.handleCallback('facebook_page', {
+          state: stateOf(again.authorizeUrl),
+          code: 'fake_code_2',
+        });
         if (out2.kind !== 'selection') throw new Error('mong đợi phiên chọn');
         // Ứng viên không đủ điều kiện → không lưu được (phiên chọn vẫn còn dùng được).
         await expect(
           c.saveConnection(out2.selectionId, sel.candidates[2]!.externalId),
         ).rejects.toMatchObject({ code: 'CHANNEL_INELIGIBLE' });
         const dup = await c.saveConnection(out2.selectionId, sel.candidates[0]!.externalId);
-        expect(dup).toMatchObject({ created: false, connection: { connectionId: first.connection.connectionId } });
+        expect(dup).toMatchObject({
+          created: false,
+          connection: { connectionId: first.connection.connectionId },
+        });
       });
     });
 
@@ -298,12 +329,16 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
       const started = await h.as(h.a, () => c.startConnect('facebook_page', redirect));
       const state = stateOf(started.authorizeUrl);
       // Tài khoản khác dùng state của A.
-      expect(await h.as(h.b, () => c.handleCallback('facebook_page', { state, code: 'fake_code_x' }))).toEqual({
+      expect(
+        await h.as(h.b, () => c.handleCallback('facebook_page', { state, code: 'fake_code_x' })),
+      ).toEqual({
         kind: 'error',
         code: 'STATE_INVALID',
       });
       await inA(async () => {
-        expect(await c.handleCallback('facebook_page', { state: 'sai', code: 'fake_code_x' })).toEqual({
+        expect(
+          await c.handleCallback('facebook_page', { state: 'sai', code: 'fake_code_x' }),
+        ).toEqual({
           kind: 'error',
           code: 'STATE_INVALID',
         });
@@ -318,7 +353,10 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
         });
         const s2 = await c.startConnect('facebook_page', redirect);
         expect(
-          await c.handleCallback('facebook_page', { state: stateOf(s2.authorizeUrl), error: 'access_denied' }),
+          await c.handleCallback('facebook_page', {
+            state: stateOf(s2.authorizeUrl),
+            error: 'access_denied',
+          }),
         ).toEqual({ kind: 'error', code: 'CONNECT_CANCELLED' });
       });
     });
@@ -326,11 +364,18 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
     it('danh sách Page giả theo kịch bản target=oauth', async () => {
       await inA(async () => {
         const c = harness().connections();
-        await harness().setOauthPages([{ externalId: 'p-x', displayName: 'Trang X', eligible: true }]);
+        await harness().setOauthPages([
+          { externalId: 'p-x', displayName: 'Trang X', eligible: true },
+        ]);
         const s = await c.startConnect('facebook_page', redirect);
-        const out = await c.handleCallback('facebook_page', { state: stateOf(s.authorizeUrl), code: 'fake_code_1' });
+        const out = await c.handleCallback('facebook_page', {
+          state: stateOf(s.authorizeUrl),
+          code: 'fake_code_1',
+        });
         if (out.kind !== 'selection') throw new Error('mong đợi phiên chọn');
-        expect((await c.getSelection(out.selectionId)).candidates.map((x) => x.externalId)).toEqual(['p-x']);
+        expect((await c.getSelection(out.selectionId)).candidates.map((x) => x.externalId)).toEqual(
+          ['p-x'],
+        );
       });
     });
   });

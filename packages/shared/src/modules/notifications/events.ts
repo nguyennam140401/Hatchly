@@ -110,19 +110,64 @@ export interface NotificationRule {
 
 /** Người nhận + kênh + gộp email theo loại (khớp UI/UX mục 8 – đổi bảng = đổi kiểm thử, phải review). */
 export const NOTIFICATION_RULES: Record<NotificationType, NotificationRule> = {
-  post_pending_review: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate', defaultActions: ['open_post'] },
-  post_returned: { recipients: ['post_author'], channels: ['in_app'], emailBatch: null, defaultActions: ['open_post'] },
-  approved_post_rescheduled: { recipients: ['owner'], channels: ['in_app'], emailBatch: null, defaultActions: ['open_post'] },
-  batch_generation_done: { recipients: ['actor_target'], channels: ['in_app'], emailBatch: null, defaultActions: ['open_plan'] },
+  post_pending_review: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['open_post'],
+  },
+  post_returned: {
+    recipients: ['post_author'],
+    channels: ['in_app'],
+    emailBatch: null,
+    defaultActions: ['open_post'],
+  },
+  approved_post_rescheduled: {
+    recipients: ['owner'],
+    channels: ['in_app'],
+    emailBatch: null,
+    defaultActions: ['open_post'],
+  },
+  batch_generation_done: {
+    recipients: ['actor_target'],
+    channels: ['in_app'],
+    emailBatch: null,
+    defaultActions: ['open_plan'],
+  },
   publish_needs_action: {
     recipients: ['owner', 'post_author'],
     channels: ['in_app', 'email'],
     emailBatch: 'batch_10m',
     defaultActions: ['open_attempt'],
   },
-  channel_token_expiring: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate', defaultActions: ['reconnect_channel'] },
-  ai_usage_80: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate', defaultActions: ['open_usage'] },
-  ai_usage_100: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate', defaultActions: ['open_usage'] },
-  plan_expiring: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate', defaultActions: ['open_plan'] },
-  data_deletion_scheduled: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate', defaultActions: ['open_plan'] },
+  channel_token_expiring: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['reconnect_channel'],
+  },
+  ai_usage_80: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['open_usage'],
+  },
+  ai_usage_100: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['open_usage'],
+  },
+  plan_expiring: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['open_plan'],
+  },
+  data_deletion_scheduled: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['open_plan'],
+  },
 };

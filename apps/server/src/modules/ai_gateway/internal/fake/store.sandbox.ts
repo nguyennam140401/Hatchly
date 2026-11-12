@@ -119,7 +119,8 @@ export class SandboxBudgetStore implements FakeBudgetStore {
             cap: aiFakeBudgets.cap,
             softLimit: aiFakeBudgets.soft_limit,
           });
-        if (row === undefined) return { ok: false, snapshot: await this.readAccount(db, key.cycleStart) };
+        if (row === undefined)
+          return { ok: false, snapshot: await this.readAccount(db, key.cycleStart) };
         const id = uuidV7();
         const reservedAt = new Date();
         await db.insert(aiFakeReservations).values({
@@ -135,7 +136,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
         return {
           ok: true,
           reservationId: id,
-          snapshot: { used: n(row.used), reserved: n(row.reserved), cap: n(row.cap), softLimit: n(row.softLimit) },
+          snapshot: {
+            used: n(row.used),
+            reserved: n(row.reserved),
+            cap: n(row.cap),
+            softLimit: n(row.softLimit),
+          },
         };
       });
     }
@@ -157,7 +163,8 @@ export class SandboxBudgetStore implements FakeBudgetStore {
             cap: aiFakeSystemBudgets.cap,
             softLimit: aiFakeSystemBudgets.soft_limit,
           });
-        if (row === undefined) return { ok: false, snapshot: await this.readSystem(db, key.weekStart) };
+        if (row === undefined)
+          return { ok: false, snapshot: await this.readSystem(db, key.weekStart) };
         const id = uuidV7();
         await db.insert(aiFakeSystemReservations).values({
           id,
@@ -170,7 +177,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
         return {
           ok: true,
           reservationId: id,
-          snapshot: { used: n(row.used), reserved: n(row.reserved), cap: n(row.cap), softLimit: n(row.softLimit) },
+          snapshot: {
+            used: n(row.used),
+            reserved: n(row.reserved),
+            cap: n(row.cap),
+            softLimit: n(row.softLimit),
+          },
         };
       },
       { tenant: 'none' },
@@ -184,7 +196,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
       .where(eq(aiFakeBudgets.cycle_start, cycleStart))
       .limit(1);
     return b === undefined
-      ? { used: 0, reserved: 0, cap: ACCOUNT_CAP_MICRO_USD, softLimit: ACCOUNT_SOFT_LIMIT_MICRO_USD }
+      ? {
+          used: 0,
+          reserved: 0,
+          cap: ACCOUNT_CAP_MICRO_USD,
+          softLimit: ACCOUNT_SOFT_LIMIT_MICRO_USD,
+        }
       : { used: n(b.used), reserved: n(b.reserved), cap: n(b.cap), softLimit: n(b.soft_limit) };
   }
 
@@ -218,7 +235,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
         const [r] = await db
           .update(aiFakeReservations)
           .set({ state: 'released', closed_at: new Date() })
-          .where(and(eq(aiFakeReservations.id, reservationId), inArray(aiFakeReservations.state, ['held', 'calling'])))
+          .where(
+            and(
+              eq(aiFakeReservations.id, reservationId),
+              inArray(aiFakeReservations.state, ['held', 'calling']),
+            ),
+          )
           .returning();
         if (r === undefined) return;
         await db
@@ -230,7 +252,10 @@ export class SandboxBudgetStore implements FakeBudgetStore {
           .update(aiFakeSystemReservations)
           .set({ state: 'released', closed_at: new Date() })
           .where(
-            and(eq(aiFakeSystemReservations.id, reservationId), inArray(aiFakeSystemReservations.state, ['held', 'calling'])),
+            and(
+              eq(aiFakeSystemReservations.id, reservationId),
+              inArray(aiFakeSystemReservations.state, ['held', 'calling']),
+            ),
           )
           .returning();
         if (r === undefined) return;
@@ -262,7 +287,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
       const [r] = await db
         .select()
         .from(aiFakeReservations)
-        .where(and(eq(aiFakeReservations.id, reservationId), inArray(aiFakeReservations.state, ['held', 'calling'])))
+        .where(
+          and(
+            eq(aiFakeReservations.id, reservationId),
+            inArray(aiFakeReservations.state, ['held', 'calling']),
+          ),
+        )
         .for('update');
       if (r === undefined) return [];
       const est = n(r.estimate);
@@ -285,13 +315,25 @@ export class SandboxBudgetStore implements FakeBudgetStore {
       const f80 = await db
         .update(aiFakeBudgets)
         .set({ notified_80: true })
-        .where(and(eq(aiFakeBudgets.id, b.id), eq(aiFakeBudgets.notified_80, false), sql`${aiFakeBudgets.used} * 100 >= ${aiFakeBudgets.cap} * 80`))
+        .where(
+          and(
+            eq(aiFakeBudgets.id, b.id),
+            eq(aiFakeBudgets.notified_80, false),
+            sql`${aiFakeBudgets.used} * 100 >= ${aiFakeBudgets.cap} * 80`,
+          ),
+        )
         .returning({ id: aiFakeBudgets.id });
       if (f80.length > 0) crossed.push(80);
       const f100 = await db
         .update(aiFakeBudgets)
         .set({ notified_100: true })
-        .where(and(eq(aiFakeBudgets.id, b.id), eq(aiFakeBudgets.notified_100, false), sql`${aiFakeBudgets.used} >= ${aiFakeBudgets.cap}`))
+        .where(
+          and(
+            eq(aiFakeBudgets.id, b.id),
+            eq(aiFakeBudgets.notified_100, false),
+            sql`${aiFakeBudgets.used} >= ${aiFakeBudgets.cap}`,
+          ),
+        )
         .returning({ id: aiFakeBudgets.id });
       if (f100.length > 0) crossed.push(100);
       await db.insert(aiFakeCostLedger).values({
@@ -314,7 +356,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
       await db
         .update(aiFakeReservations)
         .set({ state: 'settled', closed_at: new Date() })
-        .where(and(eq(aiFakeReservations.id, r.id), inArray(aiFakeReservations.state, ['held', 'calling'])));
+        .where(
+          and(
+            eq(aiFakeReservations.id, r.id),
+            inArray(aiFakeReservations.state, ['held', 'calling']),
+          ),
+        );
       if (crossed.length > 0 && hooks?.onCrossed !== undefined) await hooks.onCrossed(db, crossed);
       return crossed;
     }
@@ -322,7 +369,10 @@ export class SandboxBudgetStore implements FakeBudgetStore {
       .select()
       .from(aiFakeSystemReservations)
       .where(
-        and(eq(aiFakeSystemReservations.id, reservationId), inArray(aiFakeSystemReservations.state, ['held', 'calling'])),
+        and(
+          eq(aiFakeSystemReservations.id, reservationId),
+          inArray(aiFakeSystemReservations.state, ['held', 'calling']),
+        ),
       )
       .for('update');
     if (r === undefined) return [];
@@ -401,7 +451,7 @@ export class SandboxBudgetStore implements FakeBudgetStore {
         continue;
       }
       // `calling`: có thể đã tốn tiền → quyết toán theo ước tính, mỗi giữ chỗ một giao dịch.
-      const crossed = await this.tx(scope, (db) =>
+      await this.tx(scope, (db) =>
         this.settleInTx(
           db,
           scope,
@@ -421,7 +471,6 @@ export class SandboxBudgetStore implements FakeBudgetStore {
           hooks,
         ),
       );
-      void crossed;
       settledAtEstimate++;
       gatewayEvent('warn', 'ai.unsettled_reservation', { task: s.task, model_tier: s.tier });
     }
@@ -430,7 +479,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
 
   // ----- điều khiển (kiểm thử / dev) -----
 
-  async setBudget(input: { used?: number; reserved?: number; cap?: number; cycleStart?: string }): Promise<FakeBudgetView> {
+  async setBudget(input: {
+    used?: number | undefined;
+    reserved?: number | undefined;
+    cap?: number | undefined;
+    cycleStart?: string | undefined;
+  }): Promise<FakeBudgetView> {
     const cycle = input.cycleStart ?? (await this.currentCycleStart());
     await tenantTx(async (db) => {
       await this.ensureAccountBudget(db, cycle);
@@ -449,7 +503,11 @@ export class SandboxBudgetStore implements FakeBudgetStore {
   async getBudget(): Promise<FakeBudgetView> {
     const cycle = await this.currentCycleStart();
     return tenantTx(async (db) => {
-      const [b] = await db.select().from(aiFakeBudgets).where(eq(aiFakeBudgets.cycle_start, cycle)).limit(1);
+      const [b] = await db
+        .select()
+        .from(aiFakeBudgets)
+        .where(eq(aiFakeBudgets.cycle_start, cycle))
+        .limit(1);
       return {
         cycleStart: cycle,
         used: n(b?.used),
@@ -462,7 +520,12 @@ export class SandboxBudgetStore implements FakeBudgetStore {
     });
   }
 
-  async setSystemBudget(input: { used?: number; reserved?: number; cap?: number; weekStart?: string }): Promise<void> {
+  async setSystemBudget(input: {
+    used?: number;
+    reserved?: number;
+    cap?: number;
+    weekStart?: string;
+  }): Promise<void> {
     const week = input.weekStart ?? weekStart();
     await systemTx(
       async (db) => {
@@ -472,7 +535,9 @@ export class SandboxBudgetStore implements FakeBudgetStore {
           .set({
             ...(input.used !== undefined ? { used: BigInt(input.used) } : {}),
             ...(input.reserved !== undefined ? { reserved: BigInt(input.reserved) } : {}),
-            ...(input.cap !== undefined ? { cap: BigInt(input.cap), soft_limit: BigInt(input.cap) } : {}),
+            ...(input.cap !== undefined
+              ? { cap: BigInt(input.cap), soft_limit: BigInt(input.cap) }
+              : {}),
           })
           .where(eq(aiFakeSystemBudgets.week_start, week));
       },
@@ -484,7 +549,9 @@ export class SandboxBudgetStore implements FakeBudgetStore {
     const scope = this.scopeOfContext();
     if (scope === 'account') {
       const accountId = requireFakeAccount();
-      const rows = await tenantTx((db) => db.select().from(aiFakeCostLedger).orderBy(asc(aiFakeCostLedger.created_at)));
+      const rows = await tenantTx((db) =>
+        db.select().from(aiFakeCostLedger).orderBy(asc(aiFakeCostLedger.created_at)),
+      );
       return rows.map((r) => ({
         id: r.id,
         scope: 'account' as const,
@@ -506,9 +573,13 @@ export class SandboxBudgetStore implements FakeBudgetStore {
         createdAt: r.created_at,
       }));
     }
-    const rows = await systemTx((db) => db.select().from(aiFakeSystemCostLedger).orderBy(asc(aiFakeSystemCostLedger.created_at)), {
-      tenant: 'none',
-    });
+    const rows = await systemTx(
+      (db) =>
+        db.select().from(aiFakeSystemCostLedger).orderBy(asc(aiFakeSystemCostLedger.created_at)),
+      {
+        tenant: 'none',
+      },
+    );
     return rows.map((r) => ({
       id: r.id,
       scope: 'system' as const,
@@ -535,11 +606,17 @@ export class SandboxBudgetStore implements FakeBudgetStore {
   async reservations(): Promise<Reservation[]> {
     const scope = this.scopeOfContext();
     if (scope === 'account') {
-      const rows = await tenantTx((db) => db.select().from(aiFakeReservations).orderBy(asc(aiFakeReservations.reserved_at)));
+      const rows = await tenantTx((db) =>
+        db.select().from(aiFakeReservations).orderBy(asc(aiFakeReservations.reserved_at)),
+      );
       return rows.map((r) => toReservation(r, 'account'));
     }
     const rows = await systemTx(
-      (db) => db.select().from(aiFakeSystemReservations).orderBy(asc(aiFakeSystemReservations.reserved_at)),
+      (db) =>
+        db
+          .select()
+          .from(aiFakeSystemReservations)
+          .orderBy(asc(aiFakeSystemReservations.reserved_at)),
       { tenant: 'none' },
     );
     return rows.map((r) => toReservation(r, 'system'));

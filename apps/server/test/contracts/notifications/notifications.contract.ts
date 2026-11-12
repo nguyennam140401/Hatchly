@@ -17,39 +17,90 @@ let seq = 0;
 /** Ngày duy nhất cho mỗi lần gọi (năm 2100 + n) – khóa theo ngày không trùng ngẫu nhiên. */
 const uniqueDay = () => `${2100 + ++seq}-01-01`;
 
-function example(type: NotificationType, acc: NotifyAccount, salt = uuidV7(), day = uniqueDay()): NotificationEvent {
+function example(
+  type: NotificationType,
+  acc: NotifyAccount,
+  salt = uuidV7(),
+  day = uniqueDay(),
+): NotificationEvent {
   const author = acc.collaborator.userId;
   const map: { [T in NotificationType]: () => Extract<NotificationEvent, { type: T }> } = {
-    post_pending_review: () => ({ type: 'post_pending_review', refs: { submissionId: salt, postIds: [uuidV7(), uuidV7()], authorUserId: author } }),
-    post_returned: () => ({ type: 'post_returned', refs: { postId: salt, postVersion: 2, authorUserId: author }, params: { postTitle: 'Khai trương' } }),
-    approved_post_rescheduled: () => ({ type: 'approved_post_rescheduled', refs: { postId: salt, postVersion: 3, byUserId: author } }),
-    batch_generation_done: () => ({ type: 'batch_generation_done', refs: { planId: salt, batchId: uuidV7(), requestedByUserId: author } }),
+    post_pending_review: () => ({
+      type: 'post_pending_review',
+      refs: { submissionId: salt, postIds: [uuidV7(), uuidV7()], authorUserId: author },
+    }),
+    post_returned: () => ({
+      type: 'post_returned',
+      refs: { postId: salt, postVersion: 2, authorUserId: author },
+      params: { postTitle: 'Khai trương' },
+    }),
+    approved_post_rescheduled: () => ({
+      type: 'approved_post_rescheduled',
+      refs: { postId: salt, postVersion: 3, byUserId: author },
+    }),
+    batch_generation_done: () => ({
+      type: 'batch_generation_done',
+      refs: { planId: salt, batchId: uuidV7(), requestedByUserId: author },
+    }),
     publish_needs_action: () => ({
       type: 'publish_needs_action',
       refs: { attemptId: salt, postId: uuidV7(), authorUserId: author, state: 'needs_check' },
       params: { postTitle: 'Ưu đãi', channelDisplayName: 'Trang Gió' },
     }),
-    channel_token_expiring: () => ({ type: 'channel_token_expiring', refs: { connectionId: salt, expiresOn: day } }),
-    ai_usage_80: () => ({ type: 'ai_usage_80', refs: { cycleStart: day }, params: { percent: 80 } }),
-    ai_usage_100: () => ({ type: 'ai_usage_100', refs: { cycleStart: day }, params: { percent: 100 } }),
-    plan_expiring: () => ({ type: 'plan_expiring', refs: { subscriptionId: salt, expiresOn: day } }),
+    channel_token_expiring: () => ({
+      type: 'channel_token_expiring',
+      refs: { connectionId: salt, expiresOn: day },
+    }),
+    ai_usage_80: () => ({
+      type: 'ai_usage_80',
+      refs: { cycleStart: day },
+      params: { percent: 80 },
+    }),
+    ai_usage_100: () => ({
+      type: 'ai_usage_100',
+      refs: { cycleStart: day },
+      params: { percent: 100 },
+    }),
+    plan_expiring: () => ({
+      type: 'plan_expiring',
+      refs: { subscriptionId: salt, expiresOn: day },
+    }),
     data_deletion_scheduled: () => ({ type: 'data_deletion_scheduled', refs: { deleteOn: day } }),
   };
   return map[type]();
 }
 
 /** Bảng khóa (data-model.md mục 3): người nhận × kênh × gộp email. Đổi bảng = đổi kiểm thử. */
-const EXPECTED: Record<NotificationType, { recipients: ('owner' | 'author')[]; channels: string[]; emailBatch: string | null }> = {
-  post_pending_review: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate' },
+const EXPECTED: Record<
+  NotificationType,
+  { recipients: ('owner' | 'author')[]; channels: string[]; emailBatch: string | null }
+> = {
+  post_pending_review: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+  },
   post_returned: { recipients: ['author'], channels: ['in_app'], emailBatch: null },
   approved_post_rescheduled: { recipients: ['owner'], channels: ['in_app'], emailBatch: null },
   batch_generation_done: { recipients: ['author'], channels: ['in_app'], emailBatch: null },
-  publish_needs_action: { recipients: ['owner', 'author'], channels: ['in_app', 'email'], emailBatch: 'batch_10m' },
-  channel_token_expiring: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate' },
+  publish_needs_action: {
+    recipients: ['owner', 'author'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'batch_10m',
+  },
+  channel_token_expiring: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+  },
   ai_usage_80: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate' },
   ai_usage_100: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate' },
   plan_expiring: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate' },
-  data_deletion_scheduled: { recipients: ['owner'], channels: ['in_app', 'email'], emailBatch: 'immediate' },
+  data_deletion_scheduled: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+  },
 };
 
 export function describeNotificationsContract(harness: () => NotifyHarness): void {
@@ -71,15 +122,23 @@ export function describeNotificationsContract(harness: () => NotifyHarness): voi
     });
 
     for (const type of NOTIFICATION_TYPES) {
-      it(`${type}`, async () => {
+      it(type, async () => {
         await inNewAccount(async (acc) => {
           expect(await emit(example(type, acc))).toEqual({ status: 'queued' });
           await h().flush();
           const got = await h().store.delivered({ type });
-          const expectIds = EXPECTED[type].recipients.map((r) => (r === 'owner' ? acc.owner.userId : acc.collaborator.userId));
-          const pairs = got.map((n) => `${n.recipientUserId}|${n.channel}|${n.emailBatch ?? '-'}`).sort();
+          const expectIds = EXPECTED[type].recipients.map((r) =>
+            r === 'owner' ? acc.owner.userId : acc.collaborator.userId,
+          );
+          const pairs = got
+            .map((n) => `${n.recipientUserId}|${n.channel}|${n.emailBatch ?? '-'}`)
+            .sort();
           const want = expectIds
-            .flatMap((u) => EXPECTED[type].channels.map((c) => `${u}|${c}|${c === 'email' ? EXPECTED[type].emailBatch : '-'}`))
+            .flatMap((u) =>
+              EXPECTED[type].channels.map(
+                (c) => `${u}|${c}|${c === 'email' ? EXPECTED[type].emailBatch : '-'}`,
+              ),
+            )
             .sort();
           expect(pairs).toEqual(want);
           const emails = got.filter((n) => n.channel === 'email');
@@ -116,6 +175,19 @@ export function describeNotificationsContract(harness: () => NotifyHarness): voi
       });
     });
 
+    it('hai tài khoản cùng khóa sự kiện (cùng chu kỳ) → mỗi tài khoản đều phát được', async () => {
+      const a = await h().newAccount();
+      const b = await h().newAccount();
+      const e = { type: 'ai_usage_80' as const, refs: { cycleStart: '2031-01-01' } };
+      for (const acc of [a, b]) {
+        await h().inAccount(acc.accountId, async () => {
+          expect(await emit(e)).toEqual({ status: 'queued' });
+          await h().flush();
+          expect(await h().store.events()).toHaveLength(1);
+        });
+      }
+    });
+
     it('ai_usage_80: chu kỳ mới phát lại được', async () => {
       await inNewAccount(async () => {
         await emit({ type: 'ai_usage_80', refs: { cycleStart: '2026-11-01' } });
@@ -143,7 +215,9 @@ export function describeNotificationsContract(harness: () => NotifyHarness): voi
           { type: 'loai_la', refs: {} },
         ];
         for (const e of bad) {
-          await expect(emit(e as NotificationEvent)).rejects.toBeInstanceOf(NotificationEventInvalidError);
+          await expect(emit(e as NotificationEvent)).rejects.toBeInstanceOf(
+            NotificationEventInvalidError,
+          );
         }
         expect(await h().pendingJobs()).toBe(0);
       });
@@ -219,7 +293,9 @@ export function describeNotificationsContract(harness: () => NotifyHarness): voi
         h().mail.failFor(acc.owner.email, 'permanent');
         await deliverNotification(again, { ...h().deps, store: h().store });
         await deliverNotification(again, { ...h().deps, store: h().store });
-        const perm = (await h().store.delivered()).filter((n) => n.channel === 'email' && n.emailResult === 'permanent');
+        const perm = (await h().store.delivered()).filter(
+          (n) => n.channel === 'email' && n.emailResult === 'permanent',
+        );
         expect(perm).toHaveLength(1);
         h().mail.clear();
       });

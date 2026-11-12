@@ -15,6 +15,7 @@
     "test",
     "scripts",
     "vitest.config.mts",
+    "vitest.infra.config.mts",
     "vitest.db.config.mts",
     "vitest.queue.config.mts",
     "drizzle.config.ts",

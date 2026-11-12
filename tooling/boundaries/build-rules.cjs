@@ -236,7 +236,11 @@ function buildForbiddenRules(manifest) {
       {
         // Bảng/kho giả lập (src/dev/sandbox) chỉ dành cho src/dev và internal/fake.
         from: {
-          pathNot: ['^apps/server/src/dev/', `${MODULES}[^/]+/internal/fake/`, '^apps/server/test/'],
+          pathNot: [
+            '^apps/server/src/dev/',
+            `${MODULES}[^/]+/internal/fake/`,
+            '^apps/server/test/',
+          ],
         },
         to: { path: '^apps/server/src/dev/sandbox/' },
       },

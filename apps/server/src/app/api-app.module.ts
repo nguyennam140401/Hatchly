@@ -7,6 +7,8 @@ import { StorageModule } from '../core/storage';
 import { DiagnosticsController } from '../core/diagnostics/diagnostics.controller';
 import { HealthController } from '../core/health/health.controller';
 import type { LogDestination } from '../core/logging/logging.module';
+import { DevFakesController } from '../dev/fakes.controller';
+import { FakeOauthController } from '../modules/platform_gateway';
 import { buildModules } from './module-registry';
 
 export interface ApiAppOptions {
@@ -14,6 +16,11 @@ export interface ApiAppOptions {
   accessScan?: AccessScanMode | undefined;
   /** Nơi ghi nhật ký (kiểm thử bắt nhật ký); mặc định stdout. */
   logDestination?: LogDestination | undefined;
+}
+
+/** Route chỉ-dev (quản trị giả lập, trang ủy quyền giả) chỉ có ở development/test (005, R12). */
+export function shouldRegisterDevRoutes(appEnv: AppConfig['APP_ENV']): boolean {
+  return appEnv === 'development' || appEnv === 'test';
 }
 
 /** Mô-đun gốc của đơn vị API. Thiếu biến xác thực bắt buộc → ConfigError, API không khởi động. */
@@ -35,6 +42,10 @@ export class ApiAppModule {
         HealthController,
         // Điểm chẩn đoán không bao giờ có ở production (R17).
         ...(config.APP_ENV === 'production' ? [] : [DiagnosticsController]),
+        // 005: quản trị bản giả lập + trang ủy quyền giả – không có route ở staging/production (→ 404).
+        ...(shouldRegisterDevRoutes(config.APP_ENV)
+          ? [DevFakesController, FakeOauthController]
+          : []),
       ],
     };
   }

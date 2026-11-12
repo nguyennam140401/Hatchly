@@ -28,7 +28,8 @@ export async function samplePublishFlow(
     for (let i = 0; i < 5; i++) {
       const status = await gateway.checkStatus(input.connectionId, result.processingId);
       if (status.kind === 'processing') continue;
-      if (status.kind === 'done') return { kind: 'published', platformPostId: status.platformPostId };
+      if (status.kind === 'done')
+        return { kind: 'published', platformPostId: status.platformPostId };
       result = status;
       break;
     }
@@ -39,7 +40,8 @@ export async function samplePublishFlow(
     case 'processing':
       return { kind: 'needs_check' };
     case 'failed': {
-      if (result.error.category !== 'unknown') return { kind: 'failed', category: result.error.category };
+      if (result.error.category !== 'unknown')
+        return { kind: 'failed', category: result.error.category };
       if (!caps.reconcile) return { kind: 'needs_check' };
       const rec = await gateway.reconcile({
         connectionId: input.connectionId,

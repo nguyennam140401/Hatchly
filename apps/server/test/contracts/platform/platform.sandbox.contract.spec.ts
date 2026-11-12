@@ -13,18 +13,24 @@ let database: TestDatabase;
 describeDb('Cổng nền tảng – bản giả lập (sandbox)', () => {
   beforeAll(async () => {
     database = makeDatabase({ unit: 'api' });
-    harness = await makePlatformHarness('sandbox', { a: await createAccount(), b: await createAccount() });
+    harness = await makePlatformHarness('sandbox', {
+      a: await createAccount(),
+      b: await createAccount(),
+    });
   });
   afterAll(async () => {
     await database.close();
   });
 
   for (const type of ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const) {
-    describePlatformAdapterContract(() => {
-      const adapter = listRegisteredAdapters().find((a) => a.channelType === type);
-      if (adapter === undefined) throw new Error(`Chưa đăng ký bộ chuyển đổi ${type}`);
-      return adapter;
-    }, () => harness);
+    describePlatformAdapterContract(
+      () => {
+        const adapter = listRegisteredAdapters().find((a) => a.channelType === type);
+        if (adapter === undefined) throw new Error(`Chưa đăng ký bộ chuyển đổi ${type}`);
+        return adapter;
+      },
+      () => harness,
+    );
   }
   describePlatformGatewayContract(() => harness);
 });

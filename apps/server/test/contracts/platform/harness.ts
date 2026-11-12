@@ -15,7 +15,10 @@ import { ConnectionsService } from '../../../src/modules/platform_gateway/intern
 import { makeFakeAdapterFactory } from '../../../src/modules/platform_gateway/internal/fake';
 import type { FakeStep } from '../../../src/modules/platform_gateway/internal/fake/scenarios';
 import { PlatformGatewayService } from '../../../src/modules/platform_gateway/internal/gateway.service';
-import { FakeCredentialVault, newFakeToken } from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
+import {
+  FakeCredentialVault,
+  newFakeToken,
+} from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
 import { TEST_LOG_DIR } from '../../setup/log-capture';
 
 // Harness của bộ kiểm thử hợp đồng Cổng nền tảng (005, R15). Bản thật sau này (WBS 2.3) cung cấp
@@ -38,7 +41,9 @@ export interface PlatformHarness {
     opts?: { status?: 'disconnected'; expiresInMs?: number },
   ): Promise<string>;
   script(target: string, steps: FakeStep[]): Promise<void>;
-  setOauthPages(pages: { externalId: string; displayName: string; eligible: boolean }[]): Promise<void>;
+  setOauthPages(
+    pages: { externalId: string; displayName: string; eligible: boolean }[],
+  ): Promise<void>;
   publishedCount(hash: string): Promise<number>;
   gateway(submitTimeoutMs?: number): PlatformGatewayService;
   connections(): ConnectionsService;
@@ -53,7 +58,11 @@ export async function makePlatformHarness(
   const store = await getFakePlatformStore(mode);
   const vault = new FakeCredentialVault();
   clearAdapters();
-  registerDefaultAdapters({ driver: 'fake', appEnv: 'test', makeFake: makeFakeAdapterFactory(mode, store) });
+  registerDefaultAdapters({
+    driver: 'fake',
+    appEnv: 'test',
+    makeFake: makeFakeAdapterFactory(mode, store),
+  });
   const a = { accountId: accounts.a, userId: uuidV7() };
   const b = { accountId: accounts.b, userId: uuidV7() };
   const control = fakePlatform(mode);
@@ -95,10 +104,16 @@ export async function makePlatformHarness(
     script: (target, steps) => control.script(target, steps),
     async setOauthPages(pages) {
       const scenarios = await getScenarioStore(mode);
-      await scenarios.put({ component: 'platform', target: 'oauth', spec: { pages }, remainingUses: 1 });
+      await scenarios.put({
+        component: 'platform',
+        target: 'oauth',
+        spec: { pages },
+        remainingUses: 1,
+      });
     },
     publishedCount: (hash) => control.publishedCount(hash),
-    gateway: (submitTimeoutMs = 200) => new PlatformGatewayService({ store, vault, submitTimeoutMs }),
+    gateway: (submitTimeoutMs = 200) =>
+      new PlatformGatewayService({ store, vault, submitTimeoutMs }),
     connections: () => new ConnectionsService(store, vault),
     logText() {
       const file = resolve(

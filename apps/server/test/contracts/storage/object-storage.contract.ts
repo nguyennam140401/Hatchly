@@ -16,7 +16,12 @@ import {
 export interface StorageHarness {
   storage: ObjectStorage;
   /** Dùng đường dẫn tải lên như trình duyệt; `fields` ghi đè để thử gian lận. true = được nhận. */
-  upload(p: PresignedUpload, bytes: Buffer, contentType: string, fields?: Record<string, string>): Promise<boolean>;
+  upload(
+    p: PresignedUpload,
+    bytes: Buffer,
+    contentType: string,
+    fields?: Record<string, string>,
+  ): Promise<boolean>;
   download(url: string): Promise<Buffer | null>;
   /** Làm hết hạn: memory tua đồng hồ; S3 chờ thật. */
   expire(seconds: number): Promise<void>;
@@ -32,7 +37,10 @@ const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 export function describeObjectStorageContract(harness: () => StorageHarness): void {
   const s = () => harness().storage;
   const inAcc = <T>(acc: string, fn: () => Promise<T>, jobId?: string) =>
-    runWithJobContext({ traceId: uuidV7(), accountId: acc, ...(jobId !== undefined ? { jobId } : {}) }, fn);
+    runWithJobContext(
+      { traceId: uuidV7(), accountId: acc, ...(jobId !== undefined ? { jobId } : {}) },
+      fn,
+    );
 
   describe('1–3. tải lên bằng đường dẫn ký sẵn', () => {
     it('tải đúng → stat đúng kích thước/loại; hash = SHA-256; dùng lại trong hạn → ghi đè', async () => {
@@ -43,11 +51,18 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
         expect(up.expiresAt.getTime()).toBeLessThanOrEqual(harness().now() + 900_000 + 1000);
         const body = png();
         expect(await harness().upload(up, body, 'image/png')).toBe(true);
-        expect(await s().stat(l)).toMatchObject({ exists: true, bytes: body.length, contentType: 'image/png' });
+        expect(await s().stat(l)).toMatchObject({
+          exists: true,
+          bytes: body.length,
+          contentType: 'image/png',
+        });
         expect(await s().stat(l, { hash: true })).toMatchObject({ sha256: sha(body) });
         const again = png(100);
         expect(await harness().upload(up, again, 'image/png')).toBe(true);
-        expect(await s().stat(l, { hash: true })).toMatchObject({ bytes: again.length, sha256: sha(again) });
+        expect(await s().stat(l, { hash: true })).toMatchObject({
+          bytes: again.length,
+          sha256: sha(again),
+        });
       });
     });
 
@@ -57,11 +72,17 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
         const l = loc.mediaOriginal(uuidV7());
         const up = await s().presignUpload(l, { contentType: 'image/png', maxBytes: 100 });
         expect(await harness().upload(up, png(500), 'image/png')).toBe(false);
-        expect(await harness().upload(up, png(), 'image/jpeg', { 'Content-Type': 'image/jpeg' })).toBe(false);
+        expect(
+          await harness().upload(up, png(), 'image/jpeg', { 'Content-Type': 'image/jpeg' }),
+        ).toBe(false);
         const other = `tenants/${acc}/media/${uuidV7()}/original`;
         expect(await harness().upload(up, png(), 'image/png', { key: other })).toBe(false);
         expect(await s().stat(l)).toEqual({ exists: false });
-        const short = await s().presignUpload(l, { contentType: 'image/png', maxBytes: 100, ttlSec: 1 });
+        const short = await s().presignUpload(l, {
+          contentType: 'image/png',
+          maxBytes: 100,
+          ttlSec: 1,
+        });
         await harness().expire(3);
         expect(await harness().upload(short, png(), 'image/png')).toBe(false);
         expect(await s().stat(l)).toEqual({ exists: false });
@@ -71,11 +92,20 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
     it('ttlSec > 900 → InvalidRequestError; loại tệp ngoài danh sách / PDF ngoài ngữ cảnh → từ chối', async () => {
       await inAcc(uuidV7(), async () => {
         const l = loc.mediaOriginal(uuidV7());
-        await expect(s().presignUpload(l, { contentType: 'image/png', maxBytes: 1, ttlSec: 901 })).rejects.toBeInstanceOf(InvalidRequestError);
-        await expect(s().presignUpload(l, { contentType: 'text/html' as never, maxBytes: 1 })).rejects.toBeInstanceOf(InvalidRequestError);
-        await expect(s().presignUpload(l, { contentType: 'application/pdf', maxBytes: 1 })).rejects.toBeInstanceOf(InvalidRequestError);
         await expect(
-          s().presignUpload(loc.contextFile(uuidV7()), { contentType: 'application/pdf', maxBytes: 1 }),
+          s().presignUpload(l, { contentType: 'image/png', maxBytes: 1, ttlSec: 901 }),
+        ).rejects.toBeInstanceOf(InvalidRequestError);
+        await expect(
+          s().presignUpload(l, { contentType: 'text/html' as never, maxBytes: 1 }),
+        ).rejects.toBeInstanceOf(InvalidRequestError);
+        await expect(
+          s().presignUpload(l, { contentType: 'application/pdf', maxBytes: 1 }),
+        ).rejects.toBeInstanceOf(InvalidRequestError);
+        await expect(
+          s().presignUpload(loc.contextFile(uuidV7()), {
+            contentType: 'application/pdf',
+            maxBytes: 1,
+          }),
         ).resolves.toMatchObject({ contentType: 'application/pdf' });
       });
     });
@@ -114,9 +144,14 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
           for (const k of kinds) {
             const l = k.make();
             expect(await s().stat(l), k.name).toEqual({ exists: false });
-            await capture(s().read(l).then(async (r) => {
-              for await (const _ of r) throw new Error('đọc được tệp của B');
-            }));
+            await capture(
+              s()
+                .read(l)
+                .then(async (r) => {
+                  for await (const chunk of r)
+                    throw new Error(`đọc được tệp của B (${String((chunk as Buffer).length)})`);
+                }),
+            );
             await capture(s().copy(l, loc.mediaThumb(uuidV7())));
             await s().delete(l);
             if (k.name !== 'job_tmp') {
@@ -127,7 +162,11 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
             const pub = await s().signedUrl(l, 'public');
             expect(await harness().download(pub.url), k.name).toBeNull();
           }
-          for (const prefix of [{ kind: 'media' as const }, { kind: 'context' as const }, { kind: 'account' as const }]) {
+          for (const prefix of [
+            { kind: 'media' as const },
+            { kind: 'context' as const },
+            { kind: 'account' as const },
+          ]) {
             expect((await s().list(prefix)).items).toEqual([]);
           }
           expect(await s().deleteAllForCurrentAccount()).toEqual({ deleted: 0 });
@@ -139,7 +178,10 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
         b,
         async () => {
           for (const k of kinds) {
-            expect(await s().stat(k.make(), { hash: true }), k.name).toMatchObject({ exists: true, sha256: sha(bodies.get(k.name)!) });
+            expect(await s().stat(k.make(), { hash: true }), k.name).toMatchObject({
+              exists: true,
+              sha256: sha(bodies.get(k.name)!),
+            });
           }
         },
         jobB,
@@ -158,7 +200,9 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
         expect(pv.expiresAt.getTime()).toBeLessThanOrEqual(harness().now() + 3600_000 + 1000);
         expect(await harness().download(pv.url)).toEqual(body);
         await expect(s().signedUrl(l, 'preview', 3601)).rejects.toBeInstanceOf(InvalidRequestError);
-        await expect(s().signedUrl(l, 'public', 86_401)).rejects.toBeInstanceOf(InvalidRequestError);
+        await expect(s().signedUrl(l, 'public', 86_401)).rejects.toBeInstanceOf(
+          InvalidRequestError,
+        );
         expect((await s().signedUrl(l, 'public', 86_400)).purpose).toBe('public');
         const short = await s().signedUrl(l, 'public', 1);
         await harness().expire(3);
@@ -171,7 +215,9 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
     it('ngoài ngữ cảnh việc → TenantContextError; khóa tenants/{acc}/tmp/{jobId}/; không tải lên / không preview', async () => {
       const acc = uuidV7();
       await inAcc(acc, async () => {
-        expect(() => loc.jobTmp('a.mp3')).toThrow(expect.objectContaining({ name: 'TenantContextError' }));
+        expect(() => loc.jobTmp('a.mp3')).toThrow(
+          expect.objectContaining({ name: 'TenantContextError' }),
+        );
       });
       const jobId = uuidV7();
       await inAcc(
@@ -179,12 +225,18 @@ export function describeObjectStorageContract(harness: () => StorageHarness): vo
         async () => {
           const l = loc.jobTmp('audio.mp3');
           expect(l).toEqual({ kind: 'job_tmp', jobId, name: 'audio.mp3' });
-          await expect(s().presignUpload(l, { contentType: 'image/png', maxBytes: 1 })).rejects.toBeInstanceOf(InvalidRequestError);
+          await expect(
+            s().presignUpload(l, { contentType: 'image/png', maxBytes: 1 }),
+          ).rejects.toBeInstanceOf(InvalidRequestError);
           await s().write(l, png(), { contentType: 'audio/mpeg' });
           await expect(s().signedUrl(l, 'preview')).rejects.toBeInstanceOf(InvalidRequestError);
           await expect(s().signedUrl(l, 'public')).resolves.toMatchObject({ purpose: 'public' });
           const listed = await s().list({ kind: 'account' });
-          expect(listed.items.map((i) => i.loc)).toContainEqual({ kind: 'job_tmp', jobId, name: 'audio.mp3' });
+          expect(listed.items.map((i) => i.loc)).toContainEqual({
+            kind: 'job_tmp',
+            jobId,
+            name: 'audio.mp3',
+          });
           await harness().checkTmpLifecycle(l);
         },
         jobId,

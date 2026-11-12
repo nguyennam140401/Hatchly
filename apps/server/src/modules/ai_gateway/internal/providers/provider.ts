@@ -24,7 +24,12 @@ export interface ProviderStream extends AsyncIterable<{ delta: string }> {
 export interface AiProviderAdapter {
   readonly provider: string;
   countInputTokens(model: string, prompt: OrderedPrompt): Promise<number>;
-  complete(model: string, p: OrderedPrompt, maxOut: number, signal: AbortSignal): Promise<ProviderResult>;
+  complete(
+    model: string,
+    p: OrderedPrompt,
+    maxOut: number,
+    signal: AbortSignal,
+  ): Promise<ProviderResult>;
   stream(model: string, p: OrderedPrompt, maxOut: number, signal: AbortSignal): ProviderStream;
   transcribe(model: string, audioUrl: string, signal: AbortSignal): Promise<ProviderResult>;
 }

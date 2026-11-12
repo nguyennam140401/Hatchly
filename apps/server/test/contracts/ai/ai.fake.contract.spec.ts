@@ -19,7 +19,9 @@ beforeAll(async () => {
       for (const p of emitter.drain()) emitted.push({ accountId: p.accountId, type: p.event.type });
     },
     count: (type) =>
-      Promise.resolve(emitted.filter((e) => e.accountId === currentAccountId() && e.type === type).length),
+      Promise.resolve(
+        emitted.filter((e) => e.accountId === currentAccountId() && e.type === type).length,
+      ),
   });
 });
 

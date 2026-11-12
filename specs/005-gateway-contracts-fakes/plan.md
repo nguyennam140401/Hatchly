@@ -84,6 +84,16 @@ supertest với bản giả lập; `tooling` fixture ranh giới.
 **Gate trước Phase 0**: ĐẠT. **Re-check sau Phase 1**: ĐẠT – thiết kế không thêm vi phạm; ràng buộc mới duy nhất là
 thay đổi manifest đã được chốt ở Clarifications (chờ SA xác nhận khi review).
 
+**Rà soát sau implement (2026-11-12, skill `constitution-review`)**: ĐẠT – không vi phạm nguyên tắc I, II, III,
+VII. Ghi chú mức nhẹ còn mở: (1) quyết toán trả dần bị đứt dùng `min(thực, ước tính)` nên có thể không ghi
+`over_estimate` (`ai_gateway/internal/gateway.service.ts`); (2) `index.ts` của `platform_gateway`, `ai_gateway`,
+`notifications` xuất cả phần chỉ-dev – nên tách lối vào `dev.ts` + quy tắc ranh giới; (3) `AccountModule`,
+`NotificationsModule` đặt `global: true` để tiêm chéo (ranh giới tĩnh vẫn do manifest + dependency-cruiser kiểm).
+Thay đổi manifest (`notifications` vào `ai_gateway`, `content`, `approval`) và `enqueueRegistered` (lối riêng
+`modules/queue/enqueue-registered.ts`, chỉ `account`) đã thực hiện đúng mục Complexity Tracking. Lệch nhỏ so với
+tasks.md: việc trả giữ chỗ treo của tài khoản là việc tenant hẹn trong giao dịch giữ chỗ (RLS không cho quét chéo
+tài khoản từ việc hệ thống) + lịch mỗi phút cho ngân sách hệ thống; ảnh MinIO dev dùng `bitnamilegacy/minio`.
+
 Checklist kiến trúc (architecture.md mục 13): module rõ (mỗi hợp đồng thuộc module chủ; kho tệp thuộc `core`); không
 bảng nghiệp vụ mới; việc `notify` tạo trong giao dịch; AI qua Cổng AI, UI chỉ %; giữ chỗ/chuyển trạng thái có điều
 kiện + `CHECK`; không hạ tầng thật mới; `trace_id` + nhật ký không bí mật; migration chỉ thêm (dev).

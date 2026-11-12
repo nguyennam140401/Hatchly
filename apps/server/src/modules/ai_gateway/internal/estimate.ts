@@ -10,7 +10,11 @@ function ceilDiv(a: bigint, b: bigint): bigint {
 }
 
 /** `ceil(inTok × inPrice + maxOutTok × outPrice)` (giá theo 1 triệu token). */
-export function estimateTokens(price: PriceEntry, inputTokens: number, maxOutputTokens: number): number {
+export function estimateTokens(
+  price: PriceEntry,
+  inputTokens: number,
+  maxOutputTokens: number,
+): number {
   const total =
     BigInt(inputTokens) * BigInt(price.inputPerMTokMicroUsd) +
     BigInt(maxOutputTokens) * BigInt(price.outputPerMTokMicroUsd);

@@ -22,6 +22,11 @@ export interface SeedResult {
 }
 
 export async function runSeedAuth(env: NodeJS.ProcessEnv = process.env): Promise<SeedResult> {
+  // Kiểm môi trường TRƯỚC khi nạp cấu hình: staging/production bị loadConfig từ chối vì bản giả lập (005)
+  // – lệnh chỉ-dev phải báo đúng lý do của nó.
+  if (env.APP_ENV !== 'development' && env.APP_ENV !== 'test') {
+    throw new Error('dev:seed-auth chỉ chạy khi APP_ENV là development hoặc test');
+  }
   const config = loadConfig(env);
   if (config.APP_ENV !== 'development' && config.APP_ENV !== 'test') {
     throw new Error('dev:seed-auth chỉ chạy khi APP_ENV là development hoặc test');

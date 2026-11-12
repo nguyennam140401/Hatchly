@@ -28,8 +28,18 @@ beforeAll(async () => {
     hasRealTx: false,
     async newAccount() {
       const accountId = uuidV7();
-      const owner = { userId: uuidV7(), role: 'owner' as const, email: `chu-${accountId.slice(-6)}@example.test`, displayName: 'Chủ' };
-      const collaborator = { userId: uuidV7(), role: 'collaborator' as const, email: `ctv-${accountId.slice(-6)}@example.test`, displayName: 'CTV' };
+      const owner = {
+        userId: uuidV7(),
+        role: 'owner' as const,
+        email: `chu-${accountId.slice(-6)}@example.test`,
+        displayName: 'Chủ',
+      };
+      const collaborator = {
+        userId: uuidV7(),
+        role: 'collaborator' as const,
+        email: `ctv-${accountId.slice(-6)}@example.test`,
+        displayName: 'CTV',
+      };
       await runWithJobContext({ traceId: uuidV7(), accountId }, async () => {
         members.set([owner, collaborator]);
       });

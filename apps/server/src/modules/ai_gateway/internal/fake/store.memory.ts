@@ -46,6 +46,11 @@ interface AccountBudgets {
   current: string | undefined;
 }
 
+/** Giữ chỗ còn mở (gọi hàm → TS không giữ thu hẹp kiểu cũ sau `await`). */
+function isOpen(r: Reservation): boolean {
+  return r.state === 'held' || r.state === 'calling';
+}
+
 const keyOf = (accountId: string | null, period: string) => `${accountId ?? 'system'}:${period}`;
 
 export class MemoryBudgetStore implements FakeBudgetStore {
@@ -74,7 +79,14 @@ export class MemoryBudgetStore implements FakeBudgetStore {
     if (accountId === null) {
       let b = this.system.get(period);
       if (b === undefined) {
-        b = { used: 0, reserved: 0, cap: this.systemWeeklyCap, softLimit: this.systemWeeklyCap, n80: false, n100: false };
+        b = {
+          used: 0,
+          reserved: 0,
+          cap: this.systemWeeklyCap,
+          softLimit: this.systemWeeklyCap,
+          n80: false,
+          n100: false,
+        };
         this.system.set(period, b);
       }
       return b;
@@ -82,7 +94,14 @@ export class MemoryBudgetStore implements FakeBudgetStore {
     const a = this.account(accountId);
     let b = a.cycles.get(period);
     if (b === undefined) {
-      b = { used: 0, reserved: 0, cap: ACCOUNT_CAP_MICRO_USD, softLimit: ACCOUNT_SOFT_LIMIT_MICRO_USD, n80: false, n100: false };
+      b = {
+        used: 0,
+        reserved: 0,
+        cap: ACCOUNT_CAP_MICRO_USD,
+        softLimit: ACCOUNT_SOFT_LIMIT_MICRO_USD,
+        n80: false,
+        n100: false,
+      };
       a.cycles.set(period, b);
     }
     return b;
@@ -182,13 +201,16 @@ export class MemoryBudgetStore implements FakeBudgetStore {
     anomaly: 'unsettled' | null,
     hooks: SettleHooks | undefined,
   ): Promise<Crossed> {
-    if (r.state !== 'held' && r.state !== 'calling') return [];
+    if (!isOpen(r)) return [];
     const b = this.budget(r.accountId, r.key);
     const preview = Math.min(b.used + actual, b.cap - (b.reserved - r.estimateMicroUsd));
-    const crossed = r.accountId === null ? [] : crossedMarks(preview, b.cap, { n80: b.n80, n100: b.n100 });
+    const crossed =
+      r.accountId === null ? [] : crossedMarks(preview, b.cap, { n80: b.n80, n100: b.n100 });
     // Sự kiện thông báo "trong giao dịch": ném → chưa ghi gì.
-    if (crossed.length > 0 && hooks?.onCrossed !== undefined) await hooks.onCrossed(memoryTx(), crossed);
-    if (r.state !== 'held' && r.state !== 'calling') return [];
+    if (crossed.length > 0 && hooks?.onCrossed !== undefined)
+      await hooks.onCrossed(memoryTx(), crossed);
+    // Trạng thái có thể đã đổi trong lúc chờ onCrossed – đọc lại.
+    if (!isOpen(r)) return [];
     // Ghi ĐỒNG BỘ lên giá trị hiện tại (không dùng bản sao).
     b.reserved -= r.estimateMicroUsd;
     const total = b.used + actual;
@@ -238,7 +260,10 @@ export class MemoryBudgetStore implements FakeBudgetStore {
     let released = 0;
     let settledAtEstimate = 0;
     const stale = [...this.reservationsById.values()].filter(
-      (r) => r.accountId === accountId && r.reservedAt.getTime() < cutoff && (r.state === 'held' || r.state === 'calling'),
+      (r) =>
+        r.accountId === accountId &&
+        r.reservedAt.getTime() < cutoff &&
+        (r.state === 'held' || r.state === 'calling'),
     );
     for (const r of stale) {
       await this.locked(keyOf(r.accountId, r.key), async () => {
@@ -266,7 +291,10 @@ export class MemoryBudgetStore implements FakeBudgetStore {
             hooks,
           );
           settledAtEstimate++;
-          gatewayEvent('warn', 'ai.unsettled_reservation', { task: r.task, model_tier: r.modelTier });
+          gatewayEvent('warn', 'ai.unsettled_reservation', {
+            task: r.task,
+            model_tier: r.modelTier,
+          });
         }
       });
     }
@@ -276,10 +304,23 @@ export class MemoryBudgetStore implements FakeBudgetStore {
   // ----- điều khiển (kiểm thử / dev) -----
 
   private view(cycleStart: string, b: Budget): FakeBudgetView {
-    return { cycleStart, used: b.used, reserved: b.reserved, cap: b.cap, softLimit: b.softLimit, notified80: b.n80, notified100: b.n100 };
+    return {
+      cycleStart,
+      used: b.used,
+      reserved: b.reserved,
+      cap: b.cap,
+      softLimit: b.softLimit,
+      notified80: b.n80,
+      notified100: b.n100,
+    };
   }
 
-  setBudget(input: { used?: number; reserved?: number; cap?: number; cycleStart?: string }): Promise<FakeBudgetView> {
+  setBudget(input: {
+    used?: number | undefined;
+    reserved?: number | undefined;
+    cap?: number | undefined;
+    cycleStart?: string | undefined;
+  }): Promise<FakeBudgetView> {
     return syncPromise(() => {
       const accountId = requireFakeAccount();
       const a = this.account(accountId);
@@ -301,7 +342,12 @@ export class MemoryBudgetStore implements FakeBudgetStore {
     });
   }
 
-  setSystemBudget(input: { used?: number; reserved?: number; cap?: number; weekStart?: string }): Promise<void> {
+  setSystemBudget(input: {
+    used?: number;
+    reserved?: number;
+    cap?: number;
+    weekStart?: string;
+  }): Promise<void> {
     return syncPromise(() => {
       const b = this.budget(null, input.weekStart ?? weekStart());
       if (input.cap !== undefined) {
@@ -325,7 +371,17 @@ export class MemoryBudgetStore implements FakeBudgetStore {
       const accountId = currentAccountId();
       return [...this.reservationsById.values()]
         .filter((r) => r.accountId === accountId)
-        .map(({ accountId: _a, industryId: _i, ...r }) => ({ ...r }));
+        .map((r): Reservation => ({
+          id: r.id,
+          scope: r.scope,
+          key: r.key,
+          estimateMicroUsd: r.estimateMicroUsd,
+          modelTier: r.modelTier,
+          task: r.task,
+          reservedAt: r.reservedAt,
+          calledAt: r.calledAt,
+          state: r.state,
+        }));
     });
   }
 
@@ -345,9 +401,10 @@ export class MemoryBudgetStore implements FakeBudgetStore {
       const accountId = currentAccountId();
       if (accountId === null) this.system.clear();
       else this.accounts.delete(accountId);
-      for (const [id, r] of this.reservationsById) if (r.accountId === accountId) this.reservationsById.delete(id);
+      for (const [id, r] of this.reservationsById)
+        if (r.accountId === accountId) this.reservationsById.delete(id);
       for (let i = this.ledgerRows.length - 1; i >= 0; i--) {
-        if (this.ledgerRows[i]!.accountId === accountId) this.ledgerRows.splice(i, 1);
+        if (this.ledgerRows[i]?.accountId === accountId) this.ledgerRows.splice(i, 1);
       }
     });
   }

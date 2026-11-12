@@ -24,7 +24,11 @@ beforeAll(async () => {
 
 describe('T045 – luồng gọi mẫu chạy cho MỌI bộ chuyển đổi đã đăng ký', () => {
   it('danh sách kênh của bộ hợp đồng khớp registry (kênh mới không lọt kiểm thử)', () => {
-    expect(listRegisteredAdapters().map((a) => a.channelType).sort()).toEqual([...CHANNEL_TYPES].sort());
+    expect(
+      listRegisteredAdapters()
+        .map((a) => a.channelType)
+        .sort(),
+    ).toEqual([...CHANNEL_TYPES].sort());
   });
 
   it('tệp luồng mẫu không chứa tên nền tảng nào (SC-002)', () => {
@@ -37,16 +41,30 @@ describe('T045 – luồng gọi mẫu chạy cho MỌI bộ chuyển đổi đ�
       const g = h.gateway(100);
       for (const adapter of listRegisteredAdapters()) {
         const id = await h.createConnection(adapter.channelType);
-        const ok = await samplePublishFlow(g, { connectionId: id, text: `a ${id}`, sentAt: new Date() });
+        const ok = await samplePublishFlow(g, {
+          connectionId: id,
+          text: `a ${id}`,
+          sentAt: new Date(),
+        });
         expect(ok.kind, adapter.channelType).toBe('published');
 
         await h.script(`connection:${id}`, [{ submit: 'processing_then_done' }]);
-        const proc = await samplePublishFlow(g, { connectionId: id, text: `b ${id}`, sentAt: new Date() });
+        const proc = await samplePublishFlow(g, {
+          connectionId: id,
+          text: `b ${id}`,
+          sentAt: new Date(),
+        });
         expect(proc.kind, adapter.channelType).toBe('published');
 
         await h.script(`connection:${id}`, [{ submit: 'timeout_after_publish' }]);
-        const unknown = await samplePublishFlow(g, { connectionId: id, text: `c ${id}`, sentAt: new Date() });
-        expect(unknown.kind, adapter.channelType).toBe(adapter.capabilities.reconcile ? 'published' : 'needs_check');
+        const unknown = await samplePublishFlow(g, {
+          connectionId: id,
+          text: `c ${id}`,
+          sentAt: new Date(),
+        });
+        expect(unknown.kind, adapter.channelType).toBe(
+          adapter.capabilities.reconcile ? 'published' : 'needs_check',
+        );
       }
     });
   });
@@ -78,11 +96,27 @@ describe('T046 – kết quả lạ của bộ chuyển đổi', () => {
         const id = await h.createConnection('facebook_page');
         const t = 'bài thử';
         expect(
-          await g.submit({ connectionId: id, text: t, media: [], contentHash: g.contentHash('facebook_page', t) }),
-        ).toMatchObject({ kind: 'failed', error: { category: 'unknown', rawCode: 'UNEXPECTED_RESULT' } });
-        expect(await g.checkStatus(id, 'p')).toMatchObject({ kind: 'failed', error: { category: 'unknown' } });
+          await g.submit({
+            connectionId: id,
+            text: t,
+            media: [],
+            contentHash: g.contentHash('facebook_page', t),
+          }),
+        ).toMatchObject({
+          kind: 'failed',
+          error: { category: 'unknown', rawCode: 'UNEXPECTED_RESULT' },
+        });
+        expect(await g.checkStatus(id, 'p')).toMatchObject({
+          kind: 'failed',
+          error: { category: 'unknown' },
+        });
         expect(
-          await g.reconcile({ connectionId: id, contentHash: 'ch1:x', from: new Date(Date.now() - 1000), to: new Date() }),
+          await g.reconcile({
+            connectionId: id,
+            contentHash: 'ch1:x',
+            from: new Date(Date.now() - 1000),
+            to: new Date(),
+          }),
         ).toEqual({ kind: 'unsupported', reason: 'platform_unavailable' });
       });
       expect(h.logText()).toContain('platform.unexpected_result');
@@ -94,9 +128,8 @@ describe('T046 – kết quả lạ của bộ chuyển đổi', () => {
   describe('bộ hợp đồng adapter bắt được bộ chuyển đổi hỏng', () => {
     // Chạy bộ hợp đồng trên bộ chuyển đổi hỏng và kỳ vọng nó THẤT BẠI.
     it.fails('submit trả kind lạ → hợp đồng thất bại', async () => {
-      const { SubmitResultShape } = await import(
-        '../../../src/modules/platform_gateway/internal/adapters/result-shapes'
-      );
+      const { SubmitResultShape } =
+        await import('../../../src/modules/platform_gateway/internal/adapters/result-shapes');
       const r = await brokenAdapter().submit({} as never, {} as never);
       expect(SubmitResultShape.safeParse(r).success).toBe(true);
     });
@@ -120,5 +153,8 @@ describe('T047 – loại kênh chưa có bộ chuyển đổi', () => {
 
 // Dùng lại bộ hợp đồng adapter cho test_channel trong tệp này cũng được – đảm bảo kênh mới qua cùng bộ.
 describe('T048 – test_channel qua cùng bộ hợp đồng', () => {
-  describePlatformAdapterContract(() => getAdapter('test_channel'), () => h);
+  describePlatformAdapterContract(
+    () => getAdapter('test_channel'),
+    () => h,
+  );
 });

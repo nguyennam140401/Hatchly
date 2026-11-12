@@ -28,11 +28,8 @@ export function resolveGatewayDefaults(config: AppConfig): AppConfig {
     out.AI_GATEWAY_DRIVER ??= 'fake';
     out.NOTIFICATIONS_DRIVER ??= 'fake';
     out.STORAGE_DRIVER ??= 'memory';
-    const anyFake =
-      out.PLATFORM_GATEWAY_DRIVER === 'fake' ||
-      out.AI_GATEWAY_DRIVER === 'fake' ||
-      out.NOTIFICATIONS_DRIVER === 'fake';
-    if (anyFake) out.FAKE_STATE_STORE ??= 'memory';
+    // Hiện mọi driver cổng chỉ có `fake` → luôn cần kho trạng thái (bản thật thêm giá trị `real` sau).
+    out.FAKE_STATE_STORE ??= 'memory';
   } else {
     for (const variable of [
       'PLATFORM_GATEWAY_DRIVER',

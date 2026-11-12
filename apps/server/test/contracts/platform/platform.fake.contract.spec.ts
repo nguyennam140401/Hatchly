@@ -15,12 +15,18 @@ beforeAll(async () => {
 
 // Danh sách kênh lấy từ registry lúc chạy – kênh mới đăng ký tự được kiểm (SC-002).
 describe('Cổng nền tảng – bản giả lập (memory)', () => {
-  describe.each(['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const)('%s', (type) => {
-    describePlatformAdapterContract(() => {
-      const adapter = listRegisteredAdapters().find((a) => a.channelType === type);
-      if (adapter === undefined) throw new Error(`Chưa đăng ký bộ chuyển đổi ${type}`);
-      return adapter;
-    }, () => harness);
-  });
+  describe.each(['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const)(
+    '%s',
+    (type) => {
+      describePlatformAdapterContract(
+        () => {
+          const adapter = listRegisteredAdapters().find((a) => a.channelType === type);
+          if (adapter === undefined) throw new Error(`Chưa đăng ký bộ chuyển đổi ${type}`);
+          return adapter;
+        },
+        () => harness,
+      );
+    },
+  );
   describePlatformGatewayContract(() => harness);
 });

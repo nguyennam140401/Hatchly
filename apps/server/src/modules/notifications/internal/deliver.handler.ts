@@ -30,7 +30,11 @@ export async function deliverNotification(raw: unknown, deps: DeliverDeps): Prom
   const { event, dedupeKey } = prepareEvent(raw);
   const attrs: Record<string, unknown> = { kind: event.type, event_type: event.type };
   await withGatewayOp('notifications', 'deliver', attrs, async () => {
-    await deps.store.insertEvent({ dedupeKey, type: event.type, refs: event.refs as Record<string, unknown> });
+    await deps.store.insertEvent({
+      dedupeKey,
+      type: event.type,
+      refs: event.refs,
+    });
     const rule = NOTIFICATION_RULES[event.type];
     const recipients = await resolveRecipients(event, deps.members);
     attrs.recipients = recipients.length;
@@ -47,9 +51,10 @@ export async function deliverNotification(raw: unknown, deps: DeliverDeps): Prom
           titleVi: rendered.titleVi,
           bodyVi: rendered.bodyVi,
           actions: rendered.actions,
-          refs: event.refs as Record<string, unknown>,
+          refs: event.refs,
         });
-        if (channel !== 'email' || row.emailResult === 'sent' || row.emailResult === 'permanent') continue;
+        if (channel !== 'email' || row.emailResult === 'sent' || row.emailResult === 'permanent')
+          continue;
         const links = rendered.actions.map((a) => `${a.labelVi}: ${a.url}`).join('\n');
         const result = await deps.mailer.deliver({
           to: member.email,

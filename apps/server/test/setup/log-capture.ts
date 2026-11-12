@@ -19,7 +19,11 @@ function write(line: string): void {
 }
 
 /** Đích nhật ký cho `ApiAppModule.forRoot(config, { logDestination })` trong kiểm thử. */
-export const testLogDestination: LogDestination = { write: (chunk: string) => write(chunk) };
+export const testLogDestination: LogDestination = {
+  write: (chunk: string) => {
+    write(chunk);
+  },
+};
 
 beforeAll(() => {
   const testPath = expect.getState().testPath ?? 'unknown';
@@ -27,7 +31,11 @@ beforeAll(() => {
   file = resolve(TEST_LOG_DIR, `${basename(testPath).replace(/\.[cm]?ts$/, '')}.ndjson`);
   // Mỗi lượt chạy ghi lại từ đầu – nhật ký mẫu luôn khớp lượt kiểm thử mới nhất.
   writeFileSync(file, '', 'utf8');
-  setGatewayLogSink({ write: (entry) => write(JSON.stringify(entry)) });
+  setGatewayLogSink({
+    write: (entry) => {
+      write(JSON.stringify(entry));
+    },
+  });
 });
 
 afterAll(() => {

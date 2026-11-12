@@ -23,7 +23,9 @@ const ALLOWED_HOSTS = new Set([
 
 function isAllowed(host) {
   if (host === undefined || host === null || host === '') return true; // socket cục bộ (IPC)
-  const h = String(host).toLowerCase().replace(/^\[|\]$/g, '');
+  const h = String(host)
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '');
   return ALLOWED_HOSTS.has(h) || h.startsWith('127.') || h.endsWith('.localhost');
 }
 
@@ -60,7 +62,8 @@ net.Socket.prototype.connect = function patchedConnect(...args) {
 const originalTlsConnect = tls.connect;
 tls.connect = function patchedTlsConnect(...args) {
   const { host, port } = target(args);
-  const servername = args[0] !== null && typeof args[0] === 'object' ? args[0].servername : undefined;
+  const servername =
+    args[0] !== null && typeof args[0] === 'object' ? args[0].servername : undefined;
   if (!isAllowed(host) || (servername !== undefined && !isAllowed(servername))) {
     throw deny(servername ?? host, port);
   }

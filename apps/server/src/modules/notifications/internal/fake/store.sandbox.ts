@@ -30,12 +30,22 @@ function toDelivered(r: Row): DeliveredNotification {
 }
 
 export class SandboxNotificationStore implements NotificationStore {
-  async insertEvent(e: { dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }): Promise<boolean> {
+  async insertEvent(e: {
+    dedupeKey: string;
+    type: NotificationType;
+    refs: Record<string, unknown>;
+  }): Promise<boolean> {
     const accountId = requireFakeAccount();
     const rows = await tenantTx((db) =>
       db
         .insert(ntfFakeEvents)
-        .values({ id: uuidV7(), account_id: accountId, dedupe_key: e.dedupeKey, type: e.type, refs: e.refs })
+        .values({
+          id: uuidV7(),
+          account_id: accountId,
+          dedupe_key: e.dedupeKey,
+          type: e.type,
+          refs: e.refs,
+        })
         .onConflictDoNothing({ target: [ntfFakeEvents.account_id, ntfFakeEvents.dedupe_key] })
         .returning({ id: ntfFakeEvents.id }),
     );
@@ -79,13 +89,17 @@ export class SandboxNotificationStore implements NotificationStore {
           ),
         )
         .limit(1);
-      return toDelivered(row!);
+      if (row === undefined) throw new Error('Không đọc lại được thông báo vừa ghi');
+      return toDelivered(row);
     });
   }
 
   async setEmailResult(id: string, result: MailDeliveryResult['kind']): Promise<void> {
     await tenantTx((db) =>
-      db.update(ntfFakeNotifications).set({ email_result: result }).where(eq(ntfFakeNotifications.id, id)),
+      db
+        .update(ntfFakeNotifications)
+        .set({ email_result: result })
+        .where(eq(ntfFakeNotifications.id, id)),
     );
   }
 
@@ -100,9 +114,17 @@ export class SandboxNotificationStore implements NotificationStore {
     return rows.map(toDelivered);
   }
 
-  async events(): Promise<{ dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }[]> {
-    const rows = await tenantTx((db) => db.select().from(ntfFakeEvents).orderBy(asc(ntfFakeEvents.created_at)));
-    return rows.map((r) => ({ dedupeKey: r.dedupe_key, type: r.type as NotificationType, refs: r.refs as Record<string, unknown> }));
+  async events(): Promise<
+    { dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }[]
+  > {
+    const rows = await tenantTx((db) =>
+      db.select().from(ntfFakeEvents).orderBy(asc(ntfFakeEvents.created_at)),
+    );
+    return rows.map((r) => ({
+      dedupeKey: r.dedupe_key,
+      type: r.type as NotificationType,
+      refs: r.refs as Record<string, unknown>,
+    }));
   }
 
   async reset(): Promise<void> {

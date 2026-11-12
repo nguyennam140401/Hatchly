@@ -1,6 +1,5 @@
 import { createServer, type Server } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { AuthConfig } from '../src/core/config/auth-config';
 import { createMailer } from '../src/core/mail/mail.module';
 import { MemoryMailTransport } from '../src/core/mail/memory.transport';
 import { SmtpMailTransport } from '../src/core/mail/smtp.transport';
@@ -11,13 +10,11 @@ const msg = { to: 'a@example.test', subject: 'Chủ đề', text: 'chữ', html:
 
 describe('Mailer', () => {
   it('createMailer chọn theo cấu hình', () => {
-    expect(createMailer({ mail: { transport: 'memory' } } as AuthConfig)).toBeInstanceOf(
-      MemoryMailTransport,
-    );
+    expect(createMailer({ mail: { transport: 'memory' } })).toBeInstanceOf(MemoryMailTransport);
     expect(
       createMailer({
         mail: { transport: 'smtp', smtpUrl: 'smtp://localhost:1025', from: 'a@b.test' },
-      } as AuthConfig),
+      }),
     ).toBeInstanceOf(SmtpMailTransport);
   });
 

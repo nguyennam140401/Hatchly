@@ -129,7 +129,9 @@ export class S3ObjectStorage implements ObjectStorage {
     let sha256 = head.Metadata?.[SHA_META];
     if (sha256 === undefined) {
       // Tính bằng luồng phía máy chủ (không tin dấu của trình duyệt), lưu lại bằng copy-in-place.
-      const got = await this.client.send(new GetObjectCommand({ Bucket: this.cfg.bucket, Key: key }));
+      const got = await this.client.send(
+        new GetObjectCommand({ Bucket: this.cfg.bucket, Key: key }),
+      );
       const hash = createHash('sha256');
       for await (const chunk of got.Body as Readable) hash.update(chunk as Buffer);
       sha256 = hash.digest('hex');
@@ -148,7 +150,9 @@ export class S3ObjectStorage implements ObjectStorage {
   }
 
   async read(l: StorageLocation): Promise<Readable> {
-    const got = await this.client.send(new GetObjectCommand({ Bucket: this.cfg.bucket, Key: this.key(l) }));
+    const got = await this.client.send(
+      new GetObjectCommand({ Bucket: this.cfg.bucket, Key: this.key(l) }),
+    );
     return got.Body as Readable;
   }
 
@@ -216,7 +220,11 @@ export class S3ObjectStorage implements ObjectStorage {
     return { items, ...(r.IsTruncated === true && last !== undefined ? { next: last } : {}) };
   }
 
-  async signedUrl(l: StorageLocation, purpose: 'preview' | 'public', ttlSec?: number): Promise<SignedUrl> {
+  async signedUrl(
+    l: StorageLocation,
+    purpose: 'preview' | 'public',
+    ttlSec?: number,
+  ): Promise<SignedUrl> {
     const ttl = checkSignedUrl(l, purpose, ttlSec);
     const url = await getSignedUrl(
       this.publicClient,
@@ -232,12 +240,20 @@ export class S3ObjectStorage implements ObjectStorage {
     let token: string | undefined;
     do {
       const r = await this.client.send(
-        new ListObjectsV2Command({ Bucket: this.cfg.bucket, Prefix: p, MaxKeys: 1000, ContinuationToken: token }),
+        new ListObjectsV2Command({
+          Bucket: this.cfg.bucket,
+          Prefix: p,
+          MaxKeys: 1000,
+          ContinuationToken: token,
+        }),
       );
       const keys = (r.Contents ?? []).flatMap((c) => (c.Key === undefined ? [] : [c.Key]));
       if (keys.length > 0) {
         await this.client.send(
-          new DeleteObjectsCommand({ Bucket: this.cfg.bucket, Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true } }),
+          new DeleteObjectsCommand({
+            Bucket: this.cfg.bucket,
+            Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+          }),
         );
         deleted += keys.length;
       }
@@ -248,14 +264,18 @@ export class S3ObjectStorage implements ObjectStorage {
 
   /** Nhãn của đối tượng (kiểm thử luật vòng đời). */
   async tagsOf(l: StorageLocation): Promise<Record<string, string>> {
-    const r = await this.client.send(new GetObjectTaggingCommand({ Bucket: this.cfg.bucket, Key: this.key(l) }));
+    const r = await this.client.send(
+      new GetObjectTaggingCommand({ Bucket: this.cfg.bucket, Key: this.key(l) }),
+    );
     return Object.fromEntries((r.TagSet ?? []).map((t) => [t.Key ?? '', t.Value ?? '']));
   }
 
   /** Luật vòng đời của bucket (kiểm thử: phải có luật lọc theo nhãn `lifecycle=tmp`). */
   async lifecycleRules(): Promise<unknown> {
     const { GetBucketLifecycleConfigurationCommand } = await import('@aws-sdk/client-s3');
-    return this.client.send(new GetBucketLifecycleConfigurationCommand({ Bucket: this.cfg.bucket }));
+    return this.client.send(
+      new GetBucketLifecycleConfigurationCommand({ Bucket: this.cfg.bucket }),
+    );
   }
 
   close(): void {

@@ -95,107 +95,138 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
   }
 
   checkAccount(connectionId: string): Promise<AccountCheckResult> {
-    return withGatewayOp('platform_gateway', 'checkAccount', { connection_id: connectionId }, async () => {
-      const { connection, adapter } = await this.resolve(connectionId);
-      if (connection.status === 'disconnected') {
-        return { kind: 'ineligible', error: this.disconnectedError(connection.channelType) };
-      }
-      const result = await adapter.checkAccount(await this.credential(connection), {
-        connectionId,
-      });
-      if (!AccountCheckShape.safeParse(result).success) {
-        return { kind: 'ineligible', error: unknownError(connection.channelType, 'UNEXPECTED_RESULT') };
-      }
-      return result;
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'checkAccount',
+      { connection_id: connectionId },
+      async () => {
+        const { connection, adapter } = await this.resolve(connectionId);
+        if (connection.status === 'disconnected') {
+          return { kind: 'ineligible', error: this.disconnectedError(connection.channelType) };
+        }
+        const result = await adapter.checkAccount(await this.credential(connection), {
+          connectionId,
+        });
+        if (!AccountCheckShape.safeParse(result).success) {
+          return {
+            kind: 'ineligible',
+            error: unknownError(connection.channelType, 'UNEXPECTED_RESULT'),
+          };
+        }
+        return result;
+      },
+    );
   }
 
   mediaRules(connectionId: string): Promise<{ channelType: ChannelType; rules: MediaRules }> {
-    return withGatewayOp('platform_gateway', 'mediaRules', { connection_id: connectionId }, async () => {
-      const { connection, adapter } = await this.resolve(connectionId);
-      return { channelType: connection.channelType, rules: adapter.mediaRules() };
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'mediaRules',
+      { connection_id: connectionId },
+      async () => {
+        const { connection, adapter } = await this.resolve(connectionId);
+        return { channelType: connection.channelType, rules: adapter.mediaRules() };
+      },
+    );
   }
 
   submit(req: SubmitRequest): Promise<SubmitResult> {
-    return withGatewayOp('platform_gateway', 'submit', { connection_id: req.connectionId }, async () => {
-      const { connection, adapter } = await this.resolve(req.connectionId);
-      if (connection.status === 'disconnected') {
-        return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
-      }
-      if (req.text.length > MAX_POST_TEXT_LENGTH) throw new InvalidRequestError('text quá dài');
-      if (req.contentHash !== adapter.contentHash(req.text)) {
-        throw new InvalidRequestError('contentHash không khớp nội dung');
-      }
-      const cred = await this.credential(connection);
-      const controller = new AbortController();
-      let timer: NodeJS.Timeout | undefined;
-      const timeout = new Promise<SubmitResult>((resolve) => {
-        timer = setTimeout(() => {
-          controller.abort();
-          // Hết thời gian SAU khi đã gửi: không biết bài đã lên chưa → luôn `unknown`, không `transient`.
-          resolve({ kind: 'failed', error: unknownError(connection.channelType, 'SUBMIT_TIMEOUT') });
-        }, this.opts.submitTimeoutMs);
-      });
-      const call = adapter
-        .submit(cred, {
-          text: req.text,
-          media: req.media,
-          contentHash: req.contentHash,
-          connectionId: connection.id,
-          signal: controller.signal,
-        })
-        .then(
-          (value) => assertResultShape('submit', connection.channelType, value),
-          (): SubmitResult => ({
-            kind: 'failed',
-            error: unknownError(connection.channelType, 'ADAPTER_ERROR'),
-          }),
-        );
-      try {
-        return await Promise.race([call, timeout]);
-      } finally {
-        clearTimeout(timer);
-      }
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'submit',
+      { connection_id: req.connectionId },
+      async () => {
+        const { connection, adapter } = await this.resolve(req.connectionId);
+        if (connection.status === 'disconnected') {
+          return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
+        }
+        if (req.text.length > MAX_POST_TEXT_LENGTH) throw new InvalidRequestError('text quá dài');
+        if (req.contentHash !== adapter.contentHash(req.text)) {
+          throw new InvalidRequestError('contentHash không khớp nội dung');
+        }
+        const cred = await this.credential(connection);
+        const controller = new AbortController();
+        let timer: NodeJS.Timeout | undefined;
+        const timeout = new Promise<SubmitResult>((resolve) => {
+          timer = setTimeout(() => {
+            controller.abort();
+            // Hết thời gian SAU khi đã gửi: không biết bài đã lên chưa → luôn `unknown`, không `transient`.
+            resolve({
+              kind: 'failed',
+              error: unknownError(connection.channelType, 'SUBMIT_TIMEOUT'),
+            });
+          }, this.opts.submitTimeoutMs);
+        });
+        const call = adapter
+          .submit(cred, {
+            text: req.text,
+            media: req.media,
+            contentHash: req.contentHash,
+            connectionId: connection.id,
+            signal: controller.signal,
+          })
+          .then(
+            (value) => assertResultShape('submit', connection.channelType, value),
+            (): SubmitResult => ({
+              kind: 'failed',
+              error: unknownError(connection.channelType, 'ADAPTER_ERROR'),
+            }),
+          );
+        try {
+          return await Promise.race([call, timeout]);
+        } finally {
+          clearTimeout(timer);
+        }
+      },
+    );
   }
 
   checkStatus(connectionId: string, processingId: string): Promise<CheckStatusResult> {
-    return withGatewayOp('platform_gateway', 'checkStatus', { connection_id: connectionId }, async () => {
-      const { connection, adapter } = await this.resolve(connectionId);
-      if (connection.status === 'disconnected') {
-        return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
-      }
-      const value: unknown = await adapter
-        .checkStatus(await this.credential(connection), processingId, { connectionId })
-        .catch(() => undefined);
-      return assertResultShape('checkStatus', connection.channelType, value);
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'checkStatus',
+      { connection_id: connectionId },
+      async () => {
+        const { connection, adapter } = await this.resolve(connectionId);
+        if (connection.status === 'disconnected') {
+          return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
+        }
+        const value: unknown = await adapter
+          .checkStatus(await this.credential(connection), processingId, { connectionId })
+          .catch(() => undefined);
+        return assertResultShape('checkStatus', connection.channelType, value);
+      },
+    );
   }
 
   reconcile(req: ReconcileRequest): Promise<ReconcileResult> {
-    return withGatewayOp('platform_gateway', 'reconcile', { connection_id: req.connectionId }, async () => {
-      const { connection, adapter } = await this.resolve(req.connectionId);
-      if (req.from.getTime() > req.to.getTime()) throw new InvalidRequestError('from > to');
-      const caps = adapter.capabilities;
-      if (!caps.reconcile) return { kind: 'unsupported', reason: 'capability' };
-      const windowHours = (req.to.getTime() - req.from.getTime()) / 3_600_000;
-      if (caps.maxReconcileWindowHours !== null && windowHours > caps.maxReconcileWindowHours) {
-        return { kind: 'unsupported', reason: 'window_too_large' };
-      }
-      if (connection.status === 'disconnected') {
-        return { kind: 'unsupported', reason: 'platform_unavailable' };
-      }
-      const value: unknown = await adapter
-        .reconcile(await this.credential(connection), {
-          connectionId: connection.id,
-          contentHash: req.contentHash,
-          from: req.from,
-          to: req.to,
-        })
-        .catch(() => undefined);
-      return assertResultShape('reconcile', connection.channelType, value);
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'reconcile',
+      { connection_id: req.connectionId },
+      async () => {
+        const { connection, adapter } = await this.resolve(req.connectionId);
+        if (req.from.getTime() > req.to.getTime()) throw new InvalidRequestError('from > to');
+        const caps = adapter.capabilities;
+        if (!caps.reconcile) return { kind: 'unsupported', reason: 'capability' };
+        const windowHours = (req.to.getTime() - req.from.getTime()) / 3_600_000;
+        if (caps.maxReconcileWindowHours !== null && windowHours > caps.maxReconcileWindowHours) {
+          return { kind: 'unsupported', reason: 'window_too_large' };
+        }
+        if (connection.status === 'disconnected') {
+          return { kind: 'unsupported', reason: 'platform_unavailable' };
+        }
+        const value: unknown = await adapter
+          .reconcile(await this.credential(connection), {
+            connectionId: connection.id,
+            contentHash: req.contentHash,
+            from: req.from,
+            to: req.to,
+          })
+          .catch(() => undefined);
+        return assertResultShape('reconcile', connection.channelType, value);
+      },
+    );
   }
 
   classifyError(channelType: ChannelType, rawCode: string): ClassifiedError {
@@ -203,25 +234,30 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
   }
 
   refreshToken(connectionId: string): Promise<RefreshTokenResult> {
-    return withGatewayOp('platform_gateway', 'refreshToken', { connection_id: connectionId }, async () => {
-      const { connection, adapter } = await this.resolve(connectionId);
-      if (connection.status === 'disconnected' || !adapter.capabilities.tokenRefresh) {
-        // Kênh không tự gia hạn quyền được → người dùng "Kết nối lại".
-        return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
-      }
-      const result: unknown = await adapter
-        .refreshToken(await this.credential(connection), { connectionId })
-        .catch(() => undefined);
-      const parsed = RefreshTokenShape.safeParse(result);
-      if (!parsed.success) {
-        return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
-      }
-      const value = result as RefreshTokenResult;
-      if (value.kind === 'refreshed') {
-        await this.opts.store.updateTokenExpiry(connection.id, value.tokenExpiresAt);
-      }
-      return value;
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'refreshToken',
+      { connection_id: connectionId },
+      async () => {
+        const { connection, adapter } = await this.resolve(connectionId);
+        if (connection.status === 'disconnected' || !adapter.capabilities.tokenRefresh) {
+          // Kênh không tự gia hạn quyền được → người dùng "Kết nối lại".
+          return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
+        }
+        const result: unknown = await adapter
+          .refreshToken(await this.credential(connection), { connectionId })
+          .catch(() => undefined);
+        const parsed = RefreshTokenShape.safeParse(result);
+        if (!parsed.success) {
+          return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
+        }
+        const value = result as RefreshTokenResult;
+        if (value.kind === 'refreshed') {
+          await this.opts.store.updateTokenExpiry(connection.id, value.tokenExpiresAt);
+        }
+        return value;
+      },
+    );
   }
 
   capabilities(channelType: ChannelType): ChannelCapabilities {
@@ -233,10 +269,15 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
   }
 
   getConnection(connectionId: string): Promise<ChannelConnection | null> {
-    return withGatewayOp('platform_gateway', 'getConnection', { connection_id: connectionId }, async () => {
-      if (!UUID.test(connectionId)) return null;
-      const c = await this.opts.store.getConnection(connectionId);
-      return c === null ? null : toChannelConnection(c);
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'getConnection',
+      { connection_id: connectionId },
+      async () => {
+        if (!UUID.test(connectionId)) return null;
+        const c = await this.opts.store.getConnection(connectionId);
+        return c === null ? null : toChannelConnection(c);
+      },
+    );
   }
 }

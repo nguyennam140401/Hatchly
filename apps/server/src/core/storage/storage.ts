@@ -39,14 +39,22 @@ export interface ObjectStorage {
   ): Promise<PresignedUpload>;
   stat(loc: StorageLocation, opts?: { hash?: boolean }): Promise<ObjectInfo>;
   read(loc: StorageLocation): Promise<Readable>;
-  write(loc: StorageLocation, body: Readable | Buffer, opts: { contentType: string }): Promise<{ bytes: number; sha256: string }>;
+  write(
+    loc: StorageLocation,
+    body: Readable | Buffer,
+    opts: { contentType: string },
+  ): Promise<{ bytes: number; sha256: string }>;
   copy(from: StorageLocation, to: StorageLocation): Promise<void>;
   delete(loc: StorageLocation): Promise<void>;
   list(
     prefix: StoragePrefix,
     opts?: { after?: string; limit?: number },
   ): Promise<{ items: { loc: StorageLocation; bytes: number }[]; next?: string }>;
-  signedUrl(loc: StorageLocation, purpose: 'preview' | 'public', ttlSec?: number): Promise<SignedUrl>;
+  signedUrl(
+    loc: StorageLocation,
+    purpose: 'preview' | 'public',
+    ttlSec?: number,
+  ): Promise<SignedUrl>;
   deleteAllForCurrentAccount(): Promise<{ deleted: number }>;
 }
 
@@ -71,13 +79,19 @@ export function checkPresign(
   if (opts.contentType === 'application/pdf' && l.kind !== 'context_file') {
     throw new InvalidRequestError('PDF chỉ cho tệp ngữ cảnh');
   }
-  if (!Number.isInteger(opts.maxBytes) || opts.maxBytes < 1) throw new InvalidRequestError('maxBytes');
+  if (!Number.isInteger(opts.maxBytes) || opts.maxBytes < 1)
+    throw new InvalidRequestError('maxBytes');
   const ttl = opts.ttlSec ?? MAX_UPLOAD_TTL_SEC;
-  if (!Number.isInteger(ttl) || ttl < 1 || ttl > MAX_UPLOAD_TTL_SEC) throw new InvalidRequestError('ttlSec');
+  if (!Number.isInteger(ttl) || ttl < 1 || ttl > MAX_UPLOAD_TTL_SEC)
+    throw new InvalidRequestError('ttlSec');
   return ttl;
 }
 
-export function checkSignedUrl(l: StorageLocation, purpose: 'preview' | 'public', ttlSec?: number): number {
+export function checkSignedUrl(
+  l: StorageLocation,
+  purpose: 'preview' | 'public',
+  ttlSec?: number,
+): number {
   if (purpose === 'preview' && l.kind === 'job_tmp') {
     throw new InvalidRequestError('giao diện không xem tệp tạm');
   }

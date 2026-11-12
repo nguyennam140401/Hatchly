@@ -88,7 +88,7 @@ export function gatewayEvent(
 /** Kết quả hợp đóng → `outcome` (giá trị `kind`), còn lại `ok`. */
 function outcomeOf(value: unknown): string {
   if (value !== null && typeof value === 'object' && 'kind' in value) {
-    const kind = (value as { kind: unknown }).kind;
+    const kind = value.kind;
     if (typeof kind === 'string') return kind;
   }
   return 'ok';
@@ -115,7 +115,8 @@ export async function withGatewayOp<T>(
       const outcome = outcomeOf(result);
       // Thuộc tính đọc lúc kết thúc: thao tác được bổ sung (vd hạng mô hình, số token) khi chạy.
       const safe = safeAttrs(attrs);
-      for (const [k, v] of Object.entries(safe)) span.setAttribute(k, v as string | number | boolean);
+      for (const [k, v] of Object.entries(safe))
+        span.setAttribute(k, v as string | number | boolean);
       span.setAttribute('outcome', outcome);
       sink.write({
         msg: name,

@@ -93,7 +93,10 @@ export interface ClassifiedError {
   channelType: ChannelType;
   messageVi: string;
   /** ≥ 1 cách khắc phục (nguyên tắc VI). */
-  remedies: [{ action: RemedyAction; labelVi: string }, ...{ action: RemedyAction; labelVi: string }[]];
+  remedies: [
+    { action: RemedyAction; labelVi: string },
+    ...{ action: RemedyAction; labelVi: string }[],
+  ];
   /** Chỉ với `transient`. */
   retryAfterSec?: number;
 }
@@ -140,8 +143,7 @@ export type AccountCheckResult =
   | { kind: 'ineligible'; error: ClassifiedError };
 
 export type RefreshTokenResult =
-  | { kind: 'refreshed'; tokenExpiresAt: Date }
-  | { kind: 'failed'; error: ClassifiedError };
+  { kind: 'refreshed'; tokenExpiresAt: Date } | { kind: 'failed'; error: ClassifiedError };
 
 export type ChannelConnectionStatus = 'active' | 'expiring' | 'expired' | 'disconnected';
 

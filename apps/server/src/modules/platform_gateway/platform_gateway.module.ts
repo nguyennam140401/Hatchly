@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../../core';
+import { notConfiguredProxy } from '../../core/gateways/not-configured';
 import { registerDefaultAdapters } from './internal/adapters/registry';
 import type { ConnectionStore } from './internal/connections/connection-store';
 import {
@@ -19,11 +20,14 @@ import { PLATFORM_GATEWAY } from './public-api';
 const PLATFORM_STORE = Symbol('PLATFORM_STORE');
 const CREDENTIAL_VAULT = Symbol('CREDENTIAL_VAULT');
 
-function notConfigured(): never {
-  throw new Error('Cổng nền tảng chưa được cấu hình bản cài đặt (PLATFORM_GATEWAY_DRIVER)');
-}
-const NOT_CONFIGURED_STORE = new Proxy({}, { get: () => notConfigured }) as ConnectionStore;
-const NOT_CONFIGURED_VAULT = new Proxy({}, { get: () => notConfigured }) as CredentialVault;
+const NOT_CONFIGURED_STORE = notConfiguredProxy<ConnectionStore>(
+  'PLATFORM_GATEWAY_DRIVER',
+  'Cổng nền tảng',
+);
+const NOT_CONFIGURED_VAULT = notConfiguredProxy<CredentialVault>(
+  'PLATFORM_GATEWAY_DRIVER',
+  'Cổng nền tảng',
+);
 
 const providers = [
   {

@@ -23,16 +23,21 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
   const stateOf = (authorizeUrl: string) => new URL(authorizeUrl, WEB).searchParams.get('state')!;
 
   async function startState(): Promise<string> {
-    const res = await actors.owner.post('/api/v1/channels/connect', { channelType: 'facebook_page' });
+    const res = await actors.owner.post('/api/v1/channels/connect', {
+      channelType: 'facebook_page',
+    });
     expect(res.status).toBe(200);
     return stateOf((res.body as { authorizeUrl: string }).authorizeUrl);
   }
 
   it('cộng tác viên: kết nối/lưu/ngắt → 403; liệt kê → 200', async () => {
     const c = actors.collaborator;
-    expect((await c.post('/api/v1/channels/connect', { channelType: 'facebook_page' })).status).toBe(403);
     expect(
-      (await c.post('/api/v1/channels', { selectionId: crypto.randomUUID(), externalId: 'x' })).status,
+      (await c.post('/api/v1/channels/connect', { channelType: 'facebook_page' })).status,
+    ).toBe(403);
+    expect(
+      (await c.post('/api/v1/channels', { selectionId: crypto.randomUUID(), externalId: 'x' }))
+        .status,
     ).toBe(403);
     expect((await c.delete(`/api/v1/channels/${crypto.randomUUID()}`)).status).toBe(403);
     expect((await c.get('/api/v1/channels')).status).toBe(200);
@@ -44,7 +49,7 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
       `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state)}&code=fake_code_abc`,
     );
     expect(cb.status).toBe(302);
-    const location = new URL(cb.headers.location as string);
+    const location = new URL(cb.headers.location!);
     expect(location.origin + location.pathname).toBe(`${WEB}/channels/connect`);
     const selectionId = location.searchParams.get('selection')!;
     const sel = await actors.owner.get(`/api/v1/channels/selections/${selectionId}`);
@@ -61,7 +66,10 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     expect(bad.status).toBe(422);
     expect((bad.body as { error: { code: string } }).error.code).toBe('CHANNEL_INELIGIBLE');
 
-    const saved = await actors.owner.post('/api/v1/channels', { selectionId, externalId: eligible.externalId });
+    const saved = await actors.owner.post('/api/v1/channels', {
+      selectionId,
+      externalId: eligible.externalId,
+    });
     expect(saved.status).toBe(201);
     const conn = ChannelConnectionDto.parse(saved.body);
 
@@ -70,8 +78,11 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     const cb2 = await actors.owner.get(
       `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state2)}&code=fake_code_def`,
     );
-    const sel2 = new URL(cb2.headers.location as string).searchParams.get('selection')!;
-    const again = await actors.owner.post('/api/v1/channels', { selectionId: sel2, externalId: eligible.externalId });
+    const sel2 = new URL(cb2.headers.location!).searchParams.get('selection')!;
+    const again = await actors.owner.post('/api/v1/channels', {
+      selectionId: sel2,
+      externalId: eligible.externalId,
+    });
     expect(again.status).toBe(200);
     expect(ChannelConnectionDto.parse(again.body).connectionId).toBe(conn.connectionId);
 
@@ -81,7 +92,10 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     expect((list.body as unknown[]).length).toBeGreaterThanOrEqual(1);
 
     expect((await actors.owner.delete(`/api/v1/channels/${conn.connectionId}`)).status).toBe(204);
-    const after = (await actors.owner.get('/api/v1/channels')).body as { connectionId: string; status: string }[];
+    const after = (await actors.owner.get('/api/v1/channels')).body as {
+      connectionId: string;
+      status: string;
+    }[];
     expect(after.find((c) => c.connectionId === conn.connectionId)?.status).toBe('disconnected');
   });
 
@@ -93,7 +107,9 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     expect(anon.status).toBe(302);
     expect(anon.headers.location).toBe(`${WEB}/channels/connect?error=STATE_INVALID`);
 
-    const wrong = await actors.owner.get('/api/v1/channels/callback/facebook_page?state=sai&code=fake_code_x');
+    const wrong = await actors.owner.get(
+      '/api/v1/channels/callback/facebook_page?state=sai&code=fake_code_x',
+    );
     expect(wrong.headers.location).toBe(`${WEB}/channels/connect?error=STATE_INVALID`);
 
     const cancelled = await actors.owner.get(

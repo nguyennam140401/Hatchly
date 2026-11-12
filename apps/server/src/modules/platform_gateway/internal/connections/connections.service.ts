@@ -66,18 +66,23 @@ export class ConnectionsService {
 
   /** Bắt đầu kết nối: lưu băm `state` gắn tài khoản + người dùng, trả địa chỉ ủy quyền của nền tảng. */
   startConnect(channelType: ChannelType, redirectUri: string): Promise<{ authorizeUrl: string }> {
-    return withGatewayOp('platform_gateway', 'startConnect', { channel_type: channelType }, async () => {
-      const actor = requireCustomer();
-      const adapter = getAdapter(channelType);
-      const { state, hash } = newOauthState();
-      await this.store.saveOauthState({
-        stateHash: hash,
-        userId: actor.userId,
-        channelType,
-        expiresAt: new Date(this.now().getTime() + OAUTH_STATE_TTL_MS),
-      });
-      return { authorizeUrl: adapter.authorizeUrl(state, redirectUri) };
-    });
+    return withGatewayOp(
+      'platform_gateway',
+      'startConnect',
+      { channel_type: channelType },
+      async () => {
+        const actor = requireCustomer();
+        const adapter = getAdapter(channelType);
+        const { state, hash } = newOauthState();
+        await this.store.saveOauthState({
+          stateHash: hash,
+          userId: actor.userId,
+          channelType,
+          expiresAt: new Date(this.now().getTime() + OAUTH_STATE_TTL_MS),
+        });
+        return { authorizeUrl: adapter.authorizeUrl(state, redirectUri) };
+      },
+    );
   }
 
   /**
@@ -88,45 +93,51 @@ export class ConnectionsService {
     channelType: ChannelType,
     q: { state?: string | undefined; code?: string | undefined; error?: string | undefined },
   ): Promise<CallbackOutcome> {
-    return withGatewayOp('platform_gateway', 'handleCallback', { channel_type: channelType }, async () => {
-      const actor = requireCustomer();
-      if (q.state === undefined || q.state === '') return { kind: 'error', code: 'STATE_INVALID' };
-      const consumed = await this.store.consumeOauthState(hashOauthState(q.state), this.now());
-      if (consumed === null || consumed.userId !== actor.userId || consumed.channelType !== channelType) {
-        return { kind: 'error', code: 'STATE_INVALID' };
-      }
-      if (q.error !== undefined) return { kind: 'error', code: 'CONNECT_CANCELLED' };
-      const adapter = getAdapter(channelType);
-      const { candidates } = await adapter.exchangeCallback({ code: q.code, error: q.error });
-      if (candidates.length === 0) return { kind: 'error', code: 'CONNECT_CANCELLED' };
-      const stored: StoredCandidate[] = [];
-      for (const c of candidates) {
-        const ciphertext = await this.vault.encrypt(c.accessToken);
-        const check = await adapter.checkAccount(await this.vault.decrypt(ciphertext), {
-          connectionId: `candidate:${c.externalId}`,
+    return withGatewayOp(
+      'platform_gateway',
+      'handleCallback',
+      { channel_type: channelType },
+      async () => {
+        const actor = requireCustomer();
+        if (q.state === undefined || q.state === '')
+          return { kind: 'error', code: 'STATE_INVALID' };
+        const consumed = await this.store.consumeOauthState(hashOauthState(q.state), this.now());
+        if (consumed?.userId !== actor.userId || consumed.channelType !== channelType) {
+          return { kind: 'error', code: 'STATE_INVALID' };
+        }
+        if (q.error !== undefined) return { kind: 'error', code: 'CONNECT_CANCELLED' };
+        const adapter = getAdapter(channelType);
+        const { candidates } = await adapter.exchangeCallback({ code: q.code, error: q.error });
+        if (candidates.length === 0) return { kind: 'error', code: 'CONNECT_CANCELLED' };
+        const stored: StoredCandidate[] = [];
+        for (const c of candidates) {
+          const ciphertext = await this.vault.encrypt(c.accessToken);
+          const check = await adapter.checkAccount(await this.vault.decrypt(ciphertext), {
+            connectionId: `candidate:${c.externalId}`,
+          });
+          stored.push({
+            externalId: c.externalId,
+            displayName: c.displayName.slice(0, 120),
+            tokenCiphertextB64: ciphertext.toString('base64'),
+            tokenExpiresAt: c.tokenExpiresAt.toISOString(),
+            check,
+          });
+        }
+        const selectionId = await this.store.createSelection({
+          channelType,
+          userId: actor.userId,
+          candidates: stored,
+          expiresAt: new Date(this.now().getTime() + SELECTION_TTL_MS),
         });
-        stored.push({
-          externalId: c.externalId,
-          displayName: c.displayName.slice(0, 120),
-          tokenCiphertextB64: ciphertext.toString('base64'),
-          tokenExpiresAt: c.tokenExpiresAt.toISOString(),
-          check,
-        });
-      }
-      const selectionId = await this.store.createSelection({
-        channelType,
-        userId: actor.userId,
-        candidates: stored,
-        expiresAt: new Date(this.now().getTime() + SELECTION_TTL_MS),
-      });
-      return { kind: 'selection', selectionId };
-    });
+        return { kind: 'selection', selectionId };
+      },
+    );
   }
 
   async getSelection(selectionId: string): Promise<SelectionView> {
     const actor = requireCustomer();
     const sel = await this.store.getSelection(selectionId, this.now());
-    if (sel === null || sel.userId !== actor.userId) throw selectionNotFound();
+    if (sel?.userId !== actor.userId) throw selectionNotFound();
     return {
       channelType: sel.channelType,
       candidates: sel.candidates.map((c) => ({
@@ -145,7 +156,7 @@ export class ConnectionsService {
     return withGatewayOp('platform_gateway', 'saveConnection', {}, async () => {
       const actor = requireCustomer();
       const sel = await this.store.getSelection(selectionId, this.now());
-      if (sel === null || sel.userId !== actor.userId) throw selectionNotFound();
+      if (sel?.userId !== actor.userId) throw selectionNotFound();
       const candidate = sel.candidates.find((c) => c.externalId === externalId);
       if (candidate === undefined) throw candidateNotFound();
       const check = reviveCheck(candidate.check);

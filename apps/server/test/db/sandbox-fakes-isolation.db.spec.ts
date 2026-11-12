@@ -153,7 +153,7 @@ describeDb('Bảng giả lập – phủ đủ và quyền bảng hệ thống',
     });
     expect(tables).toEqual([...COVERED].sort());
     const declared = Object.values(fakes)
-      .filter((v) => typeof v === 'object' && v !== null && Symbol.for('drizzle:Name') in v)
+      .filter((v) => typeof v === 'object' && Symbol.for('drizzle:Name') in v)
       .map((t) => getTableConfig(t as typeof fakes.fakeScenarios).name)
       .filter((name) => !name.startsWith('ai_fake_system_'));
     expect(declared.sort()).toEqual([...COVERED].sort());
@@ -181,9 +181,9 @@ describeDb('Bảng giả lập – phủ đủ và quyền bảng hệ thống',
     await system.connect();
     try {
       const week = '2001-01-01';
-      await system.query('DELETE FROM sandbox.ai_fake_system_budgets WHERE week_start = $1', [
-        week,
-      ]).catch(() => undefined);
+      await system
+        .query('DELETE FROM sandbox.ai_fake_system_budgets WHERE week_start = $1', [week])
+        .catch(() => undefined);
       await system.query(
         'INSERT INTO sandbox.ai_fake_system_budgets (week_start, cap, soft_limit) VALUES ($1, 100, 100) ON CONFLICT DO NOTHING',
         [week],

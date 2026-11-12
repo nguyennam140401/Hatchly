@@ -32,7 +32,8 @@ export function validateMedia(rules: MediaRules, items: MediaDescriptor[]): Medi
       out.push({
         mediaId: item.mediaId,
         rule: 'format',
-        messageVi: item.kind === 'image' ? 'Kênh này không nhận ảnh.' : 'Kênh này không nhận video.',
+        messageVi:
+          item.kind === 'image' ? 'Kênh này không nhận ảnh.' : 'Kênh này không nhận video.',
         limit: 'không hỗ trợ',
         actual: item.kind,
       });

@@ -9,9 +9,9 @@ export const CONTENT_HASH_PREFIX = 'ch1:';
 
 const URL_RE = /https?:\/\/\S+/g;
 // ZWSP, ZWNJ, ZWJ, WORD JOINER, BOM.
-const INVISIBLE_RE = /[​‌‍⁠﻿]/g;
+const INVISIBLE_RE = /\u200B|\u200C|\u200D|\u2060|\uFEFF/g;
 // NBSP, NNBSP, các dấu cách Unicode khác.
-const SPACE_LIKE_RE = /[  -   　]/g;
+const SPACE_LIKE_RE = /[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g;
 
 export function normalizeText(text: string): string {
   return text
@@ -24,7 +24,10 @@ export function normalizeText(text: string): string {
 }
 
 /** `extraNormalize` – bước riêng của một bộ chuyển đổi (vd bỏ hashtag cuối), chạy sau chuẩn hóa chung. */
-export function contentHashOf(text: string, extraNormalize?: (normalized: string) => string): string {
+export function contentHashOf(
+  text: string,
+  extraNormalize?: (normalized: string) => string,
+): string {
   const base = normalizeText(text);
   const normalized = extraNormalize === undefined ? base : extraNormalize(base);
   return CONTENT_HASH_PREFIX + createHash('sha256').update(normalized, 'utf8').digest('hex');

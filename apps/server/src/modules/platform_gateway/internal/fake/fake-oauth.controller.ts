@@ -2,7 +2,14 @@ import { randomBytes } from 'node:crypto';
 import { Controller, Get, Header, Inject } from '@nestjs/common';
 import { ChannelType as ChannelTypeSchema } from '@app/shared/platform_gateway';
 import { z } from 'zod';
-import { AppError, AUTH_CONFIG, Public, ValidParam, ValidQuery, type AuthConfig } from '../../../../core';
+import {
+  AppError,
+  AUTH_CONFIG,
+  Public,
+  ValidParam,
+  ValidQuery,
+  type AuthConfig,
+} from '../../../../core';
 
 // Trang ủy quyền GIẢ của nền tảng (005, contracts/platform-gateway.md mục 4) – CHỈ development/test (được
 // ghép có điều kiện). Hai nút "Đồng ý"/"Hủy" chuyển về `redirect_uri` với `code` giả hoặc
@@ -11,8 +18,7 @@ import { AppError, AUTH_CONFIG, Public, ValidParam, ValidQuery, type AuthConfig 
 const params = z.strictObject({ channelType: ChannelTypeSchema });
 const query = z.object({ state: z.string().min(1).max(200), redirect_uri: z.string().max(500) });
 
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 @Controller('dev/fake-oauth')
 export class FakeOauthController {

@@ -7,7 +7,8 @@ import { gatewayEvent } from '../gateways/op-log';
 // Khóa dựng từ `currentAccountId()` (+ mã việc đang chạy với `job_tmp`) + mã UUID. MỌI khóa – kể cả tệp
 // tạm – nằm dưới `tenants/{acc}/` (hiến pháp nguyên tắc I). Tên tệp của người dùng không bao giờ vào khóa.
 
-export type StorageKind = 'media_original' | 'media_normalized' | 'media_thumb' | 'context_file' | 'job_tmp';
+export type StorageKind =
+  'media_original' | 'media_normalized' | 'media_thumb' | 'context_file' | 'job_tmp';
 
 export type StorageLocation =
   | { kind: 'media_original'; mediaId: string }
@@ -16,7 +17,8 @@ export type StorageLocation =
   | { kind: 'context_file'; fileId: string }
   | { kind: 'job_tmp'; jobId: string; name: string };
 
-export type StoragePrefix = { kind: 'media'; mediaId?: string } | { kind: 'context' } | { kind: 'account' };
+export type StoragePrefix =
+  { kind: 'media'; mediaId?: string } | { kind: 'context' } | { kind: 'account' };
 
 /** Lỗi lập trình/yêu cầu sai (vd hạn ký vượt trần, tổ hợp bị cấm) – thông điệp không chứa khóa. */
 export class InvalidRequestError extends Error {
@@ -51,14 +53,23 @@ function name(value: string, field: string): string {
 
 /** Dựng vị trí – kiểm định dạng ngay khi dựng. */
 export const loc = {
-  mediaOriginal: (mediaId: string): StorageLocation => ({ kind: 'media_original', mediaId: uuid(mediaId, 'mediaId') }),
+  mediaOriginal: (mediaId: string): StorageLocation => ({
+    kind: 'media_original',
+    mediaId: uuid(mediaId, 'mediaId'),
+  }),
   mediaNormalized: (mediaId: string, variant: string): StorageLocation => ({
     kind: 'media_normalized',
     mediaId: uuid(mediaId, 'mediaId'),
     variant: name(variant, 'variant'),
   }),
-  mediaThumb: (mediaId: string): StorageLocation => ({ kind: 'media_thumb', mediaId: uuid(mediaId, 'mediaId') }),
-  contextFile: (fileId: string): StorageLocation => ({ kind: 'context_file', fileId: uuid(fileId, 'fileId') }),
+  mediaThumb: (mediaId: string): StorageLocation => ({
+    kind: 'media_thumb',
+    mediaId: uuid(mediaId, 'mediaId'),
+  }),
+  contextFile: (fileId: string): StorageLocation => ({
+    kind: 'context_file',
+    fileId: uuid(fileId, 'fileId'),
+  }),
   /** Tệp tạm của VIỆC ĐANG CHẠY: mã việc lấy từ ngữ cảnh – ngoài việc nền → TenantContextError. */
   jobTmp: (fileName: string): StorageLocation => {
     const jobId = getExecutionContext()?.jobId;
@@ -99,7 +110,9 @@ export function resolvePrefix(prefix: StoragePrefix): string {
   const p = accountPrefix();
   switch (prefix.kind) {
     case 'media':
-      return prefix.mediaId === undefined ? `${p}media/` : `${p}media/${uuid(prefix.mediaId, 'mediaId')}/`;
+      return prefix.mediaId === undefined
+        ? `${p}media/`
+        : `${p}media/${uuid(prefix.mediaId, 'mediaId')}/`;
     case 'context':
       return `${p}context/`;
     case 'account':
@@ -130,7 +143,8 @@ export function locationFromKey(key: string): StorageLocation | null {
       return { kind: 'media_normalized', mediaId: rest[1], variant: rest[3] };
     }
   }
-  if (rest[0] === 'context' && rest[1] !== undefined) return { kind: 'context_file', fileId: rest[1] };
+  if (rest[0] === 'context' && rest[1] !== undefined)
+    return { kind: 'context_file', fileId: rest[1] };
   if (rest[0] === 'tmp' && rest[1] !== undefined && rest[2] !== undefined) {
     return { kind: 'job_tmp', jobId: rest[1], name: rest[2] };
   }

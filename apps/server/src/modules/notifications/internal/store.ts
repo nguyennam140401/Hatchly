@@ -20,11 +20,18 @@ export interface DeliveredNotification {
   emailResult: MailDeliveryResult['kind'] | null;
 }
 
-export type NewNotification = Omit<DeliveredNotification, 'id' | 'accountId' | 'createdAt' | 'emailResult'>;
+export type NewNotification = Omit<
+  DeliveredNotification,
+  'id' | 'accountId' | 'createdAt' | 'emailResult'
+>;
 
 export interface NotificationStore {
   /** Dòng sự kiện – `(account, dedupe_key)` duy nhất; false khi đã có. */
-  insertEvent(e: { dedupeKey: string; type: NotificationType; refs: Record<string, unknown> }): Promise<boolean>;
+  insertEvent(e: {
+    dedupeKey: string;
+    type: NotificationType;
+    refs: Record<string, unknown>;
+  }): Promise<boolean>;
   /** Thêm thông báo (người nhận × kênh) nếu chưa có; trả dòng hiện có (để biết email đã gửi chưa). */
   ensureNotification(n: NewNotification): Promise<DeliveredNotification>;
   setEmailResult(id: string, result: MailDeliveryResult['kind']): Promise<void>;

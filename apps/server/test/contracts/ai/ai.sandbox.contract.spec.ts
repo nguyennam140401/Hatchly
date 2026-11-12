@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { createAccount, describeDb, makeDatabase, withAccount, type TestDatabase } from '../../db/helpers/db';
+import {
+  createAccount,
+  describeDb,
+  makeDatabase,
+  withAccount,
+  type TestDatabase,
+} from '../../db/helpers/db';
 import { currentAccountId } from '../../../src/core/db/transaction';
 import { makeOnCrossed } from '../../../src/modules/ai_gateway/ai_gateway.module';
 import { QueueEmitter } from '../../../src/modules/notifications/internal/emit';

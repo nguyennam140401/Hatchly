@@ -13,7 +13,11 @@ import {
   minCallEstimate,
 } from '../../../src/modules/ai_gateway/internal/estimate';
 import { validateAiRequest } from '../../../src/modules/ai_gateway/internal/gateway.service';
-import { JsonPriceSource, PriceBook, type PriceEntry } from '../../../src/modules/ai_gateway/internal/prices/price-book';
+import {
+  JsonPriceSource,
+  PriceBook,
+  type PriceEntry,
+} from '../../../src/modules/ai_gateway/internal/prices/price-book';
 import { pickTier } from '../../../src/modules/ai_gateway/internal/tier';
 
 // 005 T052: ước tính (bigint, làm tròn lên), chọn hạng, bảng giá theo thời điểm, kiểm yêu cầu.
@@ -39,7 +43,9 @@ describe('estimate', () => {
     expect(Number.isInteger(estimateTokens(price(), 333, 777))).toBe(true);
   });
   it('chi phí thực: token đã đệm tính giá riêng', () => {
-    expect(actualTokensCost(price(), { inputTokens: 1000, cachedInputTokens: 500, outputTokens: 0 })).toBe(1_650);
+    expect(
+      actualTokensCost(price(), { inputTokens: 1000, cachedInputTokens: 500, outputTokens: 0 }),
+    ).toBe(1_650);
   });
   it('STT: ceil(min(durationSec, 300)/60 × giá/phút)', () => {
     expect(estimateStt(price(), 1000)).toBe(30_000);
@@ -56,7 +62,9 @@ describe('pickTier', () => {
   it('bảng chọn hạng', () => {
     expect(pickTier('post_generation', snap(1_999_999))).toBe('default');
     expect(pickTier('post_generation', snap(2_000_000))).toBe('cheap');
-    expect(pickTier('topic_suggestion', { used: 1_500_000, reserved: 500_000, softLimit: 2_000_000 })).toBe('cheap');
+    expect(
+      pickTier('topic_suggestion', { used: 1_500_000, reserved: 500_000, softLimit: 2_000_000 }),
+    ).toBe('cheap');
     expect(pickTier('image_labeling', snap(0))).toBe('cheap_vision');
     expect(pickTier('video_labeling', snap(0))).toBe('cheap_vision');
     expect(pickTier('trend_summary', snap(0))).toBe('cheap');
@@ -81,7 +89,11 @@ describe('PriceBook', () => {
 });
 
 describe('validateAiRequest', () => {
-  const base = { task: 'post_generation' as const, prompt: { system: 's', delta: 'd' }, maxOutputTokens: 10 };
+  const base = {
+    task: 'post_generation' as const,
+    prompt: { system: 's', delta: 'd' },
+    maxOutputTokens: 10,
+  };
   const code = (fn: () => void) => {
     try {
       fn();
@@ -91,19 +103,60 @@ describe('validateAiRequest', () => {
     }
   };
   it('maxOutputTokens 1–8 192; images chỉ cho gán nhãn, ≤ 8; trend_summary chỉ hệ thống', () => {
-    expect(code(() => validateAiRequest(base, 'account'))).toBe('ok');
-    expect(code(() => validateAiRequest({ ...base, maxOutputTokens: 0 }, 'account'))).toBe('AI_INVALID_REQUEST');
-    expect(code(() => validateAiRequest({ ...base, maxOutputTokens: 8193 }, 'account'))).toBe('AI_INVALID_REQUEST');
-    expect(code(() => validateAiRequest({ ...base, maxOutputTokens: 1.5 }, 'account'))).toBe('AI_INVALID_REQUEST');
-    const img = { url: 'u', bytes: 1 };
-    expect(code(() => validateAiRequest({ ...base, images: [img] }, 'account'))).toBe('AI_INVALID_REQUEST');
-    expect(code(() => validateAiRequest({ ...base, task: 'image_labeling', images: [img] }, 'account'))).toBe('ok');
     expect(
-      code(() => validateAiRequest({ ...base, task: 'image_labeling', images: Array(9).fill(img) }, 'account')),
+      code(() => {
+        validateAiRequest(base, 'account');
+      }),
+    ).toBe('ok');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, maxOutputTokens: 0 }, 'account');
+      }),
     ).toBe('AI_INVALID_REQUEST');
-    expect(code(() => validateAiRequest({ ...base, task: 'trend_summary' }, 'account'))).toBe('AI_INVALID_REQUEST');
-    expect(code(() => validateAiRequest({ ...base, task: 'trend_summary' }, 'system'))).toBe('ok');
-    expect(code(() => validateAiRequest({ ...base, task: 'nhiem_vu_la' as never }, 'account'))).toBe('AI_INVALID_REQUEST');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, maxOutputTokens: 8193 }, 'account');
+      }),
+    ).toBe('AI_INVALID_REQUEST');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, maxOutputTokens: 1.5 }, 'account');
+      }),
+    ).toBe('AI_INVALID_REQUEST');
+    const img = { url: 'u', bytes: 1 };
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, images: [img] }, 'account');
+      }),
+    ).toBe('AI_INVALID_REQUEST');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, task: 'image_labeling', images: [img] }, 'account');
+      }),
+    ).toBe('ok');
+    expect(
+      code(() => {
+        validateAiRequest(
+          { ...base, task: 'image_labeling', images: Array.from({ length: 9 }, () => img) },
+          'account',
+        );
+      }),
+    ).toBe('AI_INVALID_REQUEST');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, task: 'trend_summary' }, 'account');
+      }),
+    ).toBe('AI_INVALID_REQUEST');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, task: 'trend_summary' }, 'system');
+      }),
+    ).toBe('ok');
+    expect(
+      code(() => {
+        validateAiRequest({ ...base, task: 'nhiem_vu_la' as never }, 'account');
+      }),
+    ).toBe('AI_INVALID_REQUEST');
   });
 });
 

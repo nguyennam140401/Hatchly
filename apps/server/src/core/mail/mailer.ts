@@ -21,7 +21,10 @@ export interface Mailer {
 }
 
 /** `send()` dựng từ `deliver()` – hành vi của 004 giữ nguyên. */
-export async function sendViaDeliver(mailer: Pick<Mailer, 'deliver'>, message: MailMessage): Promise<void> {
+export async function sendViaDeliver(
+  mailer: Pick<Mailer, 'deliver'>,
+  message: MailMessage,
+): Promise<void> {
   const r = await mailer.deliver(message);
   if (r.kind !== 'sent') throw new Error(`MAIL_SEND_FAILED:${r.code}`);
 }

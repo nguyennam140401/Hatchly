@@ -17,10 +17,15 @@ describe('Bộ gửi thư – smtp → Mailpit', () => {
       async find(subject, timeoutMs) {
         const deadline = Date.now() + timeoutMs;
         while (Date.now() < deadline) {
-          const res = await fetch(`${MAILPIT_API}/api/v1/search?query=${encodeURIComponent(`subject:"${subject}"`)}`);
-          const body = (await res.json()) as { messages?: { Subject: string; To: { Address: string }[] }[] };
+          const res = await fetch(
+            `${MAILPIT_API}/api/v1/search?query=${encodeURIComponent(`subject:"${subject}"`)}`,
+          );
+          const body = (await res.json()) as {
+            messages?: { Subject: string; To: { Address: string }[] }[];
+          };
           const m = body.messages?.find((x) => x.Subject === subject);
-          if (m !== undefined) return { subject: m.Subject, to: m.To.map((t) => t.Address).join(',') };
+          if (m !== undefined)
+            return { subject: m.Subject, to: m.To.map((t) => t.Address).join(',') };
           await new Promise((r) => setTimeout(r, 200));
         }
         return undefined;

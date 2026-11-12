@@ -9,7 +9,11 @@ export class MemoryMailTransport implements Mailer {
   failNext = false;
 
   /** Kịch bản lỗi theo địa chỉ: `times` lần tiếp theo (mặc định mãi mãi). */
-  failFor(address: string, kind: 'transient' | 'permanent', times = Number.POSITIVE_INFINITY): void {
+  failFor(
+    address: string,
+    kind: 'transient' | 'permanent',
+    times = Number.POSITIVE_INFINITY,
+  ): void {
     this.failures.set(address.toLowerCase(), { kind, times });
   }
 
@@ -23,7 +27,9 @@ export class MemoryMailTransport implements Mailer {
       rule.times -= 1;
       if (rule.times <= 0) this.failures.delete(message.to.toLowerCase());
       return Promise.resolve(
-        rule.kind === 'permanent' ? { kind: 'permanent', code: '550' } : { kind: 'transient', code: '421' },
+        rule.kind === 'permanent'
+          ? { kind: 'permanent', code: '550' }
+          : { kind: 'transient', code: '421' },
       );
     }
     this.sent.push({ ...message });

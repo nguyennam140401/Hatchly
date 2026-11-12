@@ -14,7 +14,12 @@ export function describeMailerContract(make: () => Mailer, inbox: () => MailInbo
   describe('bộ gửi thư', () => {
     it('sent → đọc lại được trong hộp thư (≤ 10 giây – SC-011)', async () => {
       const subject = `Kiểm thử ${randomUUID()}`;
-      const r = await make().deliver({ to: 'chu@example.test', subject, text: 'xin chào', html: '<p>xin chào</p>' });
+      const r = await make().deliver({
+        to: 'chu@example.test',
+        subject,
+        text: 'xin chào',
+        html: '<p>xin chào</p>',
+      });
       expect(r.kind).toBe('sent');
       const started = Date.now();
       const got = await inbox().find(subject, 10_000);

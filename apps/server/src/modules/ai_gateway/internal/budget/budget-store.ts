@@ -7,8 +7,7 @@ import type { AiTask, ModelTier } from '../../public-api';
 
 /** Tài khoản: theo chu kỳ (tài khoản lấy từ ngữ cảnh – không có trong khóa); hệ thống: theo tuần. */
 export type BudgetKey =
-  | { scope: 'account'; cycleStart: string }
-  | { scope: 'system'; weekStart: string };
+  { scope: 'account'; cycleStart: string } | { scope: 'system'; weekStart: string };
 
 export interface BudgetSnapshot {
   used: number;

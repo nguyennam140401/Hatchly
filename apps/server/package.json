@@ -28,7 +28,7 @@
     "dev:seed-auth": "tsx --env-file-if-exists=.env src/ops/seed-auth.ts",
     "test:queue": "vitest run --config vitest.queue.config.mts",
     "test:infra": "vitest run --config vitest.infra.config.mts",
-    "test:e2e-fakes": "node --require ./test/helpers/deny-egress.cjs ./node_modules/vitest/vitest.mjs run --config vitest.db.config.mts test/e2e/fakes-flow.e2e.spec.ts",
+    "test:e2e-fakes": "vitest run --config vitest.db.config.mts test/e2e/fakes-flow.e2e.spec.ts",
     "test:queue-soak": "vitest run --config vitest.queue.config.mts test/queue/soak",
     "queue:sql": "tsx src/db/queue-sql.ts"
   },

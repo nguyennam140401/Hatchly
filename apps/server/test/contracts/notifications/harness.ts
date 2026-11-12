@@ -4,7 +4,10 @@ import { MemoryMailTransport } from '../../../src/core/mail/memory.transport';
 import type { ActiveMember } from '../../../src/modules/account';
 import type { NotificationsPublicApi } from '../../../src/modules/notifications';
 import type { DeliverDeps } from '../../../src/modules/notifications/internal/deliver.handler';
-import type { DeliveredNotification, NotificationStore } from '../../../src/modules/notifications/internal/store';
+import type {
+  DeliveredNotification,
+  NotificationStore,
+} from '../../../src/modules/notifications/internal/store';
 
 // Harness của bộ kiểm thử hợp đồng Thông báo (005, R9b) – giống nhau ở `memory` và `sandbox`: phát →
 // `flush()` → khẳng định. Bản thật WBS 4.3 cung cấp harness của mình.

@@ -219,8 +219,7 @@ dùng `deadLetter` của thư viện). Việc định kỳ: bộ hẹn giờ ri�
 | Kiểm tra gói hết hạn | Mỗi giờ |
 | Làm mới token kênh; còn < 7 ngày mà không làm mới được → nhắc người dùng | Hằng ngày |
 | Thu thập xu hướng theo ngành | Thứ Hai 05:00 (UTC+7) |
-| Chia đều chi phí xu hướng cho các tài khoản cùng ngành | Sau mỗi lần thu thập |
-| Trả lại giữ chỗ ngân sách treo quá 15 phút | Mỗi 10 phút |
+| Giữ chỗ ngân sách AI treo > 15 phút: `held` → trả lại; `calling` → quyết toán theo ước tính (sổ `unsettled`) | Tài khoản: việc `ai_gateway.release_stale` hẹn trong giao dịch giữ chỗ, chạy sau 15 phút trong ngữ cảnh tài khoản; hệ thống: mỗi phút |
 | Đối soát sổ chi phí AI với nhà cung cấp (lệch > 5% → cảnh báo) | Hằng ngày |
 | Xóa tài khoản (hết hạn > 90 ngày, báo trước 7 ngày; hoặc theo yêu cầu, xóa xong ≤ 30 ngày) | Hằng ngày |
 | Dọn dẹp (job xong > 30 ngày, job chết > 90 ngày, tệp tạm, bản ghi tải lên dở > 1 giờ, tệp mồ côi) | Hằng ngày / hằng tuần |
@@ -276,11 +275,24 @@ stateDiagram-v2
    Ràng buộc `CHECK (used + reserved <= cap)` là chốt chặn cuối.
 3. Chọn mô hình: `used + reserved < soft_limit` (2.000.000 micro-USD) → mô hình mặc định; ngược lại
    → mô hình rẻ. Gán nhãn và tóm tắt xu hướng luôn dùng mô hình rẻ.
-4. Gọi nhà cung cấp, rồi quyết toán (`used += actual`, `reserved -= est`) và ghi `ai_cost_ledger`
-   (tài khoản, chu kỳ, loại việc, mô hình, token vào/ra/cache, chi phí, `trace_id`). Lỗi hoặc hết
-   thời gian → trả lại giữ chỗ, thử nhà cung cấp dự phòng 1 lần.
-5. Mức sử dụng hiển thị cho khách = `floor((used + reserved) / cap × 100)%`. Đạt 80% → thông báo
-   trong ứng dụng + email, mỗi chu kỳ một lần. Không bao giờ hiển thị số tiền.
+4. Ngay trước MỖI lần gọi nhà cung cấp (chính và dự phòng): `markCalling` – giữ chỗ `held → calling`
+   (cập nhật có điều kiện, đặt `called_at`). Gọi nhà cung cấp, rồi quyết toán trong MỘT giao dịch:
+   `reserved -= est`, `used = min(used + actual, cap - reserved)` (kẹp trần – bất biến `used + reserved
+   <= cap` luôn đúng), bật cờ `notified_80/100` bằng cập nhật có điều kiện `= false`, ghi `ai_cost_ledger`
+   (chi phí THỰC không kẹp, `anomaly = 'over_estimate'` khi `actual > est`, `over_cap_micro_usd`), giữ chỗ
+   `→ settled`, rồi tạo sự kiện `ai_usage_80/100` qua `notifications.emit(tx, …)` TRÊN CÙNG giao dịch
+   (`settle(…, { onCrossed })` – nguyên tắc IV). Bước nào lỗi → hủy cả giao dịch; thử quyết toán lại 1
+   lần, vẫn lỗi → cảnh báo `ai.settle_failed`, giữ chỗ còn `calling`. Nhà cung cấp lỗi/hết thời gian →
+   trả lại giữ chỗ, thử nhà cung cấp dự phòng 1 lần.
+5. Giữ chỗ treo > 15 phút: `held` (chưa gọi – chưa tốn tiền) → trả lại; `calling` (có thể đã tốn tiền)
+   → quyết toán theo ước tính, dòng sổ `anomaly = 'unsettled'` (token = 0), cảnh báo
+   `ai.unsettled_reservation`. Ước tính là chi phí tối đa nên tính dư, không thiếu.
+6. Mức sử dụng hiển thị cho khách = `floor((used + reserved) / cap × 100)%`. Đạt 80% / 100% → thông
+   báo trong ứng dụng + email, mỗi chu kỳ một lần (cờ + khóa chống trùng theo chu kỳ). Không bao giờ hiển
+   thị số tiền.
+7. Ngân sách hệ thống theo tuần (`week_start` = thứ Hai 00:00 UTC+7, trần `AI_SYSTEM_WEEKLY_CAP_MICRO_USD`)
+   cho việc không thuộc tài khoản (tóm tắt xu hướng): `system.generate` chỉ gọi được ngoài ngữ cảnh tài
+   khoản; hết trần → `AI_SYSTEM_BUDGET_EXHAUSTED` + cảnh báo. Không chia chi phí xu hướng cho tài khoản.
 
 Thứ tự prompt cố định để tận dụng prompt cache: chỉ dẫn hệ thống → hồ sơ kinh doanh (theo phiên bản)
 → xu hướng ngành của tuần → phần thay đổi. STT ước tính chi phí tối đa theo
@@ -288,7 +300,7 @@ Thứ tự prompt cố định để tận dụng prompt cache: chỉ dẫn hệ
 
 ### 7.3 Media
 
-API kiểm tra dung lượng còn lại và giữ chỗ dung lượng, cấp presigned PUT URL (≤ 15 phút) và tạo bản
+API kiểm tra dung lượng còn lại và giữ chỗ dung lượng, cấp đường dẫn tải lên presigned POST (≤ 15 phút; khóa, Content-Type, kích thước tối đa ràng buộc trong policy – 005) và tạo bản
 ghi `uploading`. Trình duyệt tải tệp lên. API xác nhận (tệp tồn tại, kích thước, hash) và chuyển bản
 ghi sang `ready`, đồng thời tạo job `media`. Nếu đã có hash trùng trong cùng tài khoản thì sao chép
 kết quả cũ, không tốn AI. Media dùng được ngay sau khi chuẩn hóa, kể cả khi gán nhãn lỗi hoặc hết
@@ -403,6 +415,16 @@ email, mật khẩu hay mã. Không có bên nhận mới ở nước ngoài (SE
 | việc hỏng / chôn việc | `infra.dead_jobs` / `buryJob` | chạy lại việc hỏng | `retry dead job` (`requestDeadJobRetry`) |
 | bể điều khiển hàng chờ | `queue control pool` (vai trò `system`, chỉ Worker) | phong bì việc | `job envelope` |
 | schema thư viện hàng chờ | `pgboss` | bộ chạy hàng chờ của một bản Worker | `QueueRuntime` |
+
+| bộ chuyển đổi nền tảng / danh mục bộ chuyển đổi | `PlatformAdapter` / `registerAdapter`, `listRegisteredAdapters` | năng lực kênh | `ChannelCapabilities` |
+| dấu nội dung | `contentHash` (tiền tố `ch1:`) | chắc chắn chưa nhận / cần người dùng / không xác định | `transient` / `user_action` / `unknown` |
+| tìm thấy / không tìm thấy / không đối soát được | `found` / `not_found` / `unsupported` | kho mã quyền | `CredentialVault` (`DecryptedCredential`) |
+| phiên chọn Page | `connection selection` (`selectionId`) | loại việc AI / hạng mô hình | `AiTask` / `ModelTier` |
+| giữ chỗ / đánh dấu đang gọi / quyết toán / trả lại | `reserve` / `markCalling` (`calling`) / `settle` / `release` | bất thường chi phí | `anomaly`: `over_estimate`, `unsettled` |
+| ngân sách hệ thống theo tuần | `system budget` (`week_start`) | sự kiện / loại thông báo | `NotificationEvent` / `NotificationType` |
+| nhóm gộp email | `emailBatch`: `batch_10m`, `immediate` | kết quả gửi thư | `MailDeliveryResult`: `sent`, `transient`, `permanent` |
+| vị trí tệp / đường dẫn ký sẵn | `StorageLocation` (`loc.*`) / `PresignedUpload`, `SignedUrl` | kho tệp | `core/storage`, `ObjectStorage`, `OBJECT_STORAGE` |
+| trạng thái giả lập / kịch bản giả lập | schema `sandbox`, `FAKE_STATE_STORE` (`memory` \| `sandbox`) / `FakeScenario` | vật thế chỗ giao dịch (chế độ bộ nhớ) | `memoryTx()` |
 
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
 
