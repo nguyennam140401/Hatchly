@@ -1,0 +1,28 @@
+# Bộ điều khiển Jenkins (008, contracts/jenkins-platform.md mục 2). Chạy dưới người dùng `jenkins`; chỉ nghe
+# 127.0.0.1 – nginx đứng trước và là lối vào duy nhất (R6). Đĩa dữ liệu gắn tại /var/lib/jenkins-data.
+# Ảnh dựng từ ops/ci/jenkins/Dockerfile (ảnh nền đã cố định digest) nên không khai báo `image:` ở đây.
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # uid:gid của người dùng `jenkins` trên máy ảo do bootstrap.sh truyền qua biến JENKINS_UID/JENKINS_GID.
+    user: '${JENKINS_UID:-1001}:${JENKINS_GID:-1001}'
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:50000:50000' # cổng tác nhân (JNLP) – chỉ nhận từ chính máy này
+    environment:
+      CASC_JENKINS_CONFIG: /var/jenkins_casc
+    volumes:
+      - /var/lib/jenkins-data:/var/jenkins_home
+      - ./casc:/var/jenkins_casc:ro
+      - ./jobs:/var/jenkins_jobs:ro
+      # Bí mật nhập tay lần đầu (R3, jenkins-platform.md mục 6) – chỉ đọc, không có trong kho mã.
+      - /etc/jenkins-secrets:/etc/jenkins-secrets:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/login']
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 90s

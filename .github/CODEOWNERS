@@ -1,0 +1,6 @@
+# Chủ mã của định nghĩa quy trình (008, R7, R17): thay đổi ở các đường dẫn này phải được người có vai
+# `release-manager` trong ops/ci/team.json duyệt. Giữ danh sách khớp với tệp đó.
+/ops/ci/**            @nguyennam140401
+/ops/deploy/**        @nguyennam140401
+/infra/ci/**          @nguyennam140401
+/.github/CODEOWNERS   @nguyennam140401

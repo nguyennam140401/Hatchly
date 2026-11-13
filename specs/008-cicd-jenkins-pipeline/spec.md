@@ -45,7 +45,9 @@ tự đi tới môi trường tương ứng mà không ai phải làm tay, và l
 2. **Hai chặng**: *kiểm tra trước khi hợp nhất* (chặn hợp nhất vào `dev` và `master`) và *triển khai sau khi hợp
    nhất* (`dev` → test, `master` → release). Chặng sau chạy lại toàn bộ cổng chất lượng trước khi triển khai.
 3. **Một ảnh cho mỗi phiên bản mã**, dùng cho cả `api`, `worker` và tác vụ migration; ảnh không bị ghi đè.
-4. **Chỉ mã đã chạy tốt trên test mới được lên release**: `master` chỉ nhận thay đổi từ `dev`.
+4. **Hai đường vào `master`**: đường phát hành thường từ `dev` (chỉ mã đã chạy tốt trên test) và đường sửa
+   nóng từ nhánh `hotfix/*` tách ra từ `master` (không cần qua test, vì `dev` có thể đang lẫn mã chưa hoàn
+   thiện). Không có đường thứ ba.
 5. **Tương thích ngược của CSDL được kiểm bằng hai lớp**: kiểm tra tĩnh từng migration và chạy thử *phiên bản
    ứng dụng đang chạy ở môi trường đích* trên cấu trúc CSDL mới.
 6. **Triển khai hỏng thì tự quay về bản ứng dụng trước**; cấu trúc CSDL không quay lui (vì đã tương thích ngược).
@@ -54,6 +56,34 @@ tự đi tới môi trường tương ứng mà không ai phải làm tay, và l
 hành (WBS H3); kiểm thử tải; môi trường xem trước cho từng nhánh; phát hành từng phần theo tỷ lệ người dùng
 (canary) và bật/tắt tính năng bằng cờ; áp dụng thay đổi hạ tầng Terraform (quy trình riêng ở `007` US3); viết
 thêm kiểm thử nghiệp vụ cho các module (thuộc từng tính năng).
+
+## Clarifications
+
+### Session 2026-11-13
+
+- Q: Kho mã của dự án sẽ được đặt trên dịch vụ lưu mã nào để Jenkins nhận sự kiện hợp nhất và khóa nút hợp
+  nhất khi cổng chất lượng chưa đạt? → A: GitHub (đám mây, kho riêng tư); Jenkins nhận webhook và báo trạng
+  thái lên pull request.
+- Q: Máy Jenkins sẽ chạy ở đâu so với hai môi trường test và release? → A: Một máy ảo riêng trên đám mây trong
+  nước, nằm ngoài cả hai cụm Kubernetes, có mạng và quyền riêng.
+- Q: Sau khi pull request vào `master` được hợp nhất, Jenkins có triển khai thẳng lên release hay phải chờ một
+  người bấm xác nhận trong Jenkins? → A: Triển khai thẳng ngay sau hợp nhất; bước duyệt của con người là duyệt
+  pull request vào `master`.
+- Q: Khi release có lỗi nghiêm trọng cần sửa gấp, bản sửa nóng có được đi thẳng vào `master` không? → A: Có –
+  nhánh `hotfix/*` (tách từ `master`) mở pull request thẳng vào `master`, vẫn chạy đủ cổng chất lượng và cần
+  người thứ hai duyệt nhưng không cần đã chạy trên test; Jenkins tự mở pull request đưa bản sửa ngược về `dev`.
+  Lý do: `dev` là nhánh thi công tính năng theo vòng lặp nên có thể lẫn mã mới chưa hoàn thiện.
+- Q: Kết quả triển khai sẽ được gửi cho đội qua kênh nào? → A: Một nhóm Telegram của đội, cùng trạng thái
+  trên pull request của GitHub; không gửi email.
+
+### Session 2026-11-13 (sau `/speckit-analyze`)
+
+- Q: FR-004 đòi người thứ hai duyệt, nhưng hiện kho mã chỉ có một người làm – xử lý thế nào? → A: Không đẩy
+  thẳng lên `master`; thay đổi đi qua `dev` bằng pull request đã đạt cổng chất lượng. Hiện chỉ chủ dự án (quyền
+  cao nhất) được thao tác và hợp nhất vào `master`. Yêu cầu "người khác tác giả duyệt" áp dụng khi kho có từ hai
+  thành viên trở lên; trong lúc chỉ có một thành viên, việc chủ dự án bấm hợp nhất là bước duyệt của con người.
+  Câu trả lời này thay cho các chỗ ghi "người thứ hai duyệt" ở phiên trước. Đường sửa nóng `hotfix/*` (phiên
+  trước) được giữ nguyên.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -131,8 +161,8 @@ bản của commit đó, và đội nhận được thông báo thành công.
 
 ### User Story 3 - Hợp nhất vào `master` thì môi trường release tự cập nhật, an toàn (Priority: P3)
 
-Khi đội quyết định phát hành, một yêu cầu hợp nhất từ `dev` vào `master` được người thứ hai duyệt. Sau khi hợp
-nhất, Jenkins tự triển khai lên release theo đúng các bước của test, cộng thêm các lớp an toàn: xác nhận mã này
+Khi đội quyết định phát hành, một yêu cầu hợp nhất từ `dev` vào `master` được người quản lý phát hành hợp nhất
+(và được người khác tác giả duyệt khi kho có từ hai thành viên – FR-004). Sau khi hợp nhất, Jenkins tự triển khai lên release theo đúng các bước của test, cộng thêm các lớp an toàn: xác nhận mã này
 đã chạy tốt trên test, kiểm tra migration với phiên bản đang chạy ở release, và tự quay về bản trước nếu bản
 mới không khỏe.
 
@@ -146,10 +176,11 @@ tin triển khai của test để triển khai lên release → bị từ chối
 
 **Acceptance Scenarios**:
 
-1. **Given** một yêu cầu hợp nhất vào `master`, **When** chưa có người thứ hai duyệt hoặc cổng chất lượng chưa
-   đạt, **Then** không hợp nhất được.
-2. **Given** một yêu cầu hợp nhất vào `master` chứa nội dung chưa được triển khai thành công lên test, **When**
-   cổng chạy, **Then** không đạt, nêu commit nào chưa qua test.
+1. **Given** một yêu cầu hợp nhất vào `master`, **When** cổng chất lượng chưa đạt, hoặc người bấm hợp nhất không
+   có vai trò quản lý phát hành, hoặc (khi kho có từ hai thành viên) chưa có người khác tác giả duyệt, **Then**
+   không hợp nhất được.
+2. **Given** một yêu cầu hợp nhất từ `dev` vào `master` chứa nội dung chưa được triển khai thành công lên
+   test, **When** cổng chạy, **Then** không đạt, nêu commit nào chưa qua test.
 3. **Given** một commit mới trên `master`, **When** hợp nhất xong, **Then** quy trình triển khai release tự bắt
    đầu, theo cùng các bước và cùng định nghĩa như test; khác biệt chỉ là tham số của môi trường.
 4. **Given** bản mới đã triển khai lên release, **When** kiểm tra sức khỏe hoặc kiểm tra khói không đạt trong
@@ -162,6 +193,15 @@ tin triển khai của test để triển khai lên release → bị từ chối
    (không dựng lại).
 7. **Given** một lần triển khai release bất kỳ, **When** tra lịch sử, **Then** thấy: ai hợp nhất, ai duyệt,
    commit nào, ảnh nào, migration nào đã chạy, kết quả từng bước và thời điểm.
+8. **Given** release đang có lỗi và `dev` đang chứa mã chưa hoàn thiện, **When** lập trình viên tách nhánh
+   `hotfix/*` từ `master`, sửa lỗi và mở yêu cầu hợp nhất vào `master`, **Then** cổng chất lượng chạy đầy đủ
+   (kể cả kiểm tra tương thích ngược với bản đang chạy ở release), điều kiện "đã chạy trên test" không áp
+   dụng, điều kiện hợp nhất của FR-004 vẫn áp dụng; sau khi hợp nhất, release tự triển khai như thường lệ.
+9. **Given** một bản sửa nóng vừa được hợp nhất vào `master`, **When** triển khai release xong, **Then** Jenkins
+   tự mở một yêu cầu hợp nhất đưa bản sửa ngược về `dev` và báo cho đội; nếu có xung đột thì yêu cầu đó vẫn
+   được mở và ghi rõ cần người xử lý.
+10. **Given** một nhánh không phải `dev` và không tách từ `master` theo tên `hotfix/*`, **When** nó mở yêu cầu
+    hợp nhất vào `master`, **Then** bị từ chối.
 
 ---
 
@@ -205,6 +245,10 @@ của 20 lần chạy gần nhất → 0 bí mật.
 - **Bản mới khỏe ở `api` nhưng `worker` không khởi động được**: coi là triển khai hỏng, cả hai cùng quay về.
 - **Việc nền dạng mới do bản mới tạo ra, sau đó quay về bản cũ**: Worker cũ gặp loại việc không biết phải để
   nguyên việc đó trong hàng chờ (không làm mất, không chôn), và cảnh báo.
+- **GitHub không gửi được webhook hoặc tạm ngừng**: Jenkins đối chiếu định kỳ với kho mã để không bỏ sót lần
+  hợp nhất nào; ứng dụng đang chạy không bị ảnh hưởng.
+- **Telegram không gửi được**: triển khai vẫn hoàn tất; lỗi gửi được ghi trong lịch sử lần chạy và thử gửi
+  lại; kết quả vẫn xem được trên GitHub và Jenkins.
 - **Jenkins ngừng hoạt động**: ứng dụng đang chạy không bị ảnh hưởng; hợp nhất bị khóa cho tới khi Jenkins trở
   lại; có hướng dẫn triển khai khẩn cấp bằng tay (kế thừa tài liệu của `007`) kèm yêu cầu ghi nhận.
 - **Jenkins khởi động lại giữa một lần triển khai**: lần chạy được đánh dấu hỏng; chạy lại an toàn vì mọi bước
@@ -212,8 +256,18 @@ của 20 lần chạy gần nhất → 0 bí mật.
 - **Kiểm thử chập chờn**: không tự động chạy lại để "cho qua"; lần chạy lại do người kích hoạt và được ghi nhận.
 - **Kho ảnh hoặc kho bí mật không truy cập được**: quy trình dừng với thông báo rõ thành phần nào lỗi; môi
   trường giữ nguyên bản cũ.
-- **Sửa nóng (hotfix) khẩn cấp cho release**: vẫn đi qua `dev` → test → `master`; đường tắt duy nhất là quy
-  trình ngoại lệ có ghi nhận ở FR-009.
+- **Sửa nóng (hotfix) khẩn cấp cho release**: đi bằng nhánh `hotfix/*` thẳng vào `master` (FR-005a), không
+  qua test nhưng không bỏ cổng nào; vượt cổng vẫn chỉ có quy trình ngoại lệ FR-009.
+- **Bản sửa nóng xung đột với `dev` khi đưa ngược về**: yêu cầu hợp nhất vẫn được mở, đánh dấu cần người xử
+  lý; phát hành thường bị chặn cho tới khi nó được hợp nhất (FR-005b).
+- **Bản sửa nóng có kèm migration**: **không được phép** – sửa nóng không kèm migration; cần đổi cấu trúc thì
+  đi đường phát hành thường (`dev` → test → `master`). Lý do (đã kiểm chứng lúc implement, research R11): bộ
+  chạy migration **bỏ qua âm thầm** migration có mốc thời gian cũ hơn migration mới nhất đã áp, nên migration
+  của bản sửa nóng và migration chưa phát hành của `dev` có thể làm một trong hai môi trường thiếu cấu trúc mà
+  không báo lỗi. Cổng nguồn phát hành chặn nhánh `hotfix/*` có tệp migration mới; cổng migration bất biến chặn
+  mọi migration mới có mốc thời gian không lớn hơn các migration đã có ở nhánh đích.
+- **`dev` đang có mã chưa hoàn thiện đúng lúc cần phát hành**: phát hành thường đưa toàn bộ `dev` lên release,
+  nên đội chỉ mở yêu cầu phát hành khi `dev` ở trạng thái phát hành được; việc cần gấp thì đi đường sửa nóng.
 - **Ảnh chứa lỗ hổng nghiêm trọng đã biết ở phụ thuộc**: bị chặn trước khi triển khai lên release; ở test thì
   cảnh báo.
 - **Giao diện web và `api` lệch phiên bản trong lúc chuyển**: giao diện mới chỉ có hiệu lực sau khi `api` mới
@@ -232,12 +286,26 @@ của 20 lần chạy gần nhất → 0 bí mật.
 - **FR-002**: Mỗi yêu cầu hợp nhất nhắm vào `dev` hoặc `master` MUST tự kích hoạt cổng chất lượng trên kết quả
   hợp nhất dự kiến, và chạy lại khi có commit mới; kết quả MUST hiển thị ngay trên yêu cầu hợp nhất.
 - **FR-003**: Hợp nhất vào `dev` MUST tự kích hoạt triển khai lên môi trường test; hợp nhất vào `master` MUST
-  tự kích hoạt triển khai lên môi trường release. MUST NOT có nhánh nào khác triển khai được lên hai môi trường
+  tự kích hoạt triển khai lên môi trường release, chạy liền mạch tới hết mà không chờ ai xác nhận trong Jenkins.
+  MUST NOT có nhánh nào khác triển khai được lên hai môi trường
   này, và MUST NOT có ánh xạ chéo (`dev` → release hoặc `master` → test).
 - **FR-004**: `dev` và `master` MUST được bảo vệ: không đẩy thẳng, chỉ nhận thay đổi qua yêu cầu hợp nhất đã đạt
-  cổng chất lượng; hợp nhất vào `master` MUST có thêm ít nhất một người khác tác giả duyệt.
-- **FR-005**: `master` MUST chỉ nhận nội dung đã được triển khai thành công lên test; cổng MUST từ chối yêu cầu
-  hợp nhất vào `master` chứa commit chưa qua test.
+  cổng chất lượng. Hợp nhất vào `master` MUST chỉ do người có vai trò quản lý phát hành thực hiện (hiện là chủ
+  dự án); việc người này bấm hợp nhất là bước duyệt của con người. Khi kho mã có từ hai thành viên trở lên, mọi
+  yêu cầu hợp nhất vào `dev` và `master` MUST có thêm ít nhất một người khác tác giả duyệt; khi chỉ có một
+  thành viên, yêu cầu này chưa áp dụng (ngoại lệ có ghi nhận so với câu "mọi thay đổi MUST qua review" của hiến
+  pháp – plan.md mục Complexity Tracking) và MUST được bật lại ngay khi có thành viên thứ hai.
+- **FR-005**: `master` MUST chỉ nhận yêu cầu hợp nhất từ hai nguồn: `dev` (phát hành thường) và nhánh
+  `hotfix/*` (sửa nóng); mọi nguồn khác MUST bị từ chối. Với nguồn `dev`, cổng MUST từ chối yêu cầu chứa commit
+  chưa được triển khai thành công lên test.
+- **FR-005a**: Nhánh `hotfix/*` MUST được tách từ `master` và chỉ chứa thay đổi so với `master` (cổng MUST từ
+  chối nếu nó mang theo commit của `dev` chưa có trên `master`). Yêu cầu hợp nhất sửa nóng MUST chạy đủ cổng
+  chất lượng FR-006 và MUST thỏa điều kiện hợp nhất của FR-004; điều kiện "đã triển khai lên test" không áp dụng. Lần
+  triển khai MUST được đánh dấu là sửa nóng trong lịch sử (FR-043).
+- **FR-005b**: Sau mỗi lần sửa nóng được hợp nhất vào `master`, Jenkins MUST tự mở yêu cầu hợp nhất đưa thay
+  đổi đó về `dev` và báo cho đội; yêu cầu này đi qua cổng chất lượng như mọi yêu cầu khác. Khi còn bản sửa nóng
+  chưa về `dev`, cổng MUST từ chối yêu cầu phát hành thường từ `dev` vào `master` (để bản phát hành sau không
+  làm mất bản sửa).
 
 **Cổng chất lượng** (chạy ở cả hai chặng: trước khi hợp nhất và trước khi triển khai)
 
@@ -354,8 +422,12 @@ của 20 lần chạy gần nhất → 0 bí mật.
   của release, và MUST NOT giữ mật khẩu vai trò `owner` ngoài kho bí mật của môi trường.
 - **FR-040**: Bí mật MUST NOT xuất hiện dạng rõ trong định nghĩa quy trình, nhật ký chạy, kết quả hiển thị trên
   yêu cầu hợp nhất hay thông báo; nhật ký chạy MUST được quét bí mật.
-- **FR-041**: Máy Jenkins, nhật ký và sản phẩm dựng của nó MUST đặt trong nước; giao diện quản trị Jenkins MUST
-  NOT mở cho toàn internet không giới hạn; đăng nhập MUST theo từng cá nhân; quyền kích hoạt bằng tay, chạy lại
+- **FR-041**: Jenkins MUST chạy trên một máy riêng đặt trong nước, nằm ngoài cụm Kubernetes của cả test lẫn
+  release, cùng nhật ký và sản phẩm dựng của nó; máy này MUST được định nghĩa bằng mã hạ tầng và MUST chỉ có
+  đường mạng tới đúng những điểm cần cho triển khai (kho ảnh, điểm quản trị của hai cụm, nơi phục vụ giao diện
+  tĩnh), MUST NOT có đường mạng tới CSDL hay kho tệp media của release; giao diện quản trị Jenkins MUST
+  NOT mở cho toàn internet không giới hạn – lối vào duy nhất từ internet là điểm nhận webhook của GitHub, và
+  sự kiện không có chữ ký hợp lệ MUST bị từ chối; đăng nhập MUST theo từng cá nhân; quyền kích hoạt bằng tay, chạy lại
   hay sửa quy trình release MUST hẹp hơn test.
 - **FR-042**: Các thành phần bên ngoài mà quy trình dùng (ảnh nền, công cụ, phần mở rộng của Jenkins) MUST được
   cố định phiên bản; mã chạy trong chặng kiểm tra MUST NOT sửa được cấu hình hay phần mở rộng của Jenkins.
@@ -365,9 +437,15 @@ của 20 lần chạy gần nhất → 0 bí mật.
 - **FR-043**: Mỗi lần chạy MUST lưu lịch sử tra được trong ít nhất 12 tháng: người hợp nhất, người duyệt,
   commit, mã phiên bản ảnh, danh sách migration đã chạy, kết quả và thời lượng từng bước, có quay về bản trước
   hay không, có dùng ngoại lệ FR-009 hay không.
-- **FR-044**: Kết quả triển khai (thành công, hỏng, đã quay về bản trước) MUST được gửi cho đội qua kênh thông
-  báo của đội trong ≤ 5 phút kể từ khi có kết quả, kèm môi trường, commit, tác giả, bước hỏng và đường dẫn nhật
-  ký; triển khai release hỏng MUST được báo ở mức ưu tiên cao.
+- **FR-044**: Kết quả triển khai (thành công, hỏng, đã quay về bản trước) MUST được gửi vào **nhóm Telegram
+  của đội** trong ≤ 5 phút kể từ khi có kết quả, kèm môi trường, commit, tác giả, bước hỏng và đường dẫn nhật
+  ký; kết quả cổng chất lượng MUST hiện trên pull request của GitHub. Triển khai release hỏng hoặc bị quay về
+  MUST được báo ở mức ưu tiên cao (tin nhắn có nhắc tên người hợp nhất và nhóm trực). Không gửi email cho các
+  kết quả này.
+- **FR-044a**: Tin nhắn thông báo MUST NOT chứa bí mật, dữ liệu khách hàng, nội dung nhật ký thô hay địa chỉ
+  nội bộ ngoài đường dẫn tới Jenkins; mã truy cập của bot Telegram là một bí mật của Jenkins (FR-040). Nếu gửi
+  thông báo thất bại, lần triển khai MUST NOT bị coi là hỏng vì lý do đó: Jenkins thử gửi lại và ghi nhận lỗi
+  gửi trong lịch sử lần chạy.
 - **FR-045**: MUST xem được, không cần vào máy chủ, mỗi môi trường đang chạy phiên bản nào và được triển khai
   lúc nào.
 - **FR-046**: MUST có tài liệu bằng tiếng Việt: luồng nhánh và cách phát hành; ý nghĩa từng cổng và cách chạy
@@ -415,8 +493,10 @@ của 20 lần chạy gần nhất → 0 bí mật.
   cập nhật, không cần người can thiệp; đội nhận thông báo trong ≤ 5 phút sau đó.
 - **SC-008**: 100% bảng của khách hàng có trong CSDL được bộ kiểm thử truy cập chéo bao phủ; số này được tính
   tự động ở mỗi lần chạy.
-- **SC-009**: 100% bản lên release đã triển khai thành công trên test trước đó; 100% lần triển khai release có
-  người duyệt khác tác giả.
+- **SC-009**: 100% bản phát hành thường lên release đã triển khai thành công trên test trước đó; 100% lần
+  triển khai release (kể cả sửa nóng) do người quản lý phát hành hợp nhất, có người duyệt khác tác giả khi kho
+  có từ hai thành viên, và đã qua đủ cổng chất lượng; 100% bản sửa
+  nóng có yêu cầu hợp nhất về `dev` được mở tự động trong ≤ 10 phút sau khi triển khai xong.
 - **SC-010**: Quét bí mật trên định nghĩa quy trình và nhật ký của mọi lần chạy tìm thấy 0 bí mật dạng rõ; 100%
   phép thử dùng thông tin triển khai của môi trường này cho môi trường kia bị từ chối.
 - **SC-011**: Với một lần triển khai bất kỳ trong 12 tháng, trả lời được trong ≤ 5 phút: ai hợp nhất, ai duyệt,
@@ -430,6 +510,10 @@ của 20 lần chạy gần nhất → 0 bí mật.
 
 ## Assumptions
 
+- **Luồng nhánh**: `dev` là nhánh thi công tính năng theo vòng lặp và có thể chứa mã chưa hoàn thiện; phát
+  hành thường là một yêu cầu hợp nhất `dev` → `master` khi `dev` ổn định; sửa lỗi trên bản đang phát hành dùng
+  nhánh `hotfix/*` tách từ `master` (Clarifications 2026-11-13). Nhánh tính năng (`impl/*`, …) chỉ hợp nhất
+  vào `dev`.
 - **Tên nhánh**: nhánh phát hành là `master` theo yêu cầu của người dùng. Kho mã hiện chỉ có `dev`; nhánh
   `master` được tạo từ `dev` khi bật quy trình. (Nếu đội muốn dùng tên `main` thì chỉ là đổi một tham số.)
 - **Tên môi trường**: "test" và "release" của người dùng chính là `staging` và `production` ở tính năng `007`;
@@ -437,15 +521,23 @@ của 20 lần chạy gần nhất → 0 bí mật.
 - **Vì sao Jenkins**: là yêu cầu của chủ dự án. Hiến pháp không chốt công cụ tích hợp–triển khai trong bảng
   ngăn xếp công nghệ, nhưng Jenkins là một dịch vụ phải vận hành thêm, nên cần một ADR ghi bối cảnh, phương án
   đã cân nhắc, lý do chọn và điều kiện xem xét lại (FR-047). ADR được viết ở bước kế hoạch.
-- **Nơi đặt Jenkins**: tự chạy trong nước (ADR-10), **tách khỏi môi trường release** về mạng và quyền để một sự
-  cố ở Jenkins hay ở chặng kiểm tra không chạm được dữ liệu khách hàng; chi tiết (máy riêng hay cụm của test)
-  chốt ở kế hoạch. Một máy Jenkins là đủ cho đội 3–4 người; không cần chạy dự phòng (SC-014 là giới hạn chấp
-  nhận).
-- **Nơi lưu mã**: kho mã sẽ được đưa lên một dịch vụ lưu mã có yêu cầu hợp nhất, bảo vệ nhánh và báo sự kiện
-  cho Jenkins. Nếu dịch vụ không báo được sự kiện thì Jenkins hỏi định kỳ (ảnh hưởng mốc 2 phút ở US2).
-- **Phát hành lên release là tự động sau khi hợp nhất**, không có nút bấm duyệt thêm trong Jenkins: bước duyệt
-  của con người là việc người thứ hai chấp nhận yêu cầu hợp nhất vào `master` (FR-004). Đây là đúng yêu cầu
-  của người dùng; an toàn được bù bằng FR-005, FR-018, FR-026, FR-033.
+- **Nơi đặt Jenkins**: một **máy ảo riêng trên đám mây trong nước** (ADR-10), nằm **ngoài cả hai cụm
+  Kubernetes**, có mạng và quyền riêng (Clarifications 2026-11-13) – để mã chưa review ở chặng kiểm tra không
+  chạy chung cụm với môi trường nào, và để hỏng hay nâng cấp cụm test không làm mất khả năng triển khai
+  release. Máy này là tài nguyên hạ tầng mới: được định nghĩa bằng mã theo cùng cách của `007` (không tạo bằng
+  tay), gắn nhãn chi phí riêng. Một máy Jenkins là đủ cho đội 3–4 người; không cần chạy dự phòng (SC-014 là
+  giới hạn chấp nhận).
+- **Nơi lưu mã**: kho mã đặt trên **GitHub, kho riêng tư** (Clarifications 2026-11-13). "Yêu cầu hợp nhất"
+  trong đặc tả này là pull request của GitHub; bảo vệ nhánh và kiểm tra bắt buộc của GitHub là cơ chế khóa nút
+  hợp nhất (FR-004); Jenkins nhận sự kiện qua webhook và báo trạng thái từng cổng lên pull request. Mã nguồn
+  không phải dữ liệu khách hàng nên không thuộc phạm vi ADR-10; điều kiện đi kèm là kho mã không chứa bí mật
+  (cổng quét bí mật) và GitHub không nhận dữ liệu khách hàng nào. Vì GitHub ở ngoài mạng của dự án, điểm nhận
+  webhook là lối vào duy nhất của Jenkins mở ra internet và phải xác thực chữ ký của từng sự kiện (FR-041).
+- **Phát hành lên release là tự động sau khi hợp nhất**, không có nút bấm xác nhận thêm trong Jenkins và không
+  giới hạn khung giờ (đã xác nhận ở Clarifications 2026-11-13): bước duyệt của con người là việc người quản lý
+  phát hành hợp nhất pull request vào `master` – kèm người khác tác giả duyệt khi kho có từ hai thành viên
+  (FR-004) – và người hợp nhất chịu trách nhiệm chọn thời điểm bằng cách
+  chọn lúc bấm hợp nhất. An toàn được bù bằng FR-005, FR-018, FR-026, FR-030, FR-033.
 - **Dựng ảnh ở mỗi nhánh**: ảnh được dựng từ commit của nhánh tương ứng (commit hợp nhất trên `master` khác
   commit trên `dev`), nên release chạy lại toàn bộ cổng thay vì tin kết quả của test. Việc dùng lại nguyên ảnh
   đã chạy ở test khi nội dung mã trùng khớp là tối ưu được phép ở kế hoạch, không bắt buộc.
@@ -462,8 +554,14 @@ của 20 lần chạy gần nhất → 0 bí mật.
   hai môi trường, hủy sau khi chạy; không bao giờ dùng CSDL của test hay release để chạy kiểm thử.
 - **Kiểm tra khói ở release** dùng một tài khoản kiểm tra nội bộ dành riêng và các điểm kiểm tra sức khỏe; không
   chạm tài khoản khách hàng. Ở test, các cổng nền tảng / AI / thông báo chạy bản giả lập theo `007` FR-029.
-- **Kênh thông báo của đội**: email của đội là mặc định; thêm kênh trò chuyện nhóm nếu đội có. Thông báo không
-  chứa bí mật hay dữ liệu khách hàng.
+- **Kênh thông báo của đội**: một nhóm Telegram riêng của đội, gửi qua bot (Clarifications 2026-11-13); không
+  dùng email cho thông báo triển khai. Telegram là dịch vụ ở nước ngoài nhưng chỉ nhận siêu dữ liệu triển khai
+  (môi trường, commit, tên tác giả, bước hỏng, đường dẫn nhật ký) – không có dữ liệu cá nhân của khách hàng,
+  nhưng vẫn được ghi vào danh sách chuyển dữ liệu xuyên biên giới với ghi chú "không có dữ liệu khách hàng"
+  (hiến pháp nguyên tắc VII: mọi bên nhận mới ở nước ngoài phải được ghi). Telegram không phải thành phần của ứng
+  dụng; nó ngừng thì chỉ mất thông báo, lịch sử vẫn xem được trong Jenkins và trên GitHub.
 - **Quét lỗ hổng ảnh** dùng công cụ mã nguồn mở chạy trong nước, không gửi mã hay ảnh ra dịch vụ bên ngoài.
-- **Tuân thủ**: tính năng này không thêm bên nhận dữ liệu ở nước ngoài; danh sách chuyển dữ liệu xuyên biên
-  giới không đổi.
+- **Tuân thủ**: GitHub (mã nguồn) và Telegram (siêu dữ liệu triển khai) là hai dịch vụ nước ngoài mới của
+  **quy trình phát triển**, không nhận dữ liệu khách hàng. Cả hai được ghi vào danh sách chuyển dữ
+  liệu xuyên biên giới (ghi chú: quy trình phát triển, không có dữ liệu khách hàng) và được nêu trong ADR của
+  FR-047.

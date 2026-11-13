@@ -1,0 +1,10 @@
+{
+  "members": [
+    {
+      "github": "sa-user",
+      "telegram": "",
+      "roles": ["developer", "release-manager"]
+    }
+  ],
+  "onCall": []
+}

@@ -13,3 +13,6 @@ tooling/boundaries/fixtures/
 
 # Tệp do drizzle-kit sinh (002) – không định dạng tay
 apps/server/drizzle/**/meta/
+
+# Mẫu Helm (008) – không phải YAML hợp lệ
+ops/deploy/chart/templates/

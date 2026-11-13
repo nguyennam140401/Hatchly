@@ -18,6 +18,7 @@
     "vitest.infra.config.mts",
     "vitest.db.config.mts",
     "vitest.queue.config.mts",
+    "vitest.compat.config.mts",
     "drizzle.config.ts",
     "drizzle.dev.config.ts"
   ]

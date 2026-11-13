@@ -1,0 +1,2 @@
+FROM node:24-bookworm-slim@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa AS build
+FROM build AS runtime

@@ -1,0 +1,29 @@
+# Tác nhân `ci` (008, jenkins-platform.md mục 2): chạy MÃ PULL REQUEST chưa review → quyền thấp nhất có thể.
+# Người dùng `ci-agent` không có sudo, không thuộc nhóm docker hệ thống; Docker rootless riêng của người dùng này.
+# Bí mật kết nối của tác nhân nằm ở /etc/jenkins-agent/ci.secret (0400, chủ ci-agent) – không phải bí mật triển khai.
+[Unit]
+Description=Jenkins agent "ci" (mã pull request chưa review)
+After=network-online.target docker-rootless@ci-agent.service
+Wants=network-online.target
+
+[Service]
+User=ci-agent
+Group=ci-agent
+WorkingDirectory=/home/ci-agent
+Environment=DOCKER_HOST=unix:///run/user/%U/docker.sock
+EnvironmentFile=/etc/jenkins-agent/ci.env
+ExecStart=/usr/bin/java -jar /opt/jenkins-agent/agent.jar -url http://127.0.0.1:8080/ -name agent-ci -secret @/etc/jenkins-agent/ci.secret -workDir /home/ci-agent/work
+Restart=always
+RestartSec=10
+# Không thấy thư mục nhà của hai người dùng kia và không leo quyền.
+NoNewPrivileges=yes
+ProtectHome=tmpfs
+BindPaths=/home/ci-agent
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/ci-agent
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

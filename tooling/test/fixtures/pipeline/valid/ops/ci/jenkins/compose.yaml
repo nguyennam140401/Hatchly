@@ -1,0 +1,3 @@
+services:
+  jenkins:
+    image: example/jenkins:1@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb

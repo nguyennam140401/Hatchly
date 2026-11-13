@@ -1,0 +1,3 @@
+# phần mở rộng mẫu
+configuration-as-code:1.0
+job-dsl:2.0

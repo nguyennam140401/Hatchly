@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EnvironmentParams",
+  "description": "Tham số (không bí mật) của một môi trường đích – data-model.md mục 5 của 008. Nguồn giá trị: đầu ra của tính năng 007.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "branch",
+    "provisioned",
+    "registry",
+    "cluster",
+    "api",
+    "web",
+    "replicas",
+    "secrets",
+    "vulnerabilityPolicy",
+    "rollout",
+    "smoke"
+  ],
+  "properties": {
+    "name": { "type": "string", "enum": ["staging", "production"] },
+    "branch": { "type": "string", "enum": ["dev", "master"] },
+    "provisioned": { "type": "boolean" },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository"],
+      "properties": { "repository": { "type": "string" } }
+    },
+    "cluster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server", "namespaces"],
+      "properties": {
+        "server": { "type": "string" },
+        "namespaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["app", "migrate"],
+          "properties": {
+            "app": { "type": "string" },
+            "migrate": { "type": "string" }
+          }
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseUrl"],
+      "properties": { "baseUrl": { "type": "string" } }
+    },
+    "web": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseUrl", "bucket", "s3Endpoint", "s3Region", "buildEnv"],
+      "properties": {
+        "baseUrl": { "type": "string" },
+        "bucket": { "type": "string" },
+        "s3Endpoint": { "type": "string" },
+        "s3Region": { "type": "string" },
+        "buildEnv": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "replicas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["api", "worker"],
+      "properties": {
+        "api": { "type": "integer", "minimum": 1 },
+        "worker": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app", "dbOwner"],
+      "properties": {
+        "app": { "type": "string" },
+        "dbOwner": { "type": "string" }
+      }
+    },
+    "vulnerabilityPolicy": { "type": "string", "enum": ["block", "warn"] },
+    "rollout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeoutSeconds"],
+      "properties": { "timeoutSeconds": { "type": "integer", "minimum": 1 } }
+    },
+    "smoke": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeoutSeconds"],
+      "properties": { "timeoutSeconds": { "type": "integer", "minimum": 1 } }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "name": { "const": "staging" } } },
+      "then": { "properties": { "branch": { "const": "dev" } } }
+    },
+    {
+      "if": { "properties": { "name": { "const": "production" } } },
+      "then": { "properties": { "branch": { "const": "master" } } }
+    },
+    {
+      "if": { "properties": { "provisioned": { "const": true } } },
+      "then": {
+        "properties": {
+          "registry": { "properties": { "repository": { "minLength": 1 } } },
+          "cluster": {
+            "properties": {
+              "server": { "pattern": "^https://" },
+              "namespaces": {
+                "properties": { "app": { "minLength": 1 }, "migrate": { "minLength": 1 } }
+              }
+            }
+          },
+          "api": { "properties": { "baseUrl": { "pattern": "^https://" } } },
+          "web": {
+            "properties": {
+              "baseUrl": { "pattern": "^https://" },
+              "bucket": { "minLength": 1 },
+              "s3Endpoint": { "pattern": "^https://" },
+              "s3Region": { "minLength": 1 }
+            }
+          },
+          "secrets": { "properties": { "app": { "minLength": 1 }, "dbOwner": { "minLength": 1 } } }
+        }
+      }
+    }
+  ]
+}

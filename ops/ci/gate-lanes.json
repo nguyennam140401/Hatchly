@@ -1,0 +1,26 @@
+{
+  "description": "Gán mỗi bước của pnpm verify (DEFAULT_STEPS) vào đúng một làn chạy song song trên Jenkins. `order` = thứ tự trong làn. pnpm check:pipeline đỏ nếu có bước không thuộc làn nào hoặc làn nêu bước không tồn tại.",
+  "lanes": {
+    "static": [
+      { "step": "build:shared", "order": 10 },
+      { "step": "typecheck", "order": 20 },
+      { "step": "lint", "order": 30 },
+      { "step": "check:boundaries", "order": 40 },
+      { "step": "check:secrets", "order": 50 },
+      { "step": "check:pipeline", "order": 60 },
+      { "step": "check:release-source", "order": 70 },
+      { "step": "test", "order": 80 },
+      { "step": "check:web-bundle", "order": 90 },
+      { "step": "db:lint-migrations", "order": 100 },
+      { "step": "db:immutable", "order": 110 }
+    ],
+    "db": [
+      { "step": "test:db", "order": 10 },
+      { "step": "test:queue", "order": 20 },
+      { "step": "db:compat", "order": 30 },
+      { "step": "check:secrets:test-logs", "order": 90 }
+    ],
+    "e2e": [{ "step": "test:e2e", "order": 10 }],
+    "image": [{ "step": "check:image", "order": 10 }]
+  }
+}

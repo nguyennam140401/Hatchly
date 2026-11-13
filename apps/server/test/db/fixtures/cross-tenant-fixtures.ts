@@ -59,5 +59,28 @@ export const CROSS_TENANT_EXEMPT: Record<string, string> = {
   'account.sessions': 'test/db/auth-isolation.db.spec.ts',
   'account.auth_tokens': 'test/db/auth-isolation.db.spec.ts',
   'infra.dead_jobs': 'account_id cho phép NULL – test/db/dead-jobs-isolation.db.spec.ts',
+  // 008 (FR-014): bảng bị sổ đăng ký bỏ sót, catalog phát hiện – đã có spec riêng.
+  'infra.audit_log':
+    'nhật ký kiểm toán phân vùng, account_id cho phép NULL – test/db/privileges.db.spec.ts, test/db/account-deletion.db.spec.ts',
+  'sandbox.ai_fake_budgets':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.ai_fake_cost_ledger':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.ai_fake_reservations':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.fake_scenarios':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.ntf_fake_events':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.ntf_fake_notifications':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.pg_fake_connections':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.pg_fake_oauth_states':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.pg_fake_posts':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
+  'sandbox.pg_fake_selections':
+    'bản giả lập (chỉ dev/test) – test/db/sandbox-fakes-isolation.db.spec.ts',
   'sandbox.tenant_notes': 'bảng mẫu chỉ có trong kiểm thử – test/db/tenant-isolation.db.spec.ts',
 };

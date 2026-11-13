@@ -27,7 +27,16 @@ RUN pnpm --filter @app/shared build \
 
 # ---- Tầng chạy ----
 FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS runtime
+# Mã phiên bản của bản phát hành (008, R13): quy trình truyền SHA đầy đủ của commit; `api` và `worker` trả
+# giá trị này ở điểm sức khỏe để kiểm tra khói biết đúng bản đang chạy. Dựng tay không truyền → "dev".
+ARG APP_VERSION=dev
+ARG IMAGE_CREATED=
+ARG IMAGE_SOURCE=
 ENV NODE_ENV=production
+ENV APP_VERSION=$APP_VERSION
+LABEL org.opencontainers.image.revision=$APP_VERSION
+LABEL org.opencontainers.image.created=$IMAGE_CREATED
+LABEL org.opencontainers.image.source=$IMAGE_SOURCE
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
 USER node

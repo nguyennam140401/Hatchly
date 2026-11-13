@@ -1,0 +1,7 @@
+{
+  "name": "fixture-server",
+  "private": true,
+  "scripts": {
+    "test:compat": "node scripts/test-compat.mjs"
+  }
+}
