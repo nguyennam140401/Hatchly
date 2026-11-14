@@ -8,15 +8,18 @@ mã trong kho (`infra/ci/`, `ops/ci/`) – chỉ **bí mật** là việc nhập
 
 ## Trước khi bắt đầu
 
-- ADR-11 đã ở trạng thái "Chấp nhận" và điểm quyết định T038 đã xong (gói GitHub, nhà cung cấp + cỡ máy ảo, số
+- ADR-11 đã ở trạng thái "Chấp nhận" và điểm quyết định T038 đã xong (gói GitHub, nơi đặt máy ảo + cỡ máy, số
   thành viên). Không dựng máy ảo khi chưa có hai thứ này.
-- Có tài khoản nhà cung cấp đám mây trong nước và quyền tạo máy ảo; máy cá nhân đã cài Terraform.
-- Có quyền quản trị kho GitHub (tạo GitHub App, ruleset).
+- **Thử nghiệm / học việc**: máy ảo VMware trên máy cá nhân, đi theo [vmware-lab.md](vmware-lab.md) (không tốn tiền
+  cloud). **Chạy thật**: máy ảo của nhà cung cấp đám mây trong nước (khi tính năng 007 chốt nhà cung cấp, bổ sung
+  Terraform ở `infra/ci/`).
+- Có quyền quản trị kho GitHub (tạo GitHub App; áp ruleset khi kho ở gói cho phép).
 
 ## Các bước
 
-1. **Máy ảo** – `terraform init && terraform apply` trong `infra/ci/` với `admin_cidrs` = địa chỉ công cộng của
-   đội. Ghi lại đầu ra `public_ip` (gửi cho tính năng 007 đưa vào danh sách được phép của hai cụm).
+1. **Máy ảo** – Ubuntu 24.04 LTS, 4 vCPU, 8 GB RAM, đĩa 80 GB. VMware: xem [vmware-lab.md](vmware-lab.md). Đám mây:
+   `terraform init && terraform apply` trong `infra/ci/` (chưa có – chờ nhà cung cấp, T039) với `admin_cidrs` = địa chỉ
+   công cộng của đội. Ghi lại địa chỉ công cộng (gửi cho 007 đưa vào danh sách được phép của hai cụm).
 2. **Chờ `cloud-init`** chạy `ops/ci/vm/bootstrap.sh` xong (xem `/var/log/cloud-init-output.log`). Script chạy lại
    được nhiều lần; chạy tay: `sudo REPO_DIR=/opt/app-repo ADMIN_CIDRS=… bash ops/ci/vm/bootstrap.sh`.
 3. **GitHub** (mục "Tạo GitHub App" trong [credentials.md](credentials.md)): hai GitHub App `ci` và `deploy`,

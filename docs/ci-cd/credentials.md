@@ -20,19 +20,19 @@ thêm bot, lấy mã nhóm.
 
 ## Tệp trong `/etc/jenkins-secrets/` (quyền `0400`, chủ `jenkins`)
 
-| Tệp                                                        | Nội dung                                      | Thư mục Jenkins dùng |
-| ---------------------------------------------------------- | --------------------------------------------- | -------------------- |
-| `github-oauth-client-id`, `github-oauth-client-secret`     | ứng dụng OAuth                                | đăng nhập            |
-| `jenkins-url`                                              | địa chỉ công khai của Jenkins                 | cấu hình chung       |
-| `github-app-ci-id`, `github-app-ci-key`                    | App `ci`                                      | `ci/`                |
-| `github-app-deploy-id`, `github-app-deploy-key`            | App `deploy`                                  | `deploy/`            |
-| `telegram-bot-token`, `telegram-chat-id`                   | bot + nhóm                                    | `deploy/`            |
-| `staging/registry-user`, `staging/registry-password`       | kho ảnh test                                  | `deploy/staging/`    |
-| `staging/kubeconfig`                                       | mã ServiceAccount `ci-deployer` của cụm test  | `deploy/staging/`    |
-| `staging/static-site-key-id`, `staging/static-site-secret` | khóa S3 kho tệp tĩnh test                     | `deploy/staging/`    |
-| `staging/smoke-account`, `staging/smoke-password`          | email + mật khẩu tài khoản kiểm tra nội bộ test | `deploy/staging/`  |
-| `staging/smoke-token`                                      | mã `SMOKE_TOKEN` của điểm cuối kiểm tra khói  | `deploy/staging/`    |
-| `production/…`                                             | cùng bộ tên như `staging/…`, **giá trị khác** | `deploy/production/` |
+| Tệp                                                        | Nội dung                                        | Thư mục Jenkins dùng |
+| ---------------------------------------------------------- | ----------------------------------------------- | -------------------- |
+| `github-oauth-client-id`, `github-oauth-client-secret`     | ứng dụng OAuth                                  | đăng nhập            |
+| `jenkins-url`                                              | địa chỉ công khai của Jenkins                   | cấu hình chung       |
+| `github-app-ci-id`, `github-app-ci-key`                    | App `ci`                                        | `ci/`                |
+| `github-app-deploy-id`, `github-app-deploy-key`            | App `deploy`                                    | `deploy/`            |
+| `telegram-bot-token`, `telegram-chat-id`                   | bot + nhóm                                      | `deploy/`            |
+| `staging/registry-user`, `staging/registry-password`       | kho ảnh test                                    | `deploy/staging/`    |
+| `staging/kubeconfig`                                       | mã ServiceAccount `ci-deployer` của cụm test    | `deploy/staging/`    |
+| `staging/static-site-key-id`, `staging/static-site-secret` | khóa S3 kho tệp tĩnh test                       | `deploy/staging/`    |
+| `staging/smoke-account`, `staging/smoke-password`          | email + mật khẩu tài khoản kiểm tra nội bộ test | `deploy/staging/`    |
+| `staging/smoke-token`                                      | mã `SMOKE_TOKEN` của điểm cuối kiểm tra khói    | `deploy/staging/`    |
+| `production/…`                                             | cùng bộ tên như `staging/…`, **giá trị khác**   | `deploy/production/` |
 
 Tệp `staging/*` và `production/*` chỉ cần khi môi trường tương ứng đã có (tính năng 007).
 
@@ -49,3 +49,23 @@ Tệp `staging/*` và `production/*` chỉ cần khi môi trường tương ứn
 
 Xoay ngay (bước 1–4) rồi xem Audit Trail (`/var/lib/jenkins-data/audit/`) và nhật ký lần chạy của thư mục liên quan.
 Thông tin của `deploy/production/` bị lộ → coi như sự cố an toàn: báo SA, xoay cả kubeconfig của cụm release.
+
+## Khi quét nhật ký phát hiện bí mật
+
+Cuối mỗi lần chạy (cả `ci/gates` lẫn chặng triển khai), nhật ký các làn được quét bằng `tooling/scan-secrets.mjs`.
+Phát hiện → lần chạy **không đạt**, Telegram báo ưu tiên cao. Xoay thông tin theo **loại** được nêu:
+
+| Dòng báo                                  | Xoay                                                                                                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| mã truy cập GitHub (`ghp_`, `ghs_`…)      | khóa riêng của GitHub App liên quan (`ci` hoặc `deploy`) – tạo khóa mới, xóa khóa cũ                                     |
+| mã bot Telegram                           | tạo lại mã bằng BotFather (`/revoke`), cập nhật `telegram-bot-token`                                                     |
+| chuỗi kết nối CSDL / khóa S3 / kubeconfig | thông tin thuộc **thư mục môi trường** của job đã chạy – xoay đủ bộ của môi trường đó; `production` bị lộ → xem mục trên |
+| không rõ                                  | coi là lộ thông tin của thư mục chứa job; xem Audit Trail để biết job nào đã dùng                                        |
+
+Sau khi xoay: cập nhật `ops/ci/rotation.json`, chạy lại job bị đánh dấu, ghi sự cố vào mục dưới.
+
+## Lịch sử diễn tập
+
+| Ngày        | Người làm | Thông tin đã xoay thử | Thời gian | Điều đã sửa |
+| ----------- | --------- | --------------------- | --------- | ----------- |
+| _(chưa có)_ |           |                       |           |             |

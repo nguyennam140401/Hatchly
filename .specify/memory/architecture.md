@@ -425,6 +425,13 @@ email, mật khẩu hay mã. Không có bên nhận mới ở nước ngoài (SE
 | nhóm gộp email | `emailBatch`: `batch_10m`, `immediate` | kết quả gửi thư | `MailDeliveryResult`: `sent`, `transient`, `permanent` |
 | vị trí tệp / đường dẫn ký sẵn | `StorageLocation` (`loc.*`) / `PresignedUpload`, `SignedUrl` | kho tệp | `core/storage`, `ObjectStorage`, `OBJECT_STORAGE` |
 | trạng thái giả lập / kịch bản giả lập | schema `sandbox`, `FAKE_STATE_STORE` (`memory` \| `sandbox`) / `FakeScenario` | vật thế chỗ giao dịch (chế độ bộ nhớ) | `memoryTx()` |
+| cổng chất lượng / kết quả cổng | `gate` / `GateResult` | chặng kiểm tra / chặng triển khai | `ci/gates` (`Jenkinsfile.ci`) / `deploy` (`Jenkinsfile.deploy`) |
+| môi trường test / release | `staging` / `production` | ảnh phát hành | `release image` (thẻ = SHA, triển khai theo `digest`) |
+| lần triển khai / bản ghi triển khai | `deployment` / `DeploymentRecord` | sửa nóng / đưa bản sửa về `dev` | `hotfix` / `backmerge` (nhánh `backmerge/<sha12>`) |
+| triển khai lại bản cũ / quay về bản trước | `redeploy` / `rollback` | ngoại lệ vượt cổng | `GateException` (`ops/ci/exceptions/`) |
+| kiểm tra khói / việc thử | `smoke` / `queue.smoke_ping`, bảng `infra.smoke_pings` | cổng nguồn phát hành | `check:release-source` |
+| kiểm tra tương thích ngược tĩnh / động / bất biến | `db:lint-migrations` / `db:compat` / `db:immutable` | tham số môi trường | `EnvironmentParams` (`ops/deploy/env/*.yaml`) |
+| thông tin triển khai | `deploy credentials` (theo thư mục Jenkins) | tác nhân kiểm tra / triển khai | agent `ci` / agent `deploy` |
 
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
 
