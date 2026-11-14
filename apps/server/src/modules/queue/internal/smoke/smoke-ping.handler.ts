@@ -5,7 +5,10 @@ import { sql } from 'drizzle-orm';
 import { systemTx } from '../../../../core/db/transaction';
 
 /** Phiên bản của tiến trình Worker (cùng nguồn với cấu hình `APP_VERSION`). */
-const workerVersion = (): string => process.env.APP_VERSION?.trim() || '0.0.0-dev';
+const workerVersion = (): string => {
+  const value = process.env.APP_VERSION?.trim();
+  return value === undefined || value === '' ? '0.0.0-dev' : value;
+};
 
 /** Trả `true` khi lượt này là lượt đánh dấu đầu tiên. */
 export async function markSmokePingProcessed(pingId: string): Promise<boolean> {

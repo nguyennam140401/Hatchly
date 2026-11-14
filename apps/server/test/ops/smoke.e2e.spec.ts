@@ -57,8 +57,8 @@ describe('/ops/smoke – có SMOKE_TOKEN', () => {
       .expect(200);
     expect(res.body).toEqual({
       id,
-      requestedAt: expect.any(String),
-      apiVersion: expect.any(String),
+      requestedAt: expect.any(String) as string,
+      apiVersion: expect.any(String) as string,
       processedAt: null,
       workerVersion: null,
     });

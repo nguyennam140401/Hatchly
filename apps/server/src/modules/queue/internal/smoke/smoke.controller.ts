@@ -9,13 +9,12 @@ import {
   HttpStatus,
   Inject,
   NotFoundException,
-  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { APP_CONFIG, Public, uuidV7, type AppConfig } from '../../../../core';
+import { APP_CONFIG, Public, uuidV7, ValidParam, type AppConfig } from '../../../../core';
 // authTx chỉ dành cho core/auth và modules/account/internal/auth, trừ ngoại lệ có chú thích lý do ở
 // tooling/boundaries/build-rules.cjs: bảng infra.smoke_pings là bảng dùng chung, không có dữ liệu khách hàng.
 import { authTx } from '../../../../core/db/auth-tx';
@@ -35,6 +34,9 @@ export interface SmokePingStatus {
   processedAt: string | null;
   workerVersion: string | null;
 }
+
+/** Tham số đường dẫn: chỉ ràng buộc độ dài; sai định dạng UUID vẫn trả 404 như không tìm thấy. */
+const IdParams = z.strictObject({ id: z.string().max(64) });
 
 @Controller('ops/smoke')
 // Công khai về phiên đăng nhập nhưng bị SmokeTokenGuard chặn bằng mã riêng; không có dữ liệu tenant.
@@ -75,7 +77,8 @@ export class SmokeController {
   }
 
   @Get(':id')
-  async status(@Param('id') id: string): Promise<SmokePingStatus> {
+  async status(@ValidParam(IdParams) params: z.infer<typeof IdParams>): Promise<SmokePingStatus> {
+    const { id } = params;
     if (!z.uuid().safeParse(id).success) throw new NotFoundException();
     const row = await authTx(async (db) => {
       const rows = await db.select().from(smokePings).where(eq(smokePings.id, id)).limit(1);
