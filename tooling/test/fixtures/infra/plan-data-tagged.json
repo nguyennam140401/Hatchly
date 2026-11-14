@@ -1,0 +1,47 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.aws_s3_bucket.media[0]",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "tags": {
+            "data": "true"
+          }
+        }
+      }
+    },
+    {
+      "address": "module.provider.aws_s3_bucket.backup[0]",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "tags": {
+            "data": "true"
+          }
+        }
+      }
+    },
+    {
+      "address": "module.base.kubernetes_namespace_v1.this[\"database\"]",
+      "type": "kubernetes_namespace_v1",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "metadata": [
+            {
+              "labels": {
+                "data": "true"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

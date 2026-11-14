@@ -1,0 +1,28 @@
+# Mẫu tham số môi trường TẠM diễn tập khôi phục (contracts/environment-parameters.md). KHÔNG dùng trực tiếp:
+# `pnpm infra drill start --from <env> --target-time <ISO>` sinh `infra/envs/drill.tfvars` (bị gitignore) từ tham số của
+# môi trường nguồn (tooling/infra/lib/drill.mjs → buildDrillTfvars). Tệp này ghi lại HÌNH DẠNG kết quả.
+#
+# Chỗ thế khi sinh:  {{source_env}} {{project_id}} {{target_time}} {{source_backup_bucket}} {{network_cidr}}
+
+environment      = "drill"
+environment_kind = "restore_drill"
+project_id       = "{{project_id}}" # project của môi trường nguồn ({{source_env}})
+
+network_cidr = "{{network_cidr}}" # mặc định 10.30.0.0/16, không giao với staging/production
+subnet_cidr  = "10.30.1.0/24"
+
+# 1 máy.
+node_groups = {
+  default = { flavor = "<lấy từ nguồn>", count = 1, vcpu = 4, disk_gb = 50 }
+}
+
+db_instances             = 1
+db_backup_retention_days = 3
+deletion_protection      = false
+mail_capture_enabled     = false
+search_indexing          = false
+powered                  = true
+
+# Các khóa "phải giống nhau" (postgres_major, kubernetes_version, chart_versions, image_versions, …) được chép NGUYÊN
+# từ tham số của môi trường nguồn. Thời điểm đích {{target_time}} và bucket nguồn {{source_backup_bucket}} được truyền
+# bằng -var (drill_target_time, drill_source_backup_bucket), không nằm trong tệp này.

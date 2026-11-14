@@ -1,0 +1,27 @@
+# Lớp `nginx`, chứng chỉ do cert-manager (ClusterIssuer `letsencrypt`). Tên miền thật do overlays/<env> điền.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.BASE_DOMAIN, origin-app.BASE_DOMAIN]
+      secretName: app-tls
+  rules:
+    - host: api.BASE_DOMAIN
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { number: 3000 } }
+    - host: origin-app.BASE_DOMAIN
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: web, port: { number: 80 } }

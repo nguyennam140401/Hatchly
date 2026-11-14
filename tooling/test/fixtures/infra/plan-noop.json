@@ -1,0 +1,13 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.vngcloud_vserver_network.this",
+      "type": "vngcloud_vserver_network",
+      "change": {
+        "actions": ["no-op"],
+        "before": null,
+        "after": null
+      }
+    }
+  ]
+}

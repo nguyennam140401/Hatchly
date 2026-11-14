@@ -17,6 +17,7 @@
     "lint": "eslint . && prettier --check .",
     "check:boundaries": "node tooling/check-boundaries.mjs",
     "check:secrets": "node tooling/scan-secrets.mjs",
+    "infra": "node tooling/infra/cli.mjs",
     "check:web-bundle": "node tooling/check-web-bundle.mjs",
     "test": "pnpm -r test",
     "verify": "node tooling/verify.mjs",

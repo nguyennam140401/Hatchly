@@ -1,0 +1,17 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.vngcloud_vks_cluster_node_group.this[\"default\"]",
+      "type": "vngcloud_vks_cluster_node_group",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "tags": {}
+        },
+        "after": {
+          "tags": {}
+        }
+      }
+    }
+  ]
+}

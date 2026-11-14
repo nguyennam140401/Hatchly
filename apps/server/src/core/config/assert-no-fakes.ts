@@ -70,6 +70,31 @@ export function fakeSelections(config: AppConfig): string[] {
   return found;
 }
 
+/** Ba driver cổng + kho trạng thái `sandbox` – các thứ duy nhất ngoại lệ thử nghiệm cho phép (007, R15). */
+const STAGING_ALLOWED_FAKES = new Set([
+  'PLATFORM_GATEWAY_DRIVER=fake',
+  'AI_GATEWAY_DRIVER=fake',
+  'NOTIFICATIONS_DRIVER=fake',
+  'FAKE_STATE_STORE=sandbox',
+]);
+
+/**
+ * Ngoại lệ thử nghiệm: `APP_ENV=staging` + `STAGING_ALLOW_FAKES=true` cho phép driver `fake` của ba cổng
+ * và `FAKE_STATE_STORE=sandbox`. `STORAGE_DRIVER=memory`, `MAIL_TRANSPORT=memory`, `FAKE_STATE_STORE=memory`
+ * vẫn bị từ chối; `production` bỏ qua biến.
+ */
+function isAllowedStagingFake(config: AppConfig, entry: string): boolean {
+  return (
+    config.APP_ENV === 'staging' && config.STAGING_ALLOW_FAKES && STAGING_ALLOWED_FAKES.has(entry)
+  );
+}
+
+/** Tên driver `fake` đang được ngoại lệ thử nghiệm cho phép (rỗng nếu không áp dụng). */
+export function stagingFakesInUse(config: AppConfig): string[] {
+  if (config.APP_ENV !== 'staging' || !config.STAGING_ALLOW_FAKES) return [];
+  return fakeSelections(config).filter((entry) => isAllowedStagingFake(config, entry));
+}
+
 /**
  * staging/production có bất kỳ thành phần giả nào → `ConfigError` liệt kê ĐỦ biến vi phạm, vd
  * `Môi trường production không được dùng bản giả lập: PLATFORM_GATEWAY_DRIVER=fake, AI_GATEWAY_DRIVER=fake`.
@@ -77,7 +102,7 @@ export function fakeSelections(config: AppConfig): string[] {
  */
 export function assertNoFakesInProduction(config: AppConfig): void {
   if (!isProductionLike(config.APP_ENV)) return;
-  const found = fakeSelections(config);
+  const found = fakeSelections(config).filter((entry) => !isAllowedStagingFake(config, entry));
   if (found.length === 0) return;
   throw new ConfigError(
     found.map((entry) => {

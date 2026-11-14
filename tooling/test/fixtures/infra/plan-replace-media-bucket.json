@@ -1,0 +1,25 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.aws_s3_bucket.media[0]",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "bucket": "app-media-production",
+          "force_destroy": false,
+          "tags": {
+            "data": "true"
+          }
+        },
+        "after": {
+          "bucket": "app-media-x",
+          "force_destroy": false,
+          "tags": {
+            "data": "true"
+          }
+        }
+      }
+    }
+  ]
+}

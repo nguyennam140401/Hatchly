@@ -1,0 +1,75 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    {{- include "pg.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.deletionProtect }}
+    infra/deletion-protection: "true"
+    # Helm không xóa Cluster khi gỡ bản phát hành (đĩa CSDL còn nguyên) – bảo vệ xóa (US2, FR-018).
+    helm.sh/resource-policy: keep
+    {{- end }}
+spec:
+  instances: {{ .Values.instances }}
+  imageName: {{ .Values.image | quote }}
+  enableSuperuserAccess: true
+
+  postgresql:
+    parameters:
+      max_connections: {{ .Values.maxConnections | quote }}
+      archive_timeout: {{ .Values.archiveTimeout | quote }}
+    # Chỉ nhận kết nối SSL; mọi kết nối không SSL bị từ chối.
+    pg_hba:
+      - hostssl all all all scram-sha-256
+      - host all all all reject
+
+  {{- if eq .Values.mode "recovery" }}
+  bootstrap:
+    recovery:
+      source: origin
+      recoveryTarget:
+        targetTime: {{ .Values.recovery.targetTime | quote }}
+  externalClusters:
+    - name: origin
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: {{ .Values.name }}-source
+          serverName: {{ .Values.recovery.serverName | quote }}
+  {{- else }}
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+  {{- end }}
+
+  storage:
+    size: {{ .Values.storageSize }}
+    storageClass: {{ .Values.storageClass | quote }}
+
+  resources:
+    requests:
+      cpu: {{ .Values.resources.cpu | quote }}
+      memory: {{ .Values.resources.memory | quote }}
+    limits:
+      cpu: {{ .Values.resources.cpu | quote }}
+      memory: {{ .Values.resources.memory | quote }}
+
+  # Bắt buộc các bản khác máy khi instances ≥ 2 (chịu mất một máy).
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: required
+
+  monitoring:
+    enablePodMonitor: {{ .Values.enablePodMonitor }}
+
+  {{- if ne .Values.mode "recovery" }}
+  # Lưu WAL liên tục lên bucket sao lưu (RPO ≤ archive_timeout).
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ .Values.name }}-backup
+  {{- end }}

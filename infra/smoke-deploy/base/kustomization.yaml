@@ -1,0 +1,12 @@
+# TẠM – H2 thay và xóa. Bộ kê khai tối thiểu để chạy `pnpm infra smoke` (research R16, SC-003) khi H2 chưa có
+# kê khai triển khai thật. Theo contracts/handoff-outputs.md mục 2–3. KHÔNG phải kê khai chính thức.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: app
+resources:
+  - configmap.yaml
+  - migrate-job.yaml
+  - api.yaml
+  - worker.yaml
+  - web.yaml
+  - ingress.yaml

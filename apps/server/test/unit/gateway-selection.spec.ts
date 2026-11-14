@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assertNoFakesInProduction } from '../../src/core/config/assert-no-fakes';
 import { AppConfigSchema } from '../../src/core/config/config.schema';
 import { ConfigError, loadConfig, loadConfigFrom } from '../../src/core/config/load-config';
-import { readGatewaySelection } from '../../src/core/gateways/selection';
+import { logStagingFakes, readGatewaySelection } from '../../src/core/gateways/selection';
 
 // T010 (005, SC-006, US6-AS1/AS2): staging/production từ chối MỌI tổ hợp có thành phần giả, nêu đúng tên
 // biến; dev/test cho qua; API và Worker đọc cùng biến → cùng lựa chọn.
@@ -152,5 +152,89 @@ describe('assertNoFakesInProduction (SC-006)', () => {
     expect(readGatewaySelection(loadConfig({ ...env }))).toEqual(
       readGatewaySelection(loadConfig({ ...env })),
     );
+  });
+});
+
+// T011 (007, R15): ngoại lệ thử nghiệm `STAGING_ALLOW_FAKES`.
+describe('STAGING_ALLOW_FAKES (007, R15)', () => {
+  const base = {
+    ...DB,
+    ...S3,
+    STORAGE_DRIVER: 's3',
+    MAIL_TRANSPORT: 'smtp',
+    SMTP_URL: 'smtp://mail:25',
+    MAIL_FROM: 'no-reply@a.vn',
+    PLATFORM_GATEWAY_DRIVER: 'fake',
+    AI_GATEWAY_DRIVER: 'fake',
+    NOTIFICATIONS_DRIVER: 'fake',
+  };
+
+  it('1. staging không cờ + driver fake → ConfigError', () => {
+    expect(() => loadConfig({ ...base, APP_ENV: 'staging', FAKE_STATE_STORE: 'sandbox' })).toThrow(
+      ConfigError,
+    );
+  });
+
+  it('2. staging + cờ + fake + sandbox → đạt, có cảnh báo gateways.fakes_enabled_in_staging', () => {
+    const config = loadConfig({
+      ...base,
+      APP_ENV: 'staging',
+      STAGING_ALLOW_FAKES: 'true',
+      FAKE_STATE_STORE: 'sandbox',
+    });
+    const warnings: unknown[] = [];
+    logStagingFakes({ warn: (m) => warnings.push(m) }, config);
+    expect(warnings).toEqual([
+      {
+        msg: 'gateways.fakes_enabled_in_staging',
+        drivers: [
+          'PLATFORM_GATEWAY_DRIVER=fake',
+          'AI_GATEWAY_DRIVER=fake',
+          'NOTIFICATIONS_DRIVER=fake',
+          'FAKE_STATE_STORE=sandbox',
+        ],
+      },
+    ]);
+    expect(JSON.stringify(warnings)).not.toContain('SK_TEST_ONLY');
+  });
+
+  it('3. staging + cờ + FAKE_STATE_STORE=memory → lỗi', () => {
+    expect(() =>
+      loadConfig({
+        ...base,
+        APP_ENV: 'staging',
+        STAGING_ALLOW_FAKES: 'true',
+        FAKE_STATE_STORE: 'memory',
+      }),
+    ).toThrow(/FAKE_STATE_STORE=memory/);
+  });
+
+  it('4. staging + cờ + STORAGE_DRIVER=memory (hoặc MAIL_TRANSPORT=memory) → lỗi', () => {
+    const common = { ...base, APP_ENV: 'staging', STAGING_ALLOW_FAKES: 'true' };
+    expect(() =>
+      loadConfig({ ...common, STORAGE_DRIVER: 'memory', FAKE_STATE_STORE: 'sandbox' }),
+    ).toThrow(/STORAGE_DRIVER=memory/);
+    expect(() =>
+      loadConfig({ ...common, MAIL_TRANSPORT: 'memory', FAKE_STATE_STORE: 'sandbox' }),
+    ).toThrow(/MAIL_TRANSPORT=memory/);
+  });
+
+  it('5. production + cờ + fake → lỗi (production bỏ qua biến)', () => {
+    expect(() =>
+      loadConfig({
+        ...base,
+        APP_ENV: 'production',
+        STAGING_ALLOW_FAKES: 'true',
+        FAKE_STATE_STORE: 'sandbox',
+      }),
+    ).toThrow(/Môi trường production không được dùng bản giả lập/);
+  });
+
+  it('cờ không đặt → mặc định false; không có cảnh báo ở development', () => {
+    const config = loadConfig({ ...DB, APP_ENV: 'development' });
+    expect(config.STAGING_ALLOW_FAKES).toBe(false);
+    const warnings: unknown[] = [];
+    logStagingFakes({ warn: (m) => warnings.push(m) }, config);
+    expect(warnings).toEqual([]);
   });
 });

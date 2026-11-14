@@ -1,0 +1,21 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.base.kubernetes_namespace_v1.this[\"database\"]",
+      "type": "kubernetes_namespace_v1",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "metadata": [
+            {
+              "labels": {
+                "data": "true"
+              }
+            }
+          ]
+        },
+        "after": null
+      }
+    }
+  ]
+}

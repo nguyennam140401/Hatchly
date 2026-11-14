@@ -1,5 +1,5 @@
-# Ảnh web cho chạy cục bộ bằng docker compose (KHÔNG dùng cho môi trường chính thức –
-# ở đó web build tĩnh rồi phục vụ qua CDN trong nước).
+# Ảnh web: chạy cục bộ bằng docker compose (đặt API_UPSTREAM) và làm nguồn gốc `origin-app.<tên miền>` ở môi
+# trường thật (007, research R7: không đặt API_UPSTREAM; CDN đứng trước khi bật).
 # Build từ gốc repo: docker build -f apps/web/Dockerfile .
 
 # ---- Tầng build ----
@@ -23,5 +23,7 @@ RUN pnpm --filter @app/shared build \
 # ---- Tầng phục vụ tĩnh ----
 FROM nginx:1.27-alpine AS runtime
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Sinh khối chuyển tiếp /api (khi có API_UPSTREAM) và tiêu đề noindex (khi SEARCH_INDEXING=false) lúc khởi động.
+COPY --chmod=755 apps/web/docker-entrypoint.d/15-web-config.sh /docker-entrypoint.d/15-web-config.sh
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 EXPOSE 80

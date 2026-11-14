@@ -1,0 +1,46 @@
+# Ảnh theo DIGEST. Thay 64 số 0 bằng digest thật sau khi đẩy ảnh (infra/docs/04-trien-khai-anh-va-kiem-tra-khoi.md):
+#   docker buildx imagetools inspect <ảnh>:<thẻ>   hoặc   docker push in ra "digest: sha256:…".
+# Kiểm thử tooling/test/infra/smoke-deploy.spec.ts lỗi nếu có ảnh tham chiếu theo thẻ.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          image: vcr.vngcloud.vn/TODO-P6-registry/server@sha256:0000000000000000000000000000000000000000000000000000000000000000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: vcr.vngcloud.vn/TODO-P6-registry/server@sha256:0000000000000000000000000000000000000000000000000000000000000000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: vcr.vngcloud.vn/TODO-P6-registry/web@sha256:0000000000000000000000000000000000000000000000000000000000000000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrate
+          image: vcr.vngcloud.vn/TODO-P6-registry/server@sha256:0000000000000000000000000000000000000000000000000000000000000000

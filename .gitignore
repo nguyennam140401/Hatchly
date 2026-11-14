@@ -63,3 +63,14 @@ yarn-debug.log*
 yarn-error.log*
 # Nhật ký mẫu cố ý chứa bí mật giả của công cụ quét (tooling/test/fixtures/secrets)
 !tooling/test/fixtures/secrets/*.log
+
+# ===== 007 – hạ tầng Terraform =====
+# `.terraform.lock.hcl` PHẢI được commit (research R2) nên không bị bỏ qua ở đây
+infra/.plans/
+infra/.credentials/*
+!infra/.credentials/.env.example
+**/.terraform/
+*.tfplan
+*.tfstate
+*.tfstate.*
+infra/envs/drill.tfvars

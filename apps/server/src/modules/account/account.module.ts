@@ -36,6 +36,8 @@ export class AccountModule {
       // Worker: chỉ phần không cần xác thực – danh bạ thành viên cho hàng chờ `notify` (005).
       const workerApi: AccountPublicApi = {
         listActiveMembers,
+        // Tra cứu chỉ đọc (006) – dùng được ở cả Worker.
+        describeMembers: (userIds) => describeMembers(userIds),
         addMember: apiOnly('addMember'),
         removeMember: apiOnly('removeMember'),
         disableMember: apiOnly('disableMember'),

@@ -1,0 +1,45 @@
+# Giao diện: ảnh nginx tĩnh. KHÔNG đặt API_UPSTREAM (môi trường thật gọi thẳng api.<tên miền> – research R7).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: web }
+  template:
+    metadata:
+      labels: { app: web }
+    spec:
+      imagePullSecrets:
+        - name: registry-pull
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: web }
+      containers:
+        - name: web
+          image: web
+          ports:
+            - containerPort: 80
+          env:
+            # Thử nghiệm không được lên kết quả tìm kiếm (overlay đặt lại ở phát hành).
+            - { name: SEARCH_INDEXING, value: 'false' }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector: { app: web }
+  ports:
+    - port: 80
+      targetPort: 80

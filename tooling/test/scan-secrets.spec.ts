@@ -32,6 +32,14 @@ describe('tooling/scan-secrets.mjs', () => {
     expect(scan([join(dir, 'canary-in-source.ts')], '/')).toEqual([]);
   });
 
+  it('007: bắt khóa S3 và chuỗi kết nối gán cứng trong infra/, bỏ qua tệp sạch', () => {
+    const root = join(dir, '..', 'secrets-infra');
+    const at = (f: string) => scan([join(root, 'infra', f)], root).map((x) => [x.line, x.name]);
+    expect(at('bad.tfvars')).toEqual([[1, 'khóa truy cập/bí mật S3 gán cứng']]);
+    expect(at('conn.tf')).toEqual([[1, 'chuỗi kết nối có mật khẩu']]);
+    expect(at('clean.tfvars')).toEqual([]);
+  });
+
   it('không bắt tên cookie hay tiền tố đứng một mình', () => {
     expect(scan([join(dir, 'clean.ts')], '/')).toEqual([]);
   });

@@ -13,3 +13,7 @@ tooling/boundaries/fixtures/
 
 # Tệp do drizzle-kit sinh (002) – không định dạng tay
 apps/server/drizzle/**/meta/
+
+# 007: mẫu Helm (có cú pháp {{ }} không phải YAML thuần) và thư mục công cụ Terraform
+infra/modules/**/charts/**/templates/
+**/.terraform/

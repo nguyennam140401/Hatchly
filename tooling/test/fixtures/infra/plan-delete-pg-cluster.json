@@ -1,0 +1,15 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.database[0].helm_release.pg_cluster",
+      "type": "helm_release",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "values": ["deletionProtect: true"]
+        },
+        "after": null
+      }
+    }
+  ]
+}

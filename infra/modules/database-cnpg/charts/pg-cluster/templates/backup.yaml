@@ -1,0 +1,43 @@
+{{- if ne .Values.mode "recovery" }}
+# Chế độ standard: ObjectStore ghi + sao lưu hằng ngày. Chế độ recovery KHÔNG tạo ObjectStore ghi và
+# ScheduledBackup (môi trường tạm chỉ ĐỌC bucket nguồn).
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ .Values.name }}-backup
+  labels:
+    {{- include "pg.labels" . | nindent 4 }}
+  {{- if .Values.deletionProtect }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- end }}
+spec:
+  retentionPolicy: {{ printf "%dd" (int .Values.backup.retentionDays) | quote }}
+  {{- include "pg.objectStoreSpec" . | nindent 2 }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .Values.name }}-daily
+  labels:
+    {{- include "pg.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  immediate: true
+  backupOwnerReference: self
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+  cluster:
+    name: {{ .Values.name }}
+{{- else }}
+# Chế độ recovery: ObjectStore chỉ để ĐỌC từ bucket nguồn.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ .Values.name }}-source
+  labels:
+    {{- include "pg.labels" . | nindent 4 }}
+spec:
+  {{- include "pg.objectStoreSpec" . | nindent 2 }}
+{{- end }}

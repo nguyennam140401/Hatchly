@@ -17,6 +17,8 @@ const DEFAULT_STEPS = [
     'check:web-bundle',
     'db:lint-migrations',
   ].map((name) => ({ name, command: `pnpm ${name}` })),
+  // 007 (FR-027): kiểm tra tĩnh hạ tầng Terraform. Thiếu terraform/tflint → in `SKIPPED:` (bỏ qua, không lỗi).
+  { name: 'infra:check', command: 'pnpm infra check' },
   // Kiểm thử CSDL thật (gồm db:check trên CSDL tạm đã migrate – conventions.db.spec.ts).
   {
     name: 'test:db',

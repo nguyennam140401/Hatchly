@@ -1,0 +1,86 @@
+# Kiểm tra lệch hạ tầng hằng ngày (007, T098, SC-011). CHỈ ĐỌC: không có bước nào áp dụng thay đổi.
+# Chỉ stack `cloud` (API cụm chỉ mở cho admin_cidrs nên GitHub không gọi được – research R10); lệch trong cụm
+# được kiểm khi `plan` và bằng `pnpm infra drift <env>` trên máy người vận hành (khuyến nghị chạy hằng tuần).
+name: infra-drift
+
+on:
+  schedule:
+    - cron: '0 23 * * *' # 06:00 UTC+7
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [staging, production]
+    environment: ${{ matrix.env }}-readonly
+    env:
+      CI: 'true'
+      DRIFT_ENV: ${{ matrix.env }}
+      # Tài khoản dịch vụ chỉ đọc `drift-<env>` và khóa S3 chỉ đọc bucket trạng thái.
+      VNGCLOUD_CLIENT_ID: ${{ secrets.DRIFT_VNGCLOUD_CLIENT_ID }}
+      VNGCLOUD_CLIENT_SECRET: ${{ secrets.DRIFT_VNGCLOUD_CLIENT_SECRET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DRIFT_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DRIFT_AWS_SECRET_ACCESS_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Đọc phiên bản Terraform cố định
+        run: echo "TF_VERSION=$(tr -d '[:space:]' < infra/.terraform-version)" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Kiểm tra lệch stack cloud (chỉ đọc)
+        id: drift
+        continue-on-error: true
+        run: |
+          set +e
+          pnpm --silent infra drift "$DRIFT_ENV" --stack cloud --json > drift.json
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Cập nhật issue infra-drift
+        run: |
+          LABEL="infra-drift:${DRIFT_ENV}"
+          CODE="${{ steps.drift.outputs.code }}"
+          gh label create "$LABEL" --color D93F0B --description "Lệch hạ tầng ${DRIFT_ENV}" 2>/dev/null || true
+          NUMBER=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ "$CODE" = "0" ]; then
+            [ -n "$NUMBER" ] && gh issue close "$NUMBER" --comment "Không còn lệch (chạy $(date -u +%FT%TZ))."
+            exit 0
+          fi
+          if [ "$CODE" = "2" ]; then
+            TITLE="Lệch hạ tầng ${DRIFT_ENV}"
+            BODY=$(node -e 'const d=JSON.parse(require("fs").readFileSync("drift.json","utf8")); console.log((d.drift??[]).map(i=>`- \`${i.address}\`: ${i.attribute} (đang là ${JSON.stringify(i.before)} → mã khai ${JSON.stringify(i.after)})`).join("\n"))')
+          else
+            TITLE="Lần chạy kiểm tra lệch ${DRIFT_ENV} bị lỗi"
+            BODY="Lần chạy lỗi (mã ${CODE}). Xem nhật ký: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          fi
+          if [ -n "$NUMBER" ]; then
+            gh issue edit "$NUMBER" --title "$TITLE" --body "$BODY"
+          else
+            gh issue create --label "$LABEL" --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Báo thất bại khi có lệch hoặc lỗi
+        if: steps.drift.outputs.code != '0'
+        run: exit 1

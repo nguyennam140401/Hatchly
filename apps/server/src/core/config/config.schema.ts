@@ -141,6 +141,14 @@ export const AppConfigSchema = z.object({
   STORAGE_DRIVER: z.enum(['memory', 's3']).optional(),
   /** Nơi bản giả lập giữ trạng thái; bắt buộc khi có driver `fake` (mặc định `memory` ở dev/test). */
   FAKE_STATE_STORE: z.enum(['memory', 'sandbox']).optional(),
+  /**
+   * Chỉ có hiệu lực khi APP_ENV=staging; production bỏ qua (007, R15). Cho phép bản giả lập của ba cổng
+   * ở thử nghiệm với `FAKE_STATE_STORE=sandbox`, cho đến khi có bản thật.
+   */
+  STAGING_ALLOW_FAKES: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   /** Bắt buộc khi `STORAGE_DRIVER=s3`. */
   S3_ENDPOINT: z.url().optional(),
   /** Địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = S3_ENDPOINT. */

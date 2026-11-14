@@ -1,0 +1,22 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.vngcloud_vserver_network.this",
+      "type": "vngcloud_vserver_network",
+      "change": {
+        "actions": ["update"],
+        "before": null,
+        "after": null
+      }
+    },
+    {
+      "address": "module.base.helm_release.ingress[0]",
+      "type": "helm_release",
+      "change": {
+        "actions": ["update"],
+        "before": null,
+        "after": null
+      }
+    }
+  ]
+}

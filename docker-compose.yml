@@ -113,6 +113,9 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     image: app-web:local
+    environment:
+      # Bật khối chuyển tiếp /api trong nginx (môi trường thật không đặt biến này) – 007, T013.
+      API_UPSTREAM: http://api:3000
     ports:
       - '8080:80'
     depends_on:
