@@ -1,4 +1,5 @@
 import {
+  type DynamicModule,
   Inject,
   Injectable,
   Logger,
@@ -19,6 +20,8 @@ import { nestQueueLogger, type QueueLogger } from './internal/logger';
 import { startProducer, type ProducerHandle } from './internal/producer-boss';
 import { queueReadinessCheck } from './internal/readiness';
 import { QueueRuntime } from './internal/runtime/queue-runtime';
+import { SmokeController } from './internal/smoke/smoke.controller';
+import { SmokeTokenGuard } from './internal/smoke/smoke-token.guard';
 import { queueServices } from './internal/services';
 
 const MAX_START_BACKOFF_MS = 30_000;
@@ -160,6 +163,16 @@ class QueueLifecycle implements OnApplicationBootstrap, OnApplicationShutdown {
  * `index.ts` (enqueue, defineJobType, registerJobHandler…) – không phải provider.
  */
 @Module({ providers: [QueueLifecycle], exports: [QueueLifecycle] })
-export class QueueModule {}
+export class QueueModule {
+  /** API có thêm điểm cuối kiểm tra khói `/ops/smoke` (008 FR-032); Worker chỉ có vòng đời hàng chờ. */
+  static forUnit(unit: 'api' | 'worker'): DynamicModule {
+    return {
+      module: QueueModule,
+      providers: unit === 'api' ? [QueueLifecycle, SmokeTokenGuard] : [QueueLifecycle],
+      controllers: unit === 'api' ? [SmokeController] : [],
+      exports: [QueueLifecycle],
+    };
+  }
+}
 
 export { QueueLifecycle };

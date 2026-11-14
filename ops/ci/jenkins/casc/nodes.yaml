@@ -1,0 +1,32 @@
+# Hai tác nhân cố định (008, R1): `ci` chạy mã pull request chưa review, `deploy` chạy mã đã hợp nhất.
+# Mỗi tác nhân chỉ nhận job gắn đúng nhãn (mode EXCLUSIVE) – job ở ci/ không bao giờ chạy trên `deploy`.
+# Tác nhân kết nối vào bộ điều khiển bằng bí mật riêng (đọc từ /etc/jenkins-secrets/), chạy bằng người dùng
+# hệ điều hành khác nhau (ops/ci/vm/systemd/jenkins-agent-*.service).
+jenkins:
+  nodes:
+    - permanent:
+        name: 'agent-ci'
+        labelString: 'ci'
+        mode: EXCLUSIVE
+        numExecutors: 3 # ba làn song song static / db / e2e (R9); điều chỉnh sau khi đo SC-003
+        remoteFS: '/home/ci-agent/work'
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              internalDir: 'remoting'
+              failIfWorkDirIsMissing: false
+        retentionStrategy: 'always'
+    - permanent:
+        name: 'agent-deploy'
+        labelString: 'deploy'
+        mode: EXCLUSIVE
+        numExecutors: 1 # một triển khai tại một thời điểm trên máy; khóa theo môi trường ở Jenkinsfile.deploy
+        remoteFS: '/home/deploy-agent/work'
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              internalDir: 'remoting'
+              failIfWorkDirIsMissing: false
+        retentionStrategy: 'always'

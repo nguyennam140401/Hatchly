@@ -1,0 +1,60 @@
+# Bảo mật Jenkins (008, contracts/jenkins-platform.md mục 5, FR-038…042). Mọi cấu hình bằng mã – không sửa qua giao diện.
+# Danh sách người dùng khớp ops/ci/team.json (vai release-manager / developer): đổi thành viên = sửa cả hai tệp
+# trong cùng pull request (CODEOWNERS yêu cầu release-manager duyệt). Với tổ chức GitHub có nhóm, thay mục `user`
+# bằng `group: { name: "<tổ-chức>*<nhóm>" }`.
+jenkins:
+  # Bộ điều khiển KHÔNG chạy việc: mã pull request không bao giờ chạy cạnh cấu hình và khóa của Jenkins (FR-042).
+  numExecutors: 0
+  mode: EXCLUSIVE
+  systemMessage: 'Jenkins của quy trình tích hợp – triển khai. Cấu hình bằng mã: ops/ci/jenkins/. Không sửa qua giao diện.'
+  disableRememberMe: true
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: false
+  securityRealm:
+    github:
+      githubWebUri: 'https://github.com'
+      githubApiUri: 'https://api.github.com'
+      clientID: '${readFile:/etc/jenkins-secrets/github-oauth-client-id}'
+      clientSecret: '${readFile:/etc/jenkins-secrets/github-oauth-client-secret}'
+      oauthScopes: 'read:org,user:email'
+  authorizationStrategy:
+    globalMatrix:
+      entries:
+        # ---- release-managers (SA, PO): xem mọi thứ, chạy / chạy lại cả release; quản trị chỉ SA ----
+        - user:
+            name: 'nguyennam140401'
+            permissions:
+              - 'Overall/Administer'
+              - 'Overall/Read'
+              - 'Job/Read'
+              - 'Job/Build'
+              - 'Job/Cancel'
+              - 'Job/Workspace'
+              - 'Run/Replay'
+              - 'Run/Update'
+              - 'View/Read'
+        # ---- developers: xem, chạy lại ở ci/ và deploy/staging; KHÔNG chạy deploy/production/* (job đó cấp quyền
+        # riêng ở jobs/folders.groovy). Thêm mỗi người một mục `user` như trên nhưng không có Overall/Administer. ----
+        # Ẩn danh: không có mục nào → không có quyền gì (kể cả Overall/Read). Webhook của GitHub vào đường
+        # /github-webhook/ không cần đăng nhập – quyền chặn nằm ở nginx (chữ ký) và phần mở rộng GitHub.
+  # Không cho cấu hình bằng giao diện: Job DSL + JCasC là nguồn duy nhất (jobs/*.groovy, casc/*.yaml).
+  remotingSecurity:
+    enabled: true
+security:
+  # Tắt CLI qua remoting; chỉ còn CLI dùng HTTP có xác thực.
+  sSHD:
+    port: -1
+unclassified:
+  location:
+    url: '${readFile:/etc/jenkins-secrets/jenkins-url}'
+  # Audit Trail: ghi thao tác quản trị và lần bị từ chối vào tệp riêng trên đĩa dữ liệu, xoay vòng, giữ 12 tháng.
+  auditTrailPlugin:
+    pattern: '.*/(configSubmit|doDelete|postBuildResult|enable|disable|cancelQueue|stop|toggleLogKeep|doWipeOutWorkspace|createItem|createView|toggleLogKeep|login|logout|accessDenied).*'
+    logBuildCause: true
+    loggers:
+      - logFileAuditLogger:
+          log: '/var/jenkins_home/audit/audit.log'
+          limit: 50
+          count: 52 # 52 × 50 MB xoay vòng ≈ 12 tháng ở mức hoạt động thấp
+          logSeparator: '\n'

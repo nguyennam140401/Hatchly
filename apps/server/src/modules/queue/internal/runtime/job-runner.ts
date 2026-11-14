@@ -10,6 +10,7 @@ import { getHandler } from '../handlers';
 import type { QueueLogger } from '../logger';
 import type { FinishOutcome, QueueMetrics } from '../observability';
 import type { BossJob, PgBoss } from '../pgboss/boss-loader';
+import { requeueActiveJob } from '../pgboss/requeue-job';
 import { clientDatabase } from '../pgboss/tx-database';
 import { payloadRef, redactError } from '../redact';
 import { buryJob, readEnvelope } from './bury';
@@ -56,6 +57,20 @@ class TransientQueueError extends Error {
   }
 }
 
+/**
+ * Loại việc KHÔNG có trong sổ đăng ký của tiến trình này (R22) – thường do quay về bản cũ sau khi bản mới đã
+ * tạo việc dạng mới. Khác `NO_HANDLER` (loại việc đã khai báo nhưng chưa có bộ xử lý).
+ */
+class UnknownJobTypeError extends Error {
+  constructor(readonly jobType: string) {
+    super(`Loại việc ${jobType} chưa được khai báo ở bản này`);
+    this.name = 'UnknownJobTypeError';
+  }
+}
+
+/** Giờ chạy lùi cho việc loại lạ (R22): đủ lâu để không quay vòng, đủ ngắn để bản mới nhận lại. */
+export const UNKNOWN_JOB_TYPE_DELAY_SECONDS = 300;
+
 export interface RunOutcome {
   outcome: FinishOutcome;
   retryInSeconds?: number;
@@ -95,6 +110,21 @@ async function failWithDelay(
   } finally {
     client.release();
   }
+}
+
+/**
+ * Trả việc về hàng chờ KHÔNG tính lượt và KHÔNG chôn (R22): đặt lại `retry` với giờ chạy lùi và bỏ dấu "đã bắt
+ * đầu" để lần lấy kế tiếp không tăng `retry_count`. Rào theo lượt như `fail` – lượt cũ không ghi đè lượt mới.
+ */
+async function requeueUnknown(
+  deps: RunnerDeps,
+  queue: QueueName,
+  job: BossJob,
+  seconds: number,
+): Promise<boolean> {
+  const ok = await requeueActiveJob(deps.pool, job, queue, seconds);
+  deps.onControlSuccess?.();
+  return ok;
 }
 
 /** Chạy một việc đã lấy (`active`, lượt `job.retryCount`). Không bao giờ ném. */
@@ -154,7 +184,8 @@ export async function runJob(
             'Mã tài khoản trong dữ liệu việc không khớp group_id',
           );
         }
-        if (registered === undefined || def === undefined) {
+        if (def === undefined) throw new UnknownJobTypeError(env.type);
+        if (registered === undefined) {
           throw new TransientQueueError(
             'NO_HANDLER',
             `Không có bộ xử lý cho loại việc ${env.type}`,
@@ -265,6 +296,21 @@ export async function runJob(
   };
 
   try {
+    if (handlerError instanceof UnknownJobTypeError) {
+      const ok = await requeueUnknown(deps, queue, job, UNKNOWN_JOB_TYPE_DELAY_SECONDS);
+      if (!ok) return finish({ outcome: 'aborted' });
+      deps.metrics.unknownJobType(queue, env.type);
+      deps.logger.warn({
+        event: 'queue.unknown_job_type',
+        trace_id: env.traceId,
+        account_id: env.accountId,
+        queue,
+        job_type: env.type,
+        job_id: job.id,
+        retry_in_s: UNKNOWN_JOB_TYPE_DELAY_SECONDS,
+      });
+      return finish({ outcome: 'requeued', retryInSeconds: UNKNOWN_JOB_TYPE_DELAY_SECONDS });
+    }
     if (handlerError === undefined) {
       if (isRetryAfter(handlerResult)) {
         return await retryOrBury(handlerResult.seconds, undefined, 'RETRIES_EXHAUSTED');

@@ -45,6 +45,32 @@ describeDb('Chủ sở hữu và quyền đổi cấu trúc', () => {
     expect(notOwned).toEqual([]);
   });
 
+  // 008 (FR-016): kiểm trên MỌI schema không phải hệ thống (kể cả schema thư viện như pgboss và schema
+  // tạo bằng SQL tay), không chỉ schema của module – `app` mà sở hữu một bảng là vượt được RLS.
+  it('app không sở hữu đối tượng nào ở mọi schema không phải hệ thống, và không có BYPASSRLS/SUPERUSER', async () => {
+    const result = await asOwner(async (c) => {
+      const owned = await c.query<{ obj: string }>(
+        `SELECT n.nspname || '.' || c.relname AS obj
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE pg_get_userbyid(c.relowner) = 'app'
+            AND n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname NOT LIKE 'pg\\_toast%'
+         UNION ALL
+         SELECT 'schema ' || nspname FROM pg_namespace WHERE pg_get_userbyid(nspowner) = 'app'
+         UNION ALL
+         SELECT 'func ' || n.nspname || '.' || p.proname
+           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE pg_get_userbyid(p.proowner) = 'app'
+            AND n.nspname NOT IN ('pg_catalog', 'information_schema')`,
+      );
+      const role = await c.query<{ rolsuper: boolean; rolbypassrls: boolean }>(
+        `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'app'`,
+      );
+      return { owned: owned.rows.map((r) => r.obj), role: role.rows[0] };
+    });
+    expect(result.owned).toEqual([]);
+    expect(result.role).toEqual({ rolsuper: false, rolbypassrls: false });
+  });
+
   it.each([
     ['CREATE TABLE content.x (id int)'],
     ['ALTER TABLE sandbox.tenant_notes ADD COLUMN y int'],

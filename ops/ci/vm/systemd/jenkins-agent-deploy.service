@@ -1,0 +1,27 @@
+# Tác nhân `deploy` (008, jenkins-platform.md mục 2): chạy MÃ ĐÃ HỢP NHẤT, giữ thông tin triển khai của job.
+# Người dùng `deploy-agent` tách khỏi `ci-agent` và `jenkins`; Docker rootless riêng; helm/kubectl/trivy chỉ cài cho người này.
+[Unit]
+Description=Jenkins agent "deploy" (mã đã hợp nhất)
+After=network-online.target docker-rootless@deploy-agent.service
+Wants=network-online.target
+
+[Service]
+User=deploy-agent
+Group=deploy-agent
+WorkingDirectory=/home/deploy-agent
+Environment=DOCKER_HOST=unix:///run/user/%U/docker.sock
+EnvironmentFile=/etc/jenkins-agent/deploy.env
+ExecStart=/usr/bin/java -jar /opt/jenkins-agent/agent.jar -url http://127.0.0.1:8080/ -name agent-deploy -secret @/etc/jenkins-agent/deploy.secret -workDir /home/deploy-agent/work
+Restart=always
+RestartSec=10
+NoNewPrivileges=yes
+ProtectHome=tmpfs
+BindPaths=/home/deploy-agent
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/deploy-agent
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

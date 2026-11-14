@@ -1,7 +1,10 @@
 // pnpm check:secrets – quét bí mật trong mã nguồn và nhật ký mẫu (hiến pháp, cổng CI số 5; 004
 // contracts/auth-ops.md mục 5). Bản tối thiểu: chỉ bắt GIÁ TRỊ thật (mã phiên đủ dài, băm argon2id đầy
 // đủ, khóa riêng, khóa truy cập AWS) – không bắt tên cookie hay tiền tố đứng một mình trong mã/kiểm thử.
-// Dùng: node tooling/scan-secrets.mjs [thư mục…]   (mặc định: tệp git theo dõi + tệp mới chưa ignore)
+// Dùng: node tooling/scan-secrets.mjs [tệp hoặc thư mục…]   (mặc định: tệp git theo dõi + tệp mới chưa ignore)
+// 008: phạm vi mặc định gồm cả định nghĩa quy trình (ops/**, infra/ci/**, Jenkinsfile*, .github/**) dù tệp
+// không có đuôi quen thuộc; tham số nhận cả TỆP ĐƠN (vd nhật ký một lần chạy triển khai –
+// contracts/deploy-pipeline.md mục 9). Chỉ báo tệp + dòng + loại – KHÔNG BAO GIỜ in giá trị.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
@@ -17,6 +20,12 @@ export const SECRET_PATTERNS = [
   },
   { name: 'khóa riêng', re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
   { name: 'khóa truy cập AWS', re: /\bAKIA[0-9A-Z]{16}\b/ },
+  // 008: thông tin triển khai của quy trình (GitHub App / mã cá nhân, bot Telegram).
+  {
+    name: 'mã truy cập GitHub',
+    re: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})\b/,
+  },
+  { name: 'mã bot Telegram', re: /\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b/ },
   // 005 (SC-009): chuỗi mồi của bộ kiểm thử hợp đồng – CHỈ quét trong nhật ký (.ndjson/.log), vì mã
   // kiểm thử cố ý chứa chúng. Thấy trong nhật ký = mã quyền / lời nhắc / nội dung bài bị ghi ra.
   { name: 'mã quyền giả lọt nhật ký', re: /fake_tok_[A-Za-z0-9_-]{4,}/, logsOnly: true },
@@ -67,10 +76,27 @@ const TEXT_EXT = new Set([
   '.txt',
   '.html',
   '.css',
+  '.sh',
+  '.groovy',
   '.tf',
   '.tfvars',
   '.hcl',
+  '.conf',
+  '.nft',
+  '.service',
+  '.tpl',
+  '.toml',
+  '.xml',
+  '.properties',
 ]);
+/** Đường dẫn thuộc định nghĩa quy trình (008): quét MỌI tệp văn bản, không xét đuôi. */
+const PIPELINE_PATHS = [
+  /^ops\//,
+  /^infra\/ci\//,
+  /^\.github\//,
+  /(^|\/)Jenkinsfile[^/]*$/,
+  /(^|\/)Dockerfile[^/]*$/,
+];
 // `.terraform` (nhị phân provider), `.plans` (bản xem trước đã lưu): không phải mã nguồn.
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -89,12 +115,17 @@ const ALLOW = [
   /^infra\/\.credentials\/(?!\.env\.example$)/,
 ];
 
-function walk(dir, out = []) {
+function walk(target, out = []) {
   // Thư mục chưa có (vd test-logs khi chưa chạy kiểm thử) → không có tệp.
-  if (!existsSync(dir)) return out;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  if (!existsSync(target)) return out;
+  // Tham số là một tệp đơn (vd nhật ký của một lần chạy).
+  if (statSync(target).isFile()) {
+    out.push(target);
+    return out;
+  }
+  for (const entry of readdirSync(target, { withFileTypes: true })) {
     if (SKIP_DIRS.has(entry.name)) continue;
-    const full = join(dir, entry.name);
+    const full = join(target, entry.name);
     if (entry.isDirectory()) walk(full, out);
     else out.push(full);
   }
@@ -106,22 +137,30 @@ function gitFiles() {
   return out.split('\n').filter((f) => f !== '');
 }
 
-/** Các phát hiện `{ file, line, name }` trong danh sách tệp. */
-export function scanFiles(files, root = process.cwd()) {
+/**
+ * Các phát hiện `{ file, line, name }` trong danh sách tệp.
+ * `explicit`: tệp do người gọi nêu đích danh (tham số dòng lệnh) → quét dù đuôi tệp lạ, coi như nhật ký.
+ */
+export function scanFiles(files, root = process.cwd(), { explicit = false } = {}) {
   const findings = [];
   for (const file of files) {
     const rel = relative(root, file).replaceAll('\\', '/');
     if (ALLOW.some((re) => re.test(rel))) continue;
     const ext = extname(file) || file.slice(file.lastIndexOf('/') + 1);
-    if (!TEXT_EXT.has(ext) && !rel.endsWith('.env.example')) continue;
+    const inPipeline = PIPELINE_PATHS.some((re) => re.test(rel));
+    const known = TEXT_EXT.has(ext) || rel.endsWith('.env.example');
+    if (!explicit && !inPipeline && !known) continue;
     let text;
     try {
-      if (statSync(file).size > 2_000_000) continue;
+      // Nhật ký một lần chạy có thể dài – tệp nêu đích danh được phép tới 50 MB.
+      if (statSync(file).size > (explicit ? 50_000_000 : 2_000_000)) continue;
       text = readFileSync(file, 'utf8');
     } catch {
       continue;
     }
-    const isLog = LOG_EXT.has(extname(file));
+    // Tệp nhị phân (ảnh, tệp nén) nằm trong thư mục quy trình → bỏ qua.
+    if (!known && text.includes(String.fromCharCode(0))) continue;
+    const isLog = LOG_EXT.has(extname(file)) || (explicit && !known);
     const lines = text.split(/\r?\n/);
     lines.forEach((line, i) => {
       for (const p of SECRET_PATTERNS) {
@@ -136,9 +175,9 @@ export function scanFiles(files, root = process.cwd()) {
 
 // Chạy như lệnh (không chạy khi được nhập từ kiểm thử).
 if (process.argv[1]?.replaceAll('\\', '/').endsWith('tooling/scan-secrets.mjs')) {
-  const dirs = process.argv.slice(2);
-  const files = dirs.length > 0 ? dirs.flatMap((d) => walk(d)) : gitFiles();
-  const findings = scanFiles(files);
+  const targets = process.argv.slice(2);
+  const files = targets.length > 0 ? targets.flatMap((t) => walk(t)) : gitFiles();
+  const findings = scanFiles(files, process.cwd(), { explicit: targets.length > 0 });
   for (const f of findings) console.error(`✖ ${f.file}:${f.line} – ${f.name}`);
   if (findings.length > 0) {
     console.error(`✖ ${findings.length} bí mật bị phát hiện`);

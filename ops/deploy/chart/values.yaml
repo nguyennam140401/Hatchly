@@ -1,0 +1,28 @@
+# Giá trị mặc định – KHÔNG có bí mật. Giá trị thật do ops/deploy/scripts/render-values.mjs sinh từ
+# ops/deploy/env/<môi trường>.yaml + SHA + digest của lần triển khai.
+image:
+  repository: ''
+  # Triển khai luôn theo digest (sha256:…), không theo thẻ trôi.
+  digest: ''
+appVersion: '0.0.0-dev'
+replicas:
+  api: 1
+  worker: 1
+ingress:
+  host: ''
+  className: ''
+  tlsSecretName: ''
+# TÊN Secret trong cụm chứa biến bí mật của ứng dụng (DATABASE_*_URL, khóa phiên…). Chart không tạo Secret.
+envFromSecret: ''
+# Biến KHÔNG bí mật → ConfigMap.
+config:
+  APP_ENV: staging
+  LOG_LEVEL: info
+  CORS_ORIGINS: ''
+resources:
+  api:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+  worker:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }

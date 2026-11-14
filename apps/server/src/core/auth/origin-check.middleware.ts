@@ -9,12 +9,25 @@ import { resolveTraceId } from '../context/request-context';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/**
+ * Điểm cuối do MÁY gọi (không có trình duyệt, không cookie phiên) nên không có `Origin`: kiểm tra khói sau triển
+ * khai (008 FR-032) được SmokeTokenGuard bảo vệ bằng mã riêng và trả 404 khi sai mã. CSRF không áp dụng vì
+ * không dựa vào cookie; từ chối 403 ở đây còn làm lộ sự tồn tại của điểm cuối.
+ */
+const MACHINE_PATHS = ['/api/v1/ops/smoke'];
+
+const isMachinePath = (url: string | undefined): boolean => {
+  const path = (url ?? '').split('?')[0] ?? '';
+  return MACHINE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+};
+
 /** Yêu cầu có được phép theo nguồn gửi không. */
 export function isOriginAllowed(
-  req: Pick<IncomingMessage, 'method' | 'headers'>,
+  req: Pick<IncomingMessage, 'method' | 'headers'> & { url?: string | undefined },
   allowedOrigins: ReadonlySet<string>,
 ): boolean {
   if (SAFE_METHODS.has((req.method ?? 'GET').toUpperCase())) return true;
+  if (isMachinePath(req.url)) return true;
   const origin = req.headers.origin;
   if (typeof origin === 'string' && origin !== 'null' && allowedOrigins.has(origin)) return true;
   return req.headers['sec-fetch-site'] === 'same-origin';

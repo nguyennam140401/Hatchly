@@ -1,0 +1,16 @@
+{
+  "lanes": {
+    "static": [
+      {
+        "step": "lint",
+        "order": 10
+      }
+    ],
+    "db": [
+      {
+        "step": "test:db",
+        "order": 10
+      }
+    ]
+  }
+}

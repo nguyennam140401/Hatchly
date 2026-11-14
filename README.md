@@ -36,6 +36,20 @@ pnpm verify      # build shared → typecheck → lint → ranh giới → kiể
 `pnpm verify` chạy **hết** các bước rồi in bảng tổng kết; mã thoát 1 nếu một bước lỗi. Khung sạch
 chạy khoảng 20–30 giây.
 
+### Cổng chất lượng và phát hành (008)
+
+`pnpm verify` là nguồn duy nhất của các cổng; Jenkins chạy cùng lệnh nên kết quả giống nhau:
+
+```powershell
+pnpm verify                                   # máy cá nhân (bước thiếu điều kiện → bỏ qua có thông báo)
+pnpm verify --ci --report verify-report.json  # đúng lệnh Jenkins chạy (không có "bỏ qua")
+pnpm verify --only test:db,lint               # chỉ vài bước
+```
+
+Nhánh phát hành là `master`, nhánh tích hợp là `dev` (`dev` tự triển khai lên test, `master` lên release); thay đổi
+chỉ vào qua pull request có kiểm tra `ci/gates`. Tài liệu: [`docs/ci-cd/`](docs/ci-cd/) – bắt đầu từ
+`branching-and-release.md` và `gates.md`; quyết định ở [`docs/adr/ADR-11-jenkins-cicd.md`](docs/adr/ADR-11-jenkins-cicd.md).
+
 ## 3. Chạy khi phát triển
 
 ```powershell

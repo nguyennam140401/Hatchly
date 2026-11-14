@@ -1,0 +1,23 @@
+# Phần mở rộng Jenkins – cố định TỪNG phiên bản (008, R19). Thêm / đổi = pull request có chủ mã duyệt.
+# Phiên bản tra ở https://updates.jenkins.io/stable/update-center.actual.json (dòng LTS 2.580.2, 2026-11-13).
+# Phần mở rộng phụ thuộc (transitive) do jenkins-plugin-cli tự chọn bản tương thích với các bản dưới đây
+# (--latest false trong Dockerfile): chạy `jenkins-plugin-cli --list` trên ảnh đã dựng để xem danh sách đầy đủ.
+configuration-as-code:2147.v8a_8d38668c72
+job-dsl:3732.v9a_c49a_61a_313
+workflow-aggregator:608.v67378e9d3db_1
+cloudbees-folder:6.1107.v31f8955765c8
+git:5.11.0
+github-branch-source:1986.v801e40614d00
+checks-api:440.v53a_b_6c39a_b_b_b_
+github-checks:716.v4e342cf2a_03c
+credentials-binding:728.v902a_273b_8947
+matrix-auth:3.3
+github-oauth:685.v53b_070455063
+lockable-resources:1588.v7b_b_614f4202e
+timestamper:1.30
+audit-trail:472.vb_51e5934ec50
+pipeline-utility-steps:3.810.va_7672d206740
+# Nạp Jenkinsfile từ nhánh tin cậy, không từ pull request (R4, rủi ro R-6). Phép thử T053 quyết định giữ
+# cái nào; nếu cả hai không đạt thì bỏ cả hai và dùng job Pipeline do Job DSL sinh cho từng pull request.
+pipeline-multibranch-defaults:2.1
+remote-file:1.24

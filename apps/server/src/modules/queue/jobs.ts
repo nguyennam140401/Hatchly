@@ -18,6 +18,22 @@ export const sweepFailedJob = internalJob('queue.sweep_failed');
 /** Thực hiện yêu cầu chạy lại việc hỏng của hỗ trợ (R14). */
 export const deadJobRetriesJob = internalJob('queue.dead_job_retries');
 
+/**
+ * Kiểm tra khói sau triển khai (008 FR-032): API ghi `infra.smoke_pings` rồi tạo việc này; Worker đánh dấu đã
+ * xử lý và ghi phiên bản của mình. Hàng chờ `notify` (có thử lại) thay vì `scheduled` để một lần Worker khởi
+ * động lại giữa lúc triển khai không làm hỏng phép thử.
+ */
+export const smokePingJob = defineJobType({
+  name: 'queue.smoke_ping',
+  queue: 'notify',
+  scope: 'system',
+  version: 1,
+  payload: z.strictObject({ pingId: z.uuid() }),
+});
+
+/** Số ngày giữ dòng kiểm tra khói. */
+export const SMOKE_PING_RETENTION_DAYS = 7;
+
 export const INTERNAL_SCHEDULES = [
   defineSchedule({ name: 'queue.cleanup', cron: '30 3 * * *', jobType: cleanupJob }),
   defineSchedule({ name: 'queue.partitions', cron: '0 4 1 * *', jobType: partitionsJob }),

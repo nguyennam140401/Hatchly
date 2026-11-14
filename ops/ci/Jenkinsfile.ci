@@ -1,0 +1,84 @@
+// Chặng kiểm tra `ci/gates` (008 US1, contracts/quality-gates.md, jenkins-platform.md). Được nạp từ nhánh TIN CẬY `dev`
+// (job ci_gates.groovy) nên pull request KHÔNG sửa được tệp này để lấy thông tin xác thực (FR-007, R4).
+// Bất biến: không có kiểm tra nào viết trong Groovy (mọi cổng là `pnpm verify`); không `load` tệp Groovy từ thư mục
+// làm việc; chỉ MỘT `withCredentials` là `github-app-ci`; không tự chạy lại khi đỏ; tập lệnh nhận mã truy cập chạy từ
+// bản tin cậy ở thư mục `trusted/` (không phải từ pull request).
+pipeline {
+  agent { label 'ci' }
+  options {
+    timeout(time: 40, unit: 'MINUTES')
+    timestamps()
+    disableConcurrentBuilds(abortPrevious: true)
+    buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '200', artifactDaysToKeepStr: '30'))
+    skipDefaultCheckout(true)
+  }
+  environment {
+    // Ảnh công cụ và tập lệnh chạy dựng từ bản tin cậy.
+    TOOLCHAIN_DIR = 'trusted/ops/ci/toolchain'
+  }
+  stages {
+    stage('Mã tin cậy') {
+      steps {
+        // Bản `dev` cho tập lệnh có dùng mã truy cập – không bao giờ lấy từ pull request.
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: '*/dev']],
+          extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'trusted'], [$class: 'CloneOption', depth: 1, noTags: true, shallow: true]],
+          userRemoteConfigs: [[url: 'https://github.com/nguyennam140401/Hatchly.git', credentialsId: 'github-app-ci']]
+        ])
+      }
+    }
+    stage('Kết quả hợp nhất dự kiến') {
+      steps {
+        // Với pull request, Jenkins lấy kết quả hợp nhất với đích (đặc điểm của job) – kiểm tra đúng cây mã sau hợp nhất.
+        checkout scm
+        sh 'git fetch --no-tags origin "+refs/heads/dev:refs/remotes/origin/dev" "+refs/heads/master:refs/remotes/origin/master" || true'
+      }
+    }
+    stage('Biến môi trường cổng') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'github-app-ci', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN')]) {
+          sh '''
+            set +x
+            . trusted/ops/ci/scripts/toolchain.sh
+            target="${CHANGE_TARGET:-${BRANCH_NAME}}"
+            source="${CHANGE_BRANCH:-${BRANCH_NAME}}"
+            run_in_toolchain -e GITHUB_TOKEN -- node trusted/ops/ci/scripts/resolve-gate-env.mjs \
+              --target "$target" --source "$source" --sha "$(git rev-parse HEAD)" | sed 's/^/export /' > gate-env.sh
+          '''
+        }
+      }
+    }
+    stage('Các làn kiểm tra') {
+      parallel {
+        stage('static') { steps { sh 'bash trusted/ops/ci/scripts/run-lane.sh static' } }
+        stage('db')     { steps { sh 'bash trusted/ops/ci/scripts/run-lane.sh db' } }
+        stage('e2e')    { steps { sh 'bash trusted/ops/ci/scripts/run-lane.sh e2e' } }
+        stage('image')  { steps { sh 'bash trusted/ops/ci/scripts/run-lane.sh image' } }
+      }
+    }
+  }
+  post {
+    always {
+      withCredentials([usernamePassword(credentialsId: 'github-app-ci', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN')]) {
+        sh '''
+          set +x
+          . trusted/ops/ci/scripts/toolchain.sh
+          sha="${GIT_COMMIT:-$(git rev-parse HEAD)}"
+          # Quét bí mật trong nhật ký các làn (FR-040): phát hiện → lần chạy KHÔNG đạt.
+          scan=0
+          for f in lane-*.log; do
+            [ -f "$f" ] && { run_in_toolchain -- node trusted/tooling/scan-secrets.mjs "$f" || scan=1; }
+          done
+          # Gộp báo cáo, đăng gate/<bước> và ci/gates (kiểm tra bắt buộc).
+          code=0
+          run_in_toolchain -e GITHUB_TOKEN -- node trusted/ops/ci/scripts/post-gate-checks.mjs \
+            --sha "$sha" --build-url "${BUILD_URL}console" verify-report-*.json || code=$?
+          [ "$scan" -eq 0 ] || { echo "Nhật ký chứa bí mật – xoay thông tin liên quan (docs/ci-cd/credentials.md)"; exit 1; }
+          exit "$code"
+        '''
+      }
+      archiveArtifacts artifacts: 'verify-report-*.json', allowEmptyArchive: true
+    }
+  }
+}

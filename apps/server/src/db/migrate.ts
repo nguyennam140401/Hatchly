@@ -24,6 +24,8 @@ export interface MigrateOptions {
   log?: (line: string) => void;
   /** Tạo/đồng bộ 6 hàng chờ pg-boss sau migration (003). Mặc định bật. */
   ensureQueues?: boolean;
+  /** Thư mục chứa `migrations/` (và `migrations-dev/`). Mặc định `apps/server/drizzle`; chỉ kiểm thử đổi (008, T021). */
+  drizzleDir?: string;
 }
 
 export interface MigrateResult {
@@ -74,10 +76,11 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrateRes
     await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
     try {
       await client.query(`CREATE SCHEMA IF NOT EXISTS ${MIGRATIONS_SCHEMA} AUTHORIZATION "owner"`);
-      const main = await applyFolder(client, join(DRIZZLE_DIR, 'migrations'), 'schema_migrations');
+      const drizzleDir = options.drizzleDir ?? DRIZZLE_DIR;
+      const main = await applyFolder(client, join(drizzleDir, 'migrations'), 'schema_migrations');
 
       let dev = 0;
-      const devFolder = join(DRIZZLE_DIR, 'migrations-dev');
+      const devFolder = join(drizzleDir, 'migrations-dev');
       const devAllowed =
         options.appEnv === 'development' ||
         options.appEnv === 'test' ||

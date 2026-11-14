@@ -1,0 +1,41 @@
+# Tham số môi trường test (staging) – KHÔNG chứa bí mật. Lược đồ: ops/deploy/env/schema.json.
+# Giá trị lấy từ đầu ra của tính năng 007 (contracts/environment-inputs.md của 008).
+# `provisioned: false` → chặng triển khai dừng với kết quả "chưa có môi trường đích" sau khi kiểm xong ảnh.
+name: staging
+branch: dev
+provisioned: false
+
+registry:
+  repository: '' # chờ 007
+
+cluster:
+  server: '' # chờ 007
+  namespaces:
+    app: '' # chờ 007
+    migrate: '' # chờ 007
+
+api:
+  baseUrl: '' # chờ 007
+
+web:
+  baseUrl: '' # chờ 007
+  bucket: '' # chờ 007
+  s3Endpoint: '' # chờ 007
+  s3Region: '' # chờ 007
+  buildEnv: {}
+
+replicas:
+  api: 1
+  worker: 1
+
+secrets:
+  app: '' # chờ 007 – TÊN Secret trong cụm, không phải giá trị
+  dbOwner: '' # chờ 007 – TÊN Secret trong cụm, không phải giá trị
+
+# test: lỗ hổng nghiêm trọng có bản vá chỉ cảnh báo
+vulnerabilityPolicy: warn
+
+rollout:
+  timeoutSeconds: 480
+smoke:
+  timeoutSeconds: 180

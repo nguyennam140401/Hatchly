@@ -17,3 +17,6 @@ apps/server/drizzle/**/meta/
 # 007: mẫu Helm (có cú pháp {{ }} không phải YAML thuần) và thư mục công cụ Terraform
 infra/modules/**/charts/**/templates/
 **/.terraform/
+
+# Mẫu Helm (008) – không phải YAML hợp lệ
+ops/deploy/chart/templates/

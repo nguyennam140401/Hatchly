@@ -1,4 +1,7 @@
-import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { scanFiles } from '../scan-secrets.mjs';
 
@@ -42,5 +45,77 @@ describe('tooling/scan-secrets.mjs', () => {
 
   it('không bắt tên cookie hay tiền tố đứng một mình', () => {
     expect(scan([join(dir, 'clean.ts')], '/')).toEqual([]);
+  });
+});
+
+// 008 (T011): phạm vi mở rộng sang định nghĩa quy trình và nhật ký của một lần chạy.
+// Giá trị giả được ghép lúc chạy để kho mã không chứa chuỗi giống bí mật thật.
+describe('tooling/scan-secrets.mjs – phạm vi quy trình (008)', () => {
+  const scanWith = scanFiles as (
+    files: string[],
+    root?: string,
+    options?: { explicit?: boolean },
+  ) => Finding[];
+  const fakeAwsKey = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
+  const fakeGithubToken = ['ghp', 'a1B2'.repeat(9)].join('_');
+  const fakeTelegramToken = ['123456789', `AA${'x'.repeat(33)}`].join(':');
+
+  function workspace(files: Record<string, string>) {
+    const root = mkdtempSync(join(tmpdir(), 'scan-'));
+    for (const [name, content] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, name)), { recursive: true });
+      writeFileSync(join(root, name), content);
+    }
+    return root;
+  }
+
+  it('quét Jenkinsfile*, ops/**, infra/ci/**, .github/** dù đuôi tệp lạ', () => {
+    const root = workspace({
+      'ops/ci/Jenkinsfile.deploy': `pipeline {\n  environment { KEY = '${fakeAwsKey}' }\n}\n`,
+      'ops/ci/vm/bootstrap.sh': `#!/bin/sh\nexport GH=${fakeGithubToken}\n`,
+      'infra/ci/main.tf': `variable "bot" { default = "${fakeTelegramToken}" }\n`,
+      '.github/CODEOWNERS': `# ${fakeAwsKey}\n`,
+      'docs/ghi-chu.unknown': `${fakeAwsKey}\n`,
+    });
+    const files = [
+      'ops/ci/Jenkinsfile.deploy',
+      'ops/ci/vm/bootstrap.sh',
+      'infra/ci/main.tf',
+      '.github/CODEOWNERS',
+      'docs/ghi-chu.unknown',
+    ].map((f) => join(root, f));
+    const found = scanWith(files, root).map((f) => [f.file, f.line, f.name]);
+    expect(found).toEqual([
+      ['ops/ci/Jenkinsfile.deploy', 2, 'khóa truy cập AWS'],
+      ['ops/ci/vm/bootstrap.sh', 2, 'mã truy cập GitHub'],
+      ['infra/ci/main.tf', 1, 'mã bot Telegram'],
+      ['.github/CODEOWNERS', 1, 'khóa truy cập AWS'],
+    ]);
+  });
+
+  it('tệp nêu đích danh (nhật ký một lần chạy) được quét dù không có đuôi, kể cả chuỗi mồi', () => {
+    const root = workspace({
+      'run-57/console': `+ helm upgrade\ntoken=${fakeGithubToken}\nfake_tok_abcdef\n`,
+    });
+    const file = join(root, 'run-57', 'console');
+    expect(scanWith([file], root)).toEqual([]);
+    const found = scanWith([file], root, { explicit: true }).map((f) => [f.line, f.name]);
+    expect(found).toEqual([
+      [2, 'mã truy cập GitHub'],
+      [3, 'mã quyền giả lọt nhật ký'],
+    ]);
+  });
+
+  it('dòng lệnh nhận tệp đơn; báo tệp + dòng, không in giá trị', () => {
+    const root = workspace({ 'deploy.log': `ok\nkey ${fakeAwsKey}\n` });
+    const script = join(__dirname, '..', 'scan-secrets.mjs');
+    const result = spawnSync(process.execPath, [script, join(root, 'deploy.log')], {
+      encoding: 'utf8',
+      cwd: root,
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('deploy.log:2 – khóa truy cập AWS');
+    expect(result.stderr).not.toContain(fakeAwsKey);
+    expect(result.stdout).not.toContain(fakeAwsKey);
   });
 });

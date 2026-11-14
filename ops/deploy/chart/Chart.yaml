@@ -1,0 +1,7 @@
+apiVersion: v2
+name: app
+description: API + Worker của ứng dụng (008) – cùng một ảnh, hai Deployment. Không chứa Secret.
+type: application
+version: 0.1.0
+# appVersion được ghi đè bằng SHA commit lúc triển khai (`--set appVersion=<sha>`).
+appVersion: '0.0.0-dev'

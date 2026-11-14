@@ -53,6 +53,11 @@ AskUserQuestion, câu hỏi tự đủ nghĩa (nêu `<BR>` → `<BASE>` và tìn
 - "Giữ worktree để sửa tiếp" – quay về repo chính, không merge.
 - "Bỏ worktree" – xóa worktree và nhánh, **mất** các commit trên `<BR>`.
 
+**Nhánh gốc được bảo vệ (008)**: nếu `<BASE>` là `dev` hoặc `master` và kho đã áp luật bảo vệ nhánh (đẩy thẳng bị
+từ chối; xem `ops/ci/github/rulesets/` và `docs/ci-cd/branching-and-release.md`; chưa chắc thì hỏi người dùng), thay lựa
+chọn "Merge" bằng **"Đẩy nhánh và mở pull request vào `<BASE>`"** – không `merge --no-ff` cục bộ vì bước đẩy `<BASE>`
+sẽ bị từ chối và bỏ qua cổng `ci/gates`. Đẩy lên GitHub là thao tác hướng ra ngoài: hỏi xác nhận rõ trước khi làm.
+
 Nếu verify lỗi hoặc còn task chưa xong: ghi rõ trong câu hỏi và đặt "Giữ worktree" lên đầu kèm
 "(Khuyến nghị)". Ngược lại đặt "Merge" lên đầu kèm "(Khuyến nghị)".
 
@@ -79,6 +84,17 @@ Nếu verify lỗi hoặc còn task chưa xong: ghi rõ trong câu hỏi và đ�
    người dùng tự xóa (thường do tệp đang bị chương trình khác mở).
 6. In: commit merge (`git log --oneline -1`), nhánh hiện tại, xác nhận worktree đã xóa
    (`git worktree list`).
+
+## 5d. Đẩy nhánh và mở pull request (khi `<BASE>` được bảo vệ)
+
+1. Xác nhận lần 2 bằng AskUserQuestion: nêu nhánh `impl/<FEATURE>` sẽ được đẩy lên `origin` và tên kho.
+2. `ExitWorktree` với `action: "keep"`, rồi `git push -u origin "impl/<FEATURE>"` (từ `<ROOT>` hoặc từ worktree).
+3. Mở pull request vào `<BASE>`: `gh pr create --base "<BASE>" --head "impl/<FEATURE>" --title "feat(<NNN>): <FEATURE>"
+   --body "<tóm tắt bước 3>"` (thêm dòng attribution của system-reminder nếu có). In đường dẫn pull request.
+4. **Không** xóa worktree và nhánh lúc này. Worktree chỉ dọn **sau khi pull request đã hợp nhất** (`gh pr view <số>
+   --json state` = `MERGED`): khi đó chạy lại `/speckit-worktree-finish <NNN>` để dọn bằng `remove.sh` +
+   `git branch -d`.
+5. Nhắc người dùng: kiểm tra `ci/gates` trên pull request; hợp nhất do người có vai `release-manager` bấm.
 
 ## 5b. Giữ worktree
 

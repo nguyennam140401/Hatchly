@@ -45,6 +45,8 @@ apps/server/test-logs/
 *.pem
 *.key
 kubeconfig*
+.kube/
+!tooling/infra/commands/kubeconfig.mjs
 
 # ===== IDE / hệ điều hành =====
 .vscode/
@@ -74,3 +76,9 @@ infra/.credentials/*
 *.tfstate
 *.tfstate.*
 infra/envs/drill.tfvars
+
+# ===== Quy trình tích hợp – triển khai (008) =====
+verify-report*.json
+.compat-base/
+infra/ci/.terraform/
+*.tfstate*

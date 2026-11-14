@@ -1,0 +1,53 @@
+# Job migration của một lần triển khai (008 T070, contracts/deploy-pipeline.md mục 3). Mẫu NGOÀI chart: Jenkinsfile.deploy
+# thay các biến bằng `envsubst` rồi `kubectl apply`. Biến:
+#   SHA12            12 ký tự đầu của SHA commit (tên Job duy nhất cho mỗi bản phát hành)
+#   NAMESPACE        cluster.namespaces.migrate
+#   IMAGE_REF        <registry.repository>@<digest> – cùng ảnh với api/worker
+#   APP_ENV          staging | production
+#   DB_OWNER_SECRET  secrets.dbOwner – TÊN Secret chứa khóa DATABASE_OWNER_URL (vai trò owner, chỉ Job này dùng)
+# Job cùng tên đã thành công thì chặng triển khai bỏ qua (chạy lại an toàn – FR-037). Ứng dụng KHÔNG tự chạy migration.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-${SHA12}
+  namespace: ${NAMESPACE}
+  labels:
+    app.kubernetes.io/name: app-migrate
+    app.kubernetes.io/version: ${SHA12}
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: ${IMAGE_REF}
+          command: ['node', 'dist/db/migrate.js']
+          env:
+            - name: APP_ENV
+              value: ${APP_ENV}
+            - name: DATABASE_OWNER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ${DB_OWNER_SECRET}
+                  key: DATABASE_OWNER_URL
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

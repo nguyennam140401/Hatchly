@@ -1,0 +1,81 @@
+// Triển khai lại một bản cũ (008 US3, FR-034, contracts/deploy-pipeline.md mục 6): `deploy/<env>/redeploy`.
+// Tham số: VERSION (SHA đã từng triển khai THÀNH CÔNG lên chính môi trường này), REASON (bắt buộc),
+// ACK_OLDER_THAN_PREVIOUS (bắt buộc đánh dấu nếu VERSION không phải bản liền trước). KHÔNG dựng ảnh, KHÔNG chạy
+// migration: lấy digest từ bản ghi triển khai của VERSION rồi chạy bước 4–7 (rollout, web, smoke, notify) dưới cùng
+// khóa `deploy-<env>`. Không có logic triển khai trong Groovy – mọi thứ ở ops/ci/scripts/deploy.sh.
+pipeline {
+  agent { label 'deploy' }
+  options {
+    timeout(time: 40, unit: 'MINUTES')
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(daysToKeepStr: '400'))
+  }
+  environment {
+    ENV_NAME = "${env.JOB_NAME.tokenize('/')[1]}"
+    KIND = 'redeploy'
+    DEPLOY_SHA = "${params.VERSION}"
+    REDEPLOY_REASON = "${params.REASON}"
+    ACK_OLDER_THAN_PREVIOUS = "${params.ACK_OLDER_THAN_PREVIOUS}"
+    // Người bấm chạy (ghi vào bản ghi triển khai); lấy từ nguyên nhân của lần chạy.
+    REDEPLOY_BY = "${currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')[0]?.userId ?: 'khong-ro'}"
+  }
+  stages {
+    stage('Kiểm tra tham số') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'github-app-deploy', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN')]) {
+          sh '''
+            set +x
+            corepack enable && pnpm install --frozen-lockfile
+            bash ops/ci/scripts/deploy.sh guard
+            [ "$(bash ops/ci/scripts/deploy.sh env-gate)" = "true" ] || { echo "✖ Môi trường $ENV_NAME chưa có – không có gì để triển khai lại"; exit 1; }
+          '''
+        }
+      }
+    }
+    stage('Chuẩn bị (không dựng ảnh, không migration)') {
+      steps {
+        lock("deploy-${env.ENV_NAME}") {
+          withCredentials([
+            usernamePassword(credentialsId: 'github-app-deploy', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN'),
+            usernamePassword(credentialsId: 'registry', usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD')
+          ]) {
+            sh 'set +x; bash ops/ci/scripts/deploy.sh redeploy-prepare'
+          }
+        }
+      }
+    }
+    stage('4-6 · rollout, web, smoke') {
+      steps {
+        lock("deploy-${env.ENV_NAME}") {
+          withCredentials([
+            string(credentialsId: 'kubeconfig', variable: 'KUBE_TOKEN'),
+            usernamePassword(credentialsId: 'static-site', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY'),
+            string(credentialsId: 'smoke-token', variable: 'SMOKE_TOKEN'),
+            usernamePassword(credentialsId: 'smoke-login', usernameVariable: 'SMOKE_USER', passwordVariable: 'SMOKE_PASSWORD')
+          ]) {
+            sh 'set +x; bash ops/ci/scripts/deploy.sh rollout'
+            sh 'set +x; bash ops/ci/scripts/deploy.sh web-redeploy'
+            sh 'set +x; bash ops/ci/scripts/deploy.sh smoke'
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+      catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        withEnv(["BUILD_RESULT=${currentBuild.currentResult}"]) {
+          withCredentials([
+            usernamePassword(credentialsId: 'github-app-deploy', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN'),
+            string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_BOT_TOKEN'),
+            string(credentialsId: 'telegram-chat-id', variable: 'TELEGRAM_CHAT_ID')
+          ]) {
+            sh 'set +x; bash ops/ci/scripts/deploy.sh finish'
+          }
+        }
+      }
+      archiveArtifacts artifacts: 'deploy-state.json,image.json,values.yaml', allowEmptyArchive: true
+    }
+  }
+}
