@@ -127,6 +127,8 @@ export const AppConfigSchema = z.object({
   QUEUE_CONTROL_POOL_MAX: z.coerce.number().int().min(2).max(20).default(6),
   /** Bể của thể hiện pg-boss phía API (vai trò `app`) – chỉ đọc bộ nhớ đệm hàng chờ. */
   QUEUE_API_POOL_MAX: z.coerce.number().int().min(1).max(5).default(2),
+  // Mã kiểm tra khói sau triển khai (008 FR-032): bật điểm cuối /ops/smoke. Không đặt = điểm cuối trả 404.
+  SMOKE_TOKEN: z.string().min(16).max(256).optional(),
   /** Chu kỳ đọc lại `infra.queue_settings` (≤ 5 phút – FR-006). */
   QUEUE_SETTINGS_REFRESH_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
   /** Nhịp bộ hẹn giờ việc định kỳ. */

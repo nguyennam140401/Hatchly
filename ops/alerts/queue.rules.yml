@@ -122,3 +122,15 @@ groups:
           description: >-
             Xem nhật ký queue.settings_invalid (trường issues); sửa dòng trong infra.queue_settings
             (vd heartbeat_seconds × 2 phải ≤ lock_seconds).
+
+      - alert: QueueUnknownJobType
+        expr: increase(queue_unknown_job_type_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Worker gặp loại việc chưa khai báo – việc được trả lại hàng chờ, không mất'
+          description: >-
+            Thường do quay về bản cũ sau khi bản mới đã tạo việc dạng mới (008 R22). Việc không bị chôn và
+            không tính lượt; chạy lại sau 5 phút. Phát hành lại bản mới để xử lý tiếp; xem nhật ký
+            queue.unknown_job_type (trường job_type).

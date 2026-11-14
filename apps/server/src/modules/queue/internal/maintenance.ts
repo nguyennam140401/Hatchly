@@ -7,18 +7,25 @@ import {
   deadJobRetriesJob,
   DEAD_JOB_RETENTION_DAYS,
   partitionsJob,
+  SMOKE_PING_RETENTION_DAYS,
+  smokePingJob,
   sweepFailedJob,
 } from '../jobs';
 import { listPartitionedLogs } from '../schedules';
 import { processDeadJobRetries } from './dead-jobs';
 import { getHandler, registerJobHandler } from './handlers';
+import { markSmokePingProcessed } from './smoke/smoke-ping.handler';
 import { sweepFailed } from './runtime/bury';
 import { anyRuntime, type QueueRuntime, type RuntimeService } from './runtime/queue-runtime';
 
 const SQL_NAME = /^[a-z_]+\.[a-z_]+$/;
 
-/** `queue.cleanup`: việc hỏng và khung lịch quá 90 ngày. */
-export async function runCleanup(): Promise<{ deadJobs: number; slots: number }> {
+/** `queue.cleanup`: việc hỏng và khung lịch quá 90 ngày, dòng kiểm tra khói quá 7 ngày. */
+export async function runCleanup(): Promise<{
+  deadJobs: number;
+  slots: number;
+  smokePings: number;
+}> {
   return systemTx(async (db) => {
     const dead = await db.execute<{ n: number }>(
       sql`SELECT infra.cleanup_dead_jobs(${DEAD_JOB_RETENTION_DAYS}) AS n`,
@@ -26,7 +33,14 @@ export async function runCleanup(): Promise<{ deadJobs: number; slots: number }>
     const slots = await db.execute(
       sql`DELETE FROM infra.schedule_slots WHERE slot_at < now() - make_interval(days => ${DEAD_JOB_RETENTION_DAYS})`,
     );
-    return { deadJobs: dead.rows[0]?.n ?? 0, slots: slots.rowCount ?? 0 };
+    const smoke = await db.execute(
+      sql`DELETE FROM infra.smoke_pings WHERE requested_at < now() - make_interval(days => ${SMOKE_PING_RETENTION_DAYS})`,
+    );
+    return {
+      deadJobs: dead.rows[0]?.n ?? 0,
+      slots: slots.rowCount ?? 0,
+      smokePings: smoke.rowCount ?? 0,
+    };
   });
 }
 
@@ -69,7 +83,11 @@ export function registerInternalHandlers(): void {
       event: 'queue.cleanup_done',
       dead_jobs: r.deadJobs,
       slots: r.slots,
+      smoke_pings: r.smokePings,
     });
+  });
+  registerJobHandler(smokePingJob, async (payload) => {
+    await markSmokePingProcessed(payload.pingId);
   });
   registerJobHandler(partitionsJob, async () => {
     const r = await runPartitions();

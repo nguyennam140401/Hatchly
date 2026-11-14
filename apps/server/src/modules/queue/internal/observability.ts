@@ -7,7 +7,7 @@ import { QUEUE_NAMES, type QueueName } from '../public-api';
 import type { PgBoss } from './pgboss/boss-loader';
 import { JOB_TABLE } from './producer';
 
-export type FinishOutcome = 'completed' | 'retry' | 'no_retry' | 'dead' | 'aborted';
+export type FinishOutcome = 'completed' | 'retry' | 'no_retry' | 'dead' | 'aborted' | 'requeued';
 
 interface Snapshot {
   waiting: Map<QueueName, number>;
@@ -28,6 +28,7 @@ export class QueueMetrics {
   private readonly finished;
   private readonly deadCreated;
   private readonly settingsInvalidCounter;
+  private readonly unknownTypeCounter;
   private snapshot: Snapshot = emptySnapshot();
 
   constructor(provider?: MeterProvider) {
@@ -48,6 +49,10 @@ export class QueueMetrics {
     });
     this.settingsInvalidCounter = meter.createCounter('queue.settings.invalid', {
       description: 'Số lần đọc được dòng infra.queue_settings không hợp lệ',
+    });
+    this.unknownTypeCounter = meter.createCounter('queue.unknown_job_type', {
+      description:
+        'Số lần gặp loại việc chưa đăng ký ở phía xử lý (vd quay về bản cũ) – việc được trả lại hàng chờ',
     });
     const perQueue =
       (pick: (s: Snapshot) => Map<QueueName, number>) =>
@@ -81,6 +86,10 @@ export class QueueMetrics {
 
   deadJobCreated(queue: QueueName, jobType: string, cause: string): void {
     this.deadCreated.add(1, { queue, job_type: jobType, cause });
+  }
+
+  unknownJobType(queue: QueueName, jobType: string): void {
+    this.unknownTypeCounter.add(1, { queue, job_type: jobType });
   }
 
   settingsInvalid(queue: string): void {

@@ -1,4 +1,4 @@
-// 003 T064 – US6 AS2, FR-032: ops/alerts/queue.rules.yml có đúng 10 quy tắc, đúng ngưỡng, chỉ tham chiếu
+// 003 T064 – US6 AS2, FR-032: ops/alerts/queue.rules.yml có đúng 11 quy tắc, đúng ngưỡng, chỉ tham chiếu
 // chỉ số của contracts/queue-observability.md mục 1.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -30,10 +30,11 @@ const METRICS = new Set([
   'queue_dead_jobs_last_24h',
   'queue_workers_live',
   'queue_settings_invalid_total',
+  'queue_unknown_job_type_total',
 ]);
 
 describe('ops/alerts/queue.rules.yml', () => {
-  it('có đúng 10 quy tắc tên theo hợp đồng', () => {
+  it('có đúng 11 quy tắc tên theo hợp đồng', () => {
     expect(rules.map((r) => r.alert).sort()).toEqual(
       [
         'QueuePublishOldestWaitHigh',
@@ -46,6 +47,7 @@ describe('ops/alerts/queue.rules.yml', () => {
         'QueueMediaVideoP95High',
         'QueueWorkersLow',
         'QueueSettingsInvalid',
+        'QueueUnknownJobType',
       ].sort(),
     );
   });

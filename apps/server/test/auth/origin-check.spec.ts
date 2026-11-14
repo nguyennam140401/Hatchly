@@ -59,4 +59,11 @@ describe('origin-check', () => {
     expect(parsed.error.code).toBe('CSRF_REJECTED');
     expect(parsed.error.actions.length).toBeGreaterThan(0);
   });
+  it('POST /api/v1/ops/smoke (máy gọi, có bộ gác mã riêng) không cần Origin; đường dẫn khác vẫn cần', () => {
+    const machine = (url: string) => ({ ...req('POST'), url });
+    expect(isOriginAllowed(machine('/api/v1/ops/smoke'), allowed)).toBe(true);
+    expect(isOriginAllowed(machine('/api/v1/ops/smoke/abc?x=1'), allowed)).toBe(true);
+    expect(isOriginAllowed(machine('/api/v1/ops/smoke-khac'), allowed)).toBe(false);
+    expect(isOriginAllowed(machine('/api/v1/auth/login'), allowed)).toBe(false);
+  });
 });

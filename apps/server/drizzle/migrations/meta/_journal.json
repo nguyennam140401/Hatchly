@@ -99,6 +99,13 @@
       "when": 1794484558186,
       "tag": "0013_context_profile_versions_immutable",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794624103530,
+      "tag": "0014_infra_smoke_pings",
+      "breakpoints": true
     }
   ]
 }

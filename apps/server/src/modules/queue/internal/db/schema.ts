@@ -105,6 +105,26 @@ export const scheduleSlots = sharedTable(
   { reason: 'Khung chạy của việc định kỳ hệ thống' },
 );
 
+/**
+ * Dòng kiểm tra khói sau triển khai (008 FR-032, R20): API ghi một dòng (vai `app`, không tenant) rồi tạo việc
+ * `queue.smoke_ping`; Worker đánh dấu đã xử lý (vai `system`). Bảng dùng chung – KHÔNG có dữ liệu khách hàng.
+ * Quyền viết tay trong migration 0014: `app` INSERT/SELECT; `system` SELECT, UPDATE (processed_at,
+ * worker_version) và DELETE (dọn dòng cũ hơn 7 ngày); `support` không có quyền.
+ */
+export const smokePings = sharedTable(
+  infra,
+  'smoke_pings',
+  {
+    id: uuid('id').primaryKey(),
+    requested_at: timestamptz('requested_at').notNull(),
+    api_version: text('api_version').notNull(),
+    processed_at: timestamptz('processed_at'),
+    worker_version: text('worker_version'),
+  },
+  (t) => [index('smoke_pings_requested_at_idx').on(t.requested_at)],
+  { reason: 'Dòng kiểm tra khói sau triển khai (008) – không chứa dữ liệu khách hàng' },
+);
+
 /** Câu điều kiện của chính sách `system_scoped` (data-model mục 5). */
 const SYSTEM_SCOPED = sql`account_id = ${CURRENT_ACCOUNT_ID} OR (account_id IS NULL AND ${CURRENT_ACCOUNT_ID} IS NULL)`;
 

@@ -166,6 +166,9 @@ function buildForbiddenRules(manifest) {
         pathNot: [
           '^apps/server/src/core/(auth|db)/',
           '^apps/server/src/modules/account/internal/auth/',
+          // 008 FR-032: kiểm tra khói ghi infra.smoke_pings (bảng dùng chung, KHÔNG có dữ liệu khách hàng)
+          // bằng vai `app` không tenant – đúng thứ FR-032 đòi; `system` chỉ chạy ở Worker.
+          '^apps/server/src/modules/queue/internal/smoke/',
           '^apps/server/test/',
         ],
       },
