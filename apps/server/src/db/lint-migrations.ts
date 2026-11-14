@@ -290,8 +290,8 @@ export function newMigrationFiles(): string[] {
     const base = migrationBaseRef();
     const mergeBase = git(['merge-base', 'HEAD', base]);
     const rel = relative(root, folder).replace(/\\/g, '/');
-    const added = git(['diff', '--name-only', '--diff-filter=A', mergeBase, '--', rel]);
-    const untracked = git(['ls-files', '--others', '--exclude-standard', '--', rel]);
+    const added = git(['-C', root, 'diff', '--name-only', '--diff-filter=A', mergeBase, '--', rel]);
+    const untracked = git(['-C', root, 'ls-files', '--others', '--exclude-standard', '--', rel]);
     return [...added.split('\n'), ...untracked.split('\n')]
       .filter((f) => f.endsWith('.sql'))
       .map((f) => resolve(root, f));
