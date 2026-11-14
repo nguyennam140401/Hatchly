@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-empty-function -- các tập lệnh .mjs không có kiểu; kiểm thử dùng phản hồi giả */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-empty-function -- các tập lệnh .mjs không có kiểu; kiểm thử dùng phản hồi giả */
 import { describe, expect, it } from 'vitest';
 import { backmerge } from '../../ops/ci/scripts/backmerge.mjs';
 import { kindFor } from '../../ops/ci/scripts/deployment-record.mjs';
