@@ -45,6 +45,7 @@ apps/server/test-logs/
 *.pem
 *.key
 kubeconfig*
+.kube/
 
 # ===== IDE / hệ điều hành =====
 .vscode/

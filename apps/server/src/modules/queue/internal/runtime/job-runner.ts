@@ -10,9 +10,9 @@ import { getHandler } from '../handlers';
 import type { QueueLogger } from '../logger';
 import type { FinishOutcome, QueueMetrics } from '../observability';
 import type { BossJob, PgBoss } from '../pgboss/boss-loader';
+import { requeueActiveJob } from '../pgboss/requeue-job';
 import { clientDatabase } from '../pgboss/tx-database';
 import { payloadRef, redactError } from '../redact';
-import { JOB_TABLE } from '../producer';
 import { buryJob, readEnvelope } from './bury';
 import { retryDelaySeconds } from './retry-policy';
 import type { SettingsCache } from './settings';
@@ -122,14 +122,9 @@ async function requeueUnknown(
   job: BossJob,
   seconds: number,
 ): Promise<boolean> {
-  const result = await deps.pool.query(
-    `UPDATE ${JOB_TABLE}
-        SET state = 'retry', start_after = now() + make_interval(secs => $4), started_on = NULL, heartbeat_on = NULL
-      WHERE id = $1 AND name = $2 AND state = 'active' AND retry_count = $3`,
-    [job.id, queue, job.retryCount, seconds],
-  );
+  const ok = await requeueActiveJob(deps.pool, job, queue, seconds);
   deps.onControlSuccess?.();
-  return (result.rowCount ?? 0) > 0;
+  return ok;
 }
 
 /** Chạy một việc đã lấy (`active`, lượt `job.retryCount`). Không bao giờ ném. */

@@ -21,6 +21,8 @@ BRANCH="${BRANCH_NAME:-${GIT_BRANCH:-}}"; BRANCH="${BRANCH#origin/}"
 SHA="${DEPLOY_SHA:-${GIT_COMMIT:-$(git rev-parse HEAD)}}"
 SHA12="${SHA:0:12}"
 STATE=deploy-state.json
+# kubeconfig chứa KUBE_TOKEN: luôn xóa khi chặng kết thúc (kể cả lỗi), không để token nằm lại trên đĩa (VII).
+trap 'rm -rf .kube' EXIT
 get() { node ops/deploy/scripts/env-get.mjs "$ENV_NAME" "$1"; }
 record() { node ops/ci/scripts/deployment-record.mjs "$@"; }
 
