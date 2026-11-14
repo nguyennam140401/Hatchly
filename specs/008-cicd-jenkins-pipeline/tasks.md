@@ -110,8 +110,8 @@ nhân và lệnh chạy lại; nhánh sạch đạt (SC-002) – không cần Je
 
 ### Kiểm chứng US1 phần A
 
-- [ ] T035 [US1] Chạy quickstart A1 (hai chế độ + phép thử FR-008) và A3 (ba cổng mới, phép thử `db:compat` bắt được `-- breaking-ok:` mà mã ở `origin/dev` còn đọc, hai phép thử `check:release-source`); sửa lệch nếu có trong `tooling/verify.mjs` và các công cụ T016–T030
-- [ ] T036 [US1] Chạy quickstart A2 (năm nhánh nháp a–e, mỗi nhánh một vi phạm) + nhánh sạch đối chứng và A4 (ngoại lệ): mỗi cổng KHÔNG ĐẠT đúng nguyên nhân, in đủ tên cổng · dòng lỗi đầu · lệnh chạy lại; giữ năm nhánh nháp ở máy (không đẩy) để dùng lại ở T062; ghi kết quả 5/5 vào mục "Kết quả kiểm chứng" cuối `specs/008-cicd-jenkins-pipeline/quickstart.md`
+- [X] T035 [US1] Chạy quickstart A1 (hai chế độ + phép thử FR-008) và A3 (ba cổng mới, phép thử `db:compat` bắt được `-- breaking-ok:` mà mã ở `origin/dev` còn đọc, hai phép thử `check:release-source`); sửa lệch nếu có trong `tooling/verify.mjs` và các công cụ T016–T030
+- [X] T036 [US1] Chạy quickstart A2 (năm nhánh nháp a–e, mỗi nhánh một vi phạm) + nhánh sạch đối chứng và A4 (ngoại lệ): mỗi cổng KHÔNG ĐẠT đúng nguyên nhân, in đủ tên cổng · dòng lỗi đầu · lệnh chạy lại; giữ năm nhánh nháp ở máy (không đẩy) để dùng lại ở T062; ghi kết quả 5/5 vào mục "Kết quả kiểm chứng" cuối `specs/008-cicd-jenkins-pipeline/quickstart.md`
 
 **Checkpoint**: MVP – toàn bộ cổng chất lượng chạy được và chặn đúng trên máy cá nhân; chưa cần Jenkins hay môi trường
 

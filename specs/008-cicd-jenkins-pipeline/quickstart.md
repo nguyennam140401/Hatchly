@@ -154,3 +154,29 @@ thông tin xác thực đã nhập ở thư mục `deploy/staging/`.
 Một thành viên chưa làm 008, chỉ theo `docs/ci-cd/branching-and-release.md` và `docs/ci-cd/gates.md`, đưa một thay
 đổi nhỏ từ máy mình lên test trong ngày đầu, không ai làm hộ bước nào; ghi thời gian và câu hỏi phát sinh vào mục
 "Lịch sử diễn tập" của tài liệu. Diễn tập `docs/ci-cd/emergency-deploy.md` một lần trên test với Jenkins tắt.
+
+## Kết quả kiểm chứng
+
+### Phần A (máy cá nhân, 2026-11-14)
+
+| Mục | Kết quả |
+| --- | --- |
+| A1 `pnpm verify --ci --report` có CSDL | ĐẠT 15/15 bước (`check:release-source` và `db:compat` không áp dụng); thời gian 639 s |
+| A1 phép thử FR-008 | không có CSDL: `--ci` KHÔNG ĐẠT (mã 1); chế độ máy cá nhân: bỏ qua có thông báo |
+| A2 a – import `internal` của module khác | KHÔNG ĐẠT đúng nguyên nhân (`no-internal-cross-module`, nêu tệp) |
+| A2 b – bảng có `account_id` không bật RLS | `test:db` KHÔNG ĐẠT, nêu `a-rls-missing:context.draft_no_rls` |
+| A2 c – bảng đúng quy ước, thiếu fixture truy cập chéo | `test:db` KHÔNG ĐẠT, nêu tên bảng; cổng in "đã phủ 20 / tổng 21 bảng" |
+| A2 d – `DROP COLUMN` và sửa migration cũ | `db:lint-migrations` bắt `drop-column` (kèm cách chia bước); `db:immutable` bắt tệp 0012 bị sửa |
+| A2 e – chuỗi giống mã GitHub trong `Jenkinsfile.ci` | `check:secrets` KHÔNG ĐẠT, nêu tệp và dòng, không in giá trị |
+| A2 nhánh sạch đối chứng | ĐẠT (chính lần chạy A1) → **5/5 vi phạm bị chặn, 0 báo sai** |
+| A3 `check:release-source` | nguồn `feature/x` → từ chối; commit chưa lên test → từ chối |
+| A3 `db:compat` bắt `-- breaking-ok:` | `db:lint-migrations` ĐẠT nhưng `db:compat` KHÔNG ĐẠT (FR-020) |
+| A4 ngoại lệ | có tệp hợp lệ → `! ngoại lệ` và ĐẠT; cổng `test:db` → `check:pipeline` từ chối; hết hạn → `lint` KHÔNG ĐẠT |
+
+Lỗi tìm ra khi chạy và đã sửa: `db:lint-migrations` chạy từ `apps/server` truyền sai đường dẫn cho git nên không thấy
+migration mới và báo đạt oan. Nay dùng `git -C <gốc kho>`.
+
+Ghi chú: `db:compat` đọc nhánh gốc từ `COMPAT_BASE_SHA` hoặc `origin/$GATE_TARGET_BRANCH`, còn `db:lint-migrations` và
+`db:immutable` đọc `MIGRATION_BASE_REF`; Jenkins phải đặt cả hai (việc của `Jenkinsfile.ci`, T056).
+Năm nhánh nháp (cục bộ, không đẩy) dùng lại cho T062: `draft/008-a-boundary`, `-b-no-rls`, `-c-no-fixture`,
+`-d-migration`, `-e-secret` (và `-g-compat`).
