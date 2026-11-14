@@ -3,5 +3,9 @@
 jobs:
   - file: /var/jenkins_jobs/folders.groovy
   - file: /var/jenkins_jobs/ci_gates.groovy
-  - file: /var/jenkins_jobs/deploy_environments.groovy
+  - file: /var/jenkins_jobs/ci_sandbox.groovy
+  - file: /var/jenkins_jobs/deploy.groovy
+  - file: /var/jenkins_jobs/redeploy.groovy
+  - file: /var/jenkins_jobs/maintenance_ruleset_drift.groovy
+  - file: /var/jenkins_jobs/maintenance_prune_images.groovy
   - file: /var/jenkins_jobs/maintenance_credential_age.groovy

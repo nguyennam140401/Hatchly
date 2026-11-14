@@ -14,7 +14,7 @@ pipelineJob('maintenance/credential-age') {
                   stages {
                     stage('Kiểm tra tuổi') {
                       steps {
-                        checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://github.com/nguyennam140401/Hatchly.git', credentialsId: 'github-app-deploy']]])
+                        checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://github.com/nguyennam140401/Hatchly.git', credentialsId: 'github-app-ci']]])
                         withCredentials([
                           string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_BOT_TOKEN'),
                           string(credentialsId: 'telegram-chat-id', variable: 'TELEGRAM_CHAT_ID')

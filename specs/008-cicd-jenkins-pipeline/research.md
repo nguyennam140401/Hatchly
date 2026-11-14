@@ -160,6 +160,14 @@ người có vai `release-manager` bấm hợp nhất. `check:pipeline` so `ops/
 thành viên mà ruleset chưa yêu cầu người duyệt → không đạt, để chế độ này không kéo dài quá thực tế. Cơ chế giới
 hạn người hợp nhất vào `master` phụ thuộc loại tài khoản GitHub (cá nhân / tổ chức) – chốt lúc implement.
 
+**Cơ chế "chỉ `release-manager` hợp nhất vào `master`"** (chốt lúc implement, T058): ruleset của GitHub không giới hạn
+*ai bấm hợp nhất*. Kho thuộc **tài khoản cá nhân** chỉ có chủ kho và cộng tác viên có quyền ghi, nên:
+(1) khi chỉ có một thành viên, người đó là `release-manager` và là người duy nhất hợp nhất được; (2) từ hai thành
+viên, `CODEOWNERS` (`*` thuộc `release-manager`) kết hợp ruleset yêu cầu duyệt của chủ mã khiến chỉ duyệt của
+`release-manager` mới mở được nút hợp nhất vào `master`; cộng tác viên khác chỉ được cấp quyền Write cho `dev`
+(không cấp Maintain/Admin). Chuyển kho sang **tổ chức** sẽ cho cơ chế chặt hơn (giới hạn người hợp nhất theo nhóm).
+Ghi nhận ở `docs/ci-cd/branching-and-release.md` (T091).
+
 **Điều kiện tiên quyết**: luật bảo vệ nhánh trên kho **riêng tư** cần gói GitHub trả phí (Team). Phải xác nhận
 trước khi implement US1 – xem mục Rủi ro của plan.
 

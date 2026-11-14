@@ -24,7 +24,7 @@ log() { printf '▸ %s\n' "$*"; }
 log "Gói hệ thống"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y --no-install-recommends ca-certificates curl git nginx nftables openjdk-21-jre-headless \
+apt-get install -y --no-install-recommends ca-certificates curl xz-utils git nginx nftables openjdk-21-jre-headless \
   uidmap dbus-user-session slirp4netns fuse-overlayfs docker.io docker-compose-v2 jq
 # Docker hệ thống chỉ cung cấp bộ công cụ rootless; daemon hệ thống TẮT (không người dùng nào dùng).
 systemctl disable --now docker.service docker.socket 2>/dev/null || true
@@ -84,6 +84,16 @@ if [ ! -x "$BIN/trivy" ] || ! "$BIN/trivy" --version 2>/dev/null | grep -q "${TR
   tar -xzf /tmp/trivy.tgz -C /tmp trivy && install -o deploy-agent -g deploy-agent -m 0700 /tmp/trivy "$BIN/trivy"
 fi
 grep -q 'home/deploy-agent/bin' /home/deploy-agent/.profile 2>/dev/null || echo 'export PATH="$HOME/bin:$PATH"' >> /home/deploy-agent/.profile
+
+# ---------- 4b. Node.js cho tập lệnh của đường ống (có kiểm SHA-256) ----------
+log "Node.js ${NODE_VERSION}"
+if ! /opt/node/bin/node --version 2>/dev/null | grep -qx "${NODE_VERSION}"; then
+  fetch_verified "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" "$NODE_SHA256_LINUX_X64" /tmp/node.tar.xz
+  rm -rf /opt/node && mkdir -p /opt/node
+  tar -xJf /tmp/node.tar.xz -C /opt/node --strip-components=1
+fi
+ln -sf /opt/node/bin/node /usr/local/bin/node
+ln -sf /opt/node/bin/corepack /usr/local/bin/corepack
 
 # ---------- 5. Bí mật: chỉ tạo thư mục rỗng ----------
 log "Thư mục bí mật $SECRETS_DIR (rỗng – SA nhập tay)"
