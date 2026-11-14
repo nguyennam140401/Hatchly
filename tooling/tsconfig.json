@@ -5,10 +5,16 @@
     "moduleResolution": "NodeNext",
     "allowJs": true,
     "checkJs": false,
-    "rootDir": ".",
+    "rootDir": "..",
     "outDir": "dist-types",
     "types": ["node"]
   },
-  "include": ["**/*.ts", "**/*.mjs", "**/*.cjs"],
+  "include": [
+    "**/*.ts",
+    "**/*.mjs",
+    "**/*.cjs",
+    "../ops/ci/scripts/*.mjs",
+    "../ops/deploy/**/*.mjs"
+  ],
   "exclude": ["boundaries/fixtures/**", "node_modules", "dist-types"]
 }

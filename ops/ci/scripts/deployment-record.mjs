@@ -125,7 +125,10 @@ export async function pullRequestInfo(repo, sha, env, fetchFn = fetch) {
   };
 }
 
-/** Tạo Deployment + trạng thái cuối; trả id (hoặc undefined khi `no_target`). */
+/**
+ * Tạo Deployment + trạng thái cuối; trả id (hoặc undefined khi `no_target`).
+ * @param {{repo: string, record: object, result: string, failedStep?: string, logUrl?: string}} input
+ */
 export async function createDeployment(
   { repo, record, result, failedStep, logUrl },
   env,

@@ -224,6 +224,22 @@ Phụ thuộc ngoài: bước 6–7 chạy thật cần môi trường của 007
 | R-10 | `test:compat` là hợp đồng mọi phiên bản sau phải giữ; kiểm thử cấu trúc lẫn vào sẽ gây đỏ giả. | Tập `test:compat` chọn theo quy ước tên/nhãn, `check:pipeline` kiểm kịch bản tồn tại; tài liệu `gates.md`. |
 | R-11 | Bề mặt tấn công của Jenkins và phần mở rộng. | Giao diện không mở ra internet; chỉ `/github-webhook/` có kiểm chữ ký; phần mở rộng tối thiểu, cố định phiên bản, cập nhật qua pull request. |
 
+### Trạng thái rủi ro khi kết thúc implement (cập nhật 2026-11-14)
+
+| # | Trạng thái | Ghi chú |
+|---|---|---|
+| R-1 | **Mở** | Chủ dự án chưa dùng gói GitHub trả phí. Ruleset (`ops/ci/github/rulesets/`) và `apply-rulesets.sh` đã viết và được `check:pipeline` kiểm, nhưng **chưa áp** (T060); FR-004 tạm dựa vào kỷ luật của người duy nhất có quyền ghi. Phương án rẻ nhất khi cần: GitHub Team một ghế. |
+| R-2 | **Đã xử lý trong thiết kế** | Chế độ một thành viên (0 người duyệt, `release-manager` bấm hợp nhất); `check:pipeline` buộc bật duyệt khi `team.json` có từ hai người. |
+| R-3 | **Đổi hướng** | Thử nghiệm trên máy ảo VMware (`docs/ci-cd/vmware-lab.md`), không tốn tiền cloud; chi phí máy chạy thật chốt cùng 007. |
+| R-4 | **Mở** | Chờ 007; `environment-inputs.md` + `provisioned: false` giữ phần còn lại chạy được. |
+| R-5 | **Đã giảm thiểu bằng mã** | Thông tin theo thư mục, chủ mã duyệt `ops/deploy/**`; chưa kiểm trên Jenkins thật (T054). |
+| R-6 | **Mở** | Chọn giữa `remote-file` và `pipeline-multibranch-defaults` cần Jenkins thật (T053). |
+| R-7 | **Mở** | Chưa đo được trên máy thật (T052). |
+| R-8 | **Mở** | `pnpm verify --ci` đầy đủ ~11 phút trên máy này (tuần tự); thời gian ba làn song song trên Jenkins chưa đo (T061). |
+| R-9 | Chấp nhận | `emergency-deploy.md` đã viết, chưa diễn tập (T098). |
+| R-10 | **Đã giảm thiểu** | `docs/ci-cd/gates.md` nêu hợp đồng; `test:compat` hiện 4 ca hành vi. |
+| R-11 | **Đã giảm thiểu bằng mã** | nginx/nftables/plugins cố định ở `ops/ci/vm/`; chưa kiểm trên máy thật. |
+
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |

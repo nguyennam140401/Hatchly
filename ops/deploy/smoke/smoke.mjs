@@ -34,7 +34,7 @@ async function check(name, fn) {
 }
 
 /**
- * @param {{apiBase: string, webBase: string, expect: string, token?: string, user?: string, password?: string,
+ * @param {{apiBase: string, webBase: string, expect: string, token?: string|undefined, user?: string|undefined, password?: string|undefined,
  *          deadline: number, fetchFn?: typeof fetch, now?: () => number, wait?: (ms: number) => Promise<void>}} o
  * @returns {Promise<{name: string, ok: boolean, detail: string}[]>}
  */

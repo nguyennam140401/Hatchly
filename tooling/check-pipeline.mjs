@@ -290,7 +290,7 @@ export function checkPipeline({ root = '.', ci = false, steps, helm = defaultHel
   ].filter((f) => existsSync(f));
   for (const file of templateFiles) {
     readLines(file).forEach((text, i) => {
-      if (/^\s*kind:\s*Secret/.test(text)) {
+      if (/^\s*kind:\s*Secret\b/.test(text)) {
         fail(
           file,
           'mẫu Kubernetes không được định nghĩa `kind: Secret` – bí mật chỉ nằm trong cụm',
