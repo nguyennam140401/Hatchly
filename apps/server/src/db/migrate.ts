@@ -19,6 +19,8 @@ export type AppEnvName = 'development' | 'test' | 'staging' | 'production';
 export interface MigrateOptions {
   ownerUrl: string;
   appEnv: AppEnvName;
+  /** 007 (R15): ở `staging` có cờ này thì áp thêm migration dev (schema `sandbox` cho bản giả lập). */
+  stagingAllowFakes?: boolean;
   log?: (line: string) => void;
   /** Tạo/đồng bộ 6 hàng chờ pg-boss sau migration (003). Mặc định bật. */
   ensureQueues?: boolean;
@@ -76,7 +78,10 @@ export async function runMigrations(options: MigrateOptions): Promise<MigrateRes
 
       let dev = 0;
       const devFolder = join(DRIZZLE_DIR, 'migrations-dev');
-      const devAllowed = options.appEnv === 'development' || options.appEnv === 'test';
+      const devAllowed =
+        options.appEnv === 'development' ||
+        options.appEnv === 'test' ||
+        (options.appEnv === 'staging' && options.stagingAllowFakes === true);
       if (devAllowed && existsSync(join(devFolder, 'meta', '_journal.json'))) {
         dev = await applyFolder(client, devFolder, 'schema_migrations_dev');
       } else if (!devAllowed) {
@@ -108,7 +113,11 @@ export async function migrateFromEnv(
   env: Record<string, string | undefined> = process.env,
 ): Promise<MigrateResult> {
   const config = loadMigrateConfig(env);
-  return runMigrations({ ownerUrl: config.DATABASE_OWNER_URL, appEnv: config.APP_ENV });
+  return runMigrations({
+    ownerUrl: config.DATABASE_OWNER_URL,
+    appEnv: config.APP_ENV,
+    stagingAllowFakes: config.STAGING_ALLOW_FAKES,
+  });
 }
 
 if (require.main === module) {

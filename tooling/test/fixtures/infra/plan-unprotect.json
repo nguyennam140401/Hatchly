@@ -1,0 +1,36 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.aws_s3_bucket.media[0]",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "force_destroy": false,
+          "tags": {
+            "data": "true"
+          }
+        },
+        "after": {
+          "force_destroy": true,
+          "tags": {
+            "data": "true"
+          }
+        }
+      }
+    },
+    {
+      "address": "module.database[0].helm_release.pg_cluster",
+      "type": "helm_release",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "values": ["deletionProtect: true"]
+        },
+        "after": {
+          "values": ["deletionProtect: false"]
+        }
+      }
+    }
+  ]
+}

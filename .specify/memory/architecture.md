@@ -114,6 +114,20 @@ flowchart TB
 **Cấu hình thay đổi không cần phát hành** (lưu trong CSDL, cache trong tiến trình 5 phút): bảng giá
 mô hình, bảng ánh xạ lỗi nền tảng, thông số hàng chờ, danh sách ngành.
 
+### Hình thái triển khai thật (007 – hạ tầng Terraform, ADR-11)
+
+- **Hai môi trường** (`staging`, `production`), mỗi môi trường một project/mạng/cụm/kho tệp; cùng mã, khác `infra/envs/<env>.tfvars`.
+- **Hai stack Terraform** mỗi môi trường: `cloud` (mạng, cụm VKS, cân bằng tải, bucket – qua module `provider-vngcloud`) và
+  `platform` (lối vào NGINX Ingress của F5/NGINX, cert-manager, CloudNativePG + Barman Cloud, NetworkPolicy, RBAC). Stack
+  `platform` chỉ nhận đầu ra theo hợp đồng lớp nhà cung cấp.
+- **Giao diện:** ảnh `web` (nginx tĩnh) chạy trong cụm làm nguồn `origin-app.<tên miền>`; **CDN** kéo từ đó; API ở `api.<tên miền>`.
+- **CSDL:** CloudNativePG 17 (1 bản thử nghiệm, 2 bản phát hành), sao lưu WAL liên tục + hằng ngày lên bucket riêng; dịch vụ `pg-rw`.
+- **Bí mật:** `Secret` Kubernetes theo thành phần (`api-secrets`, `worker-secrets`, `migrate-secrets`, `registry-pull`,
+  `pg-backup-s3`), do `pnpm infra secrets` tạo — Terraform không giữ giá trị bí mật. Mỗi ServiceAccount chỉ `get` Secret của mình.
+- **Thử nghiệm:** `STAGING_ALLOW_FAKES=true` cho phép driver `fake` của ba cổng (kèm `FAKE_STATE_STORE=sandbox`) đến khi có bản
+  thật; production từ chối mọi bản giả lập.
+- Vận hành qua `pnpm infra` (ba lớp chặn lên phát hành, bản ghi áp dụng, kiểm lệch, diễn tập khôi phục) – xem `infra/docs/`.
+
 ## 4. Module và schema
 
 Mỗi module sở hữu một schema PostgreSQL. Module chỉ gọi nhau qua giao diện công khai (NestJS
@@ -426,14 +440,17 @@ email, mật khẩu hay mã. Không có bên nhận mới ở nước ngoài (SE
 | vị trí tệp / đường dẫn ký sẵn | `StorageLocation` (`loc.*`) / `PresignedUpload`, `SignedUrl` | kho tệp | `core/storage`, `ObjectStorage`, `OBJECT_STORAGE` |
 | trạng thái giả lập / kịch bản giả lập | schema `sandbox`, `FAKE_STATE_STORE` (`memory` \| `sandbox`) / `FakeScenario` | vật thế chỗ giao dịch (chế độ bộ nhớ) | `memoryTx()` |
 
+Thuật ngữ hạ tầng (môi trường, stack, bản xem trước, bản ghi áp dụng, diễn tập khôi phục, Secret…): xem
+`specs/007-terraform-infra-environments/data-model.md` mục 1.
+
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
 
 ## 12. Việc còn mở ảnh hưởng triển khai
 
 | Mã | Nội dung | Ảnh hưởng tới mã nguồn | Mốc |
 |---|---|---|---|
-| T4 | Chốt nhà cung cấp đám mây sau 3 điểm xác minh: PITR, giá băng thông ra, SLA ≥ 99,5% | Chỉ ảnh hưởng cấu hình (chuẩn mở) | Trước khi ký hợp đồng |
-| T4c | CSDL được quản lý hay CloudNativePG | Chỉ ảnh hưởng hạ tầng | Theo T4 |
+| T4 | Nhà cung cấp đám mây: **VNG Cloud** (ADR-11, 2026-11); còn các điểm xác minh P6 (V1–V14, nhất là V2/V4/V9 chặn) trong `infra/docs/p6-cau-hoi-nha-cung-cap.md` | Chỉ ảnh hưởng cấu hình (chuẩn mở) | Trước khi đưa dữ liệu thật vào phát hành |
+| T4c | CSDL: **CloudNativePG** (mặc định, ADR-11); chuyển `managed` khi V1 đạt (`infra/docs/10-chuyen-bien-the-csdl.md`) | Chỉ ảnh hưởng hạ tầng | Theo V1 |
 | ~~T7~~ | ~~Chọn thư viện xác thực cụ thể~~ – **đã chốt ở 004**: argon2 + phiên máy chủ + arctic (sau), xem mục 2 | Module `account` | Xong (2026-11-10) |
 | T11 | Mô hình AI, dịch vụ STT | Chỉ ảnh hưởng adapter nhà cung cấp trong AI Gateway | POC-1, POC-4 |
 | POC-2 | Khả năng đối soát của từng nền tảng; hạn mức Zalo OA/Instagram; thời gian khóa 2 phút cho video | Adapter + `error_mappings` | Trước khi hoàn thiện Publishing |

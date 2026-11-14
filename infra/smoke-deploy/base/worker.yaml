@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: worker }
+  template:
+    metadata:
+      labels: { app: worker }
+    spec:
+      serviceAccountName: worker
+      imagePullSecrets:
+        - name: registry-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      # Worker tắt có kiểm soát: chờ việc đang chạy tối đa 30 giây (SHUTDOWN_TIMEOUT_MS) + dư 5 giây.
+      terminationGracePeriodSeconds: 35
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: worker }
+      containers:
+        - name: worker
+          image: server
+          command: ['node', 'dist/worker.js']
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - configMapRef: { name: app-config-base }
+            - configMapRef: { name: app-config-env }
+            - secretRef: { name: worker-secrets }
+          env:
+            - { name: DATABASE_POOL_MAX, value: '20' }
+          resources:
+            # Video 500 MB cần đĩa tạm (FR-010).
+            requests: { cpu: 500m, memory: 1536Mi, ephemeral-storage: 1Gi }
+            limits: { memory: 2Gi, ephemeral-storage: 4Gi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: 3001 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 3001 }
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false

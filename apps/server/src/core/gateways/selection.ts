@@ -1,3 +1,4 @@
+import { stagingFakesInUse } from '../config/assert-no-fakes';
 import type { AppConfig } from '../config/config.schema';
 import { ConfigError } from '../config/config-error';
 import { resolveMailConfig } from '../config/mail-config';
@@ -40,6 +41,18 @@ export function logGatewaySelection(
   selection: GatewaySelection,
 ): void {
   logger.log({ msg: 'gateways.selected', ...selection });
+}
+
+/**
+ * 007 (R15): ở `staging` có `STAGING_ALLOW_FAKES=true` mà còn driver `fake` → một dòng cảnh báo có cấu trúc
+ * `gateways.fakes_enabled_in_staging` (tên driver, không có bí mật). Không làm gì nếu không áp dụng.
+ */
+export function logStagingFakes(
+  logger: { warn: (message: unknown) => void },
+  config: AppConfig,
+): void {
+  const drivers = stagingFakesInUse(config);
+  if (drivers.length > 0) logger.warn({ msg: 'gateways.fakes_enabled_in_staging', drivers });
 }
 
 /** Thông điệp khi thiếu schema sandbox (dùng lại trong kiểm thử). */

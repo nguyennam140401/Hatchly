@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +28,25 @@ const ok = (name: string) => ({ name, command: 'node -e "console.log(1)"' });
 const fail = (name: string, message: string) => ({
   name,
   command: `node -e "console.log('dong dau'); console.error('${message}'); process.exit(2)"`,
+});
+
+describe('tooling/verify.mjs – bước infra:check (007, FR-027)', () => {
+  it('danh sách bước mặc định có infra:check chạy `pnpm infra check`', () => {
+    const source = readFileSync(verifyScript, 'utf8');
+    expect(source).toContain("name: 'infra:check', command: 'pnpm infra check'");
+  });
+
+  it('đầu ra `SKIPPED:` của infra:check được tính là bỏ qua, không phải lỗi', () => {
+    const { code, out } = runWithSteps([
+      ok('a'),
+      {
+        name: 'infra:check',
+        command: `node -e "console.log('SKIPPED: chưa cài terraform – cài đủ công cụ')"`,
+      },
+    ]);
+    expect(code).toBe(0);
+    expect(out).toMatch(/infra:check\s+– bỏ qua.*\(chưa cài terraform/);
+  });
 });
 
 describe('tooling/verify.mjs', () => {

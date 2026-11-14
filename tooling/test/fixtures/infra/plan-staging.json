@@ -1,0 +1,116 @@
+{
+  "resource_changes": [
+    {
+      "address": "module.provider.vngcloud_vserver_network.this",
+      "type": "vngcloud_vserver_network",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.vngcloud_vserver_subnet.nodes",
+      "type": "vngcloud_vserver_subnet",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.vngcloud_vserver_secgroup.nodes",
+      "type": "vngcloud_vserver_secgroup",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.vngcloud_vks_cluster.this",
+      "type": "vngcloud_vks_cluster",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.vngcloud_vks_cluster_node_group.this[\"default\"]",
+      "type": "vngcloud_vks_cluster_node_group",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.vngcloud_vlb_load_balancer.ingress[0]",
+      "type": "vngcloud_vlb_load_balancer",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.aws_s3_bucket.media[0]",
+      "type": "aws_s3_bucket",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.provider.aws_s3_bucket_versioning.media[0]",
+      "type": "aws_s3_bucket_versioning",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.helm_release.ingress[0]",
+      "type": "helm_release",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.kubernetes_namespace_v1.this[\"app\"]",
+      "type": "kubernetes_namespace_v1",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.kubernetes_network_policy_v1.app_ingress_only",
+      "type": "kubernetes_network_policy_v1",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "data.terraform_remote_state.cloud",
+      "type": "terraform_remote_state",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.kubernetes_deployment_v1.mailpit[0]",
+      "type": "kubernetes_deployment_v1",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.kubernetes_service_v1.mailpit[0]",
+      "type": "kubernetes_service_v1",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.kubernetes_namespace_v1.this[\"mail-capture\"]",
+      "type": "kubernetes_namespace_v1",
+      "change": {
+        "actions": ["create"]
+      }
+    },
+    {
+      "address": "module.base.kubernetes_network_policy_v1.mail_capture_smtp_from_app[0]",
+      "type": "kubernetes_network_policy_v1",
+      "change": {
+        "actions": ["create"]
+      }
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import { DatabaseService } from './core/db/database';
 import {
   assertSandboxSchemaReady,
   logGatewaySelection,
+  logStagingFakes,
   readGatewaySelection,
 } from './core/gateways/selection';
 import { assertWorkerDatabaseConfig } from './core/config/load-config';
@@ -37,6 +38,7 @@ export async function bootstrapWorker(env: NodeJS.ProcessEnv = process.env) {
   app.flushLogs();
   // 005 (US6-AS1): cùng lựa chọn bản cài đặt ở API và Worker; thiếu schema sandbox → dừng.
   logGatewaySelection(logger, readGatewaySelection(config));
+  logStagingFakes(logger, config);
   await assertSandboxSchemaReady(config, app.get(DatabaseService), logger);
 
   const coordinator = app.get(ShutdownCoordinator);

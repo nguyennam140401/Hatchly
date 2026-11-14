@@ -1,0 +1,24 @@
+name: pg
+mode: standard # standard | recovery
+instances: 1
+image: ''
+storageSize: 10Gi
+storageClass: ''
+resources:
+  cpu: 500m
+  memory: 1Gi
+maxConnections: '220'
+archiveTimeout: 5min
+deletionProtect: true
+labels: {}
+backupSecretName: pg-backup-s3
+# Bật khi H3 cài Prometheus Operator (cần CRD PodMonitor).
+enablePodMonitor: false
+backup:
+  bucket: ''
+  endpoint: ''
+  region: ''
+  retentionDays: 30
+  schedule: '0 0 19 * * *'
+# Chỉ mode = recovery.
+recovery: {}

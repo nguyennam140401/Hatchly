@@ -1,0 +1,55 @@
+# Kiểm tra tĩnh hạ tầng Terraform (007, FR-027). KHÔNG dùng bí mật nào và KHÔNG chạm tài nguyên thật.
+# Mọi action bên thứ ba ghim theo SHA commit (kiểm bởi tooling/test/infra/workflows.spec.ts).
+name: infra-static
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'tooling/infra/**'
+      - 'tooling/scan-secrets.mjs'
+      - '.github/workflows/infra-*.yml'
+  push:
+    paths:
+      - 'infra/**'
+      - 'tooling/infra/**'
+      - 'tooling/scan-secrets.mjs'
+      - '.github/workflows/infra-*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      # Phiên bản tflint cố định (trùng ghi chú ở infra/.tflint.hcl).
+      TFLINT_VERSION: v0.55.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Đọc phiên bản Terraform cố định
+        run: echo "TF_VERSION=$(tr -d '[:space:]' < infra/.terraform-version)" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Kiểm tra tĩnh (pnpm infra check)
+        run: pnpm infra check

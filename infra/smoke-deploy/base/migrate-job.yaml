@@ -1,0 +1,33 @@
+# Migration là Job riêng, chạy trước khi đổi ảnh (kiến trúc mục 3). Dùng ServiceAccount `migrate` và Secret
+# `migrate-secrets` (chuỗi kết nối quyền chủ sở hữu/quản trị CHỈ có ở đây – FR-014). Tạo vai trò CSDL rồi áp migration.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app: migrate }
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: migrate
+      imagePullSecrets:
+        - name: registry-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: migrate
+          image: server
+          command: ['sh', '-c', 'node dist/db/bootstrap.js && node dist/db/migrate.js']
+          envFrom:
+            - configMapRef: { name: app-config-base }
+            - configMapRef: { name: app-config-env }
+            - secretRef: { name: migrate-secrets }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false

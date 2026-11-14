@@ -1,0 +1,4 @@
+issuerName: letsencrypt
+email: ''
+ingressClass: nginx
+server: https://acme-v02.api.letsencrypt.org/directory

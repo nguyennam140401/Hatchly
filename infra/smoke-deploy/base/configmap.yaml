@@ -1,0 +1,14 @@
+# Biến KHÔNG bí mật dùng chung hai môi trường (contracts/handoff-outputs.md mục 2).
+# Phần khác nhau theo môi trường (APP_ENV, địa chỉ, S3_*, bản giả lập ở thử nghiệm) nằm ở overlays/<env>/config.env.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-base
+data:
+  API_PORT: '3000'
+  WORKER_HEALTH_PORT: '3001'
+  SHUTDOWN_TIMEOUT_MS: '30000'
+  TRUST_PROXY_HOPS: '1'
+  MAIL_TRANSPORT: smtp
+  STORAGE_DRIVER: s3
+  S3_FORCE_PATH_STYLE: 'true'

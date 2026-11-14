@@ -71,7 +71,7 @@ describe('Bộ mẫu ranh giới module', () => {
         'o-enqueue-registered-outside-account',
         'p-dev-imported-by-module',
         'q-aws-sdk-outside-storage',
-        'r-cross-schema-sql',
+        'n-cross-schema-sql',
         'clean',
       ].sort(),
     );

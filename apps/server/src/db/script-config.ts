@@ -22,6 +22,11 @@ export type BootstrapConfig = z.infer<typeof BootstrapConfigSchema>;
 
 export const MigrateConfigSchema = z.object({
   APP_ENV: AppEnv,
+  /** 007 (R15): chỉ có nghĩa ở `staging`. */
+  STAGING_ALLOW_FAKES: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   DATABASE_OWNER_URL: secret(postgresUrl()),
 });
 export type MigrateConfig = z.infer<typeof MigrateConfigSchema>;

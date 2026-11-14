@@ -65,6 +65,7 @@ describe('loadConfig', () => {
       STORAGE_DRIVER: 'memory',
       FAKE_STATE_STORE: 'memory',
       S3_FORCE_PATH_STYLE: false,
+      STAGING_ALLOW_FAKES: false,
       AI_SYSTEM_WEEKLY_CAP_MICRO_USD: 2_000_000,
       PLATFORM_SUBMIT_TIMEOUT_MS: 30_000,
       AI_PROVIDER_TIMEOUT_MS: 40_000,

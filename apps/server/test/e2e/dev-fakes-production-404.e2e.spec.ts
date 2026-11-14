@@ -34,9 +34,11 @@ describe('shouldRegisterDevRoutes', () => {
   });
 });
 
-async function startApi(appEnv: 'production' | 'test'): Promise<INestApplication> {
+async function startApi(appEnv: 'production' | 'staging' | 'test'): Promise<INestApplication> {
   const env = {
     APP_ENV: appEnv,
+    // 007 (R15): ở staging bật ngoại lệ bản giả lập – route /dev/fakes vẫn KHÔNG được mở.
+    ...(appEnv === 'staging' ? { STAGING_ALLOW_FAKES: 'true' } : {}),
     LOG_LEVEL: 'fatal',
     ...TEST_AUTH_ENV,
     MAIL_TRANSPORT: 'smtp',
@@ -45,7 +47,7 @@ async function startApi(appEnv: 'production' | 'test'): Promise<INestApplication
     DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
   };
   // production: chưa có bản thật của các cổng → bỏ qua loadConfig/assertNoFakes, các cổng "chưa cấu hình".
-  const config = appEnv === 'production' ? loadConfigFrom(AppConfigSchema, env) : loadConfig(env);
+  const config = appEnv === 'test' ? loadConfig(env) : loadConfigFrom(AppConfigSchema, env);
   const moduleRef = await Test.createTestingModule({
     imports: [ApiAppModule.forRoot(config)],
   }).compile();
@@ -63,6 +65,22 @@ describe('APP_ENV=production', () => {
 
   it('mọi route /dev/fakes/* và /dev/fake-oauth/* → 404', async () => {
     app = await startApi('production');
+    for (const [method, path] of DEV_PATHS) {
+      const agent = request(app.getHttpServer() as Server);
+      const res = await agent[method](path).set('origin', TEST_ORIGIN).send({});
+      expect(res.status, `${method} ${path}`).toBe(404);
+    }
+  });
+});
+
+describe('APP_ENV=staging + STAGING_ALLOW_FAKES=true (007)', () => {
+  let app: INestApplication | undefined;
+  afterAll(async () => {
+    await app?.close();
+  });
+
+  it('mọi route /dev/fakes/* và /dev/fake-oauth/* vẫn → 404', async () => {
+    app = await startApi('staging');
     for (const [method, path] of DEV_PATHS) {
       const agent = request(app.getHttpServer() as Server);
       const res = await agent[method](path).set('origin', TEST_ORIGIN).send({});

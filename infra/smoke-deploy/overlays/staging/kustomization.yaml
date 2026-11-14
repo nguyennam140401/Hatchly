@@ -1,0 +1,29 @@
+# TẠM – H2 thay và xóa. Overlay thử nghiệm của bộ kê khai tạm. Điền giá trị từ `pnpm infra outputs staging`.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: app-config-env
+    namespace: app
+    envs:
+      - config.env
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+  # Ảnh theo DIGEST (không theo thẻ): phát hành chạy đúng ảnh đã kiểm.
+  - path: images.yaml
+  # Tên miền thật của môi trường (thay chỗ giữ BASE_DOMAIN của base/ingress.yaml).
+  - target: { kind: Ingress, name: app }
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts
+        value: [api.staging.TODO-P6-base-domain, origin-app.staging.TODO-P6-base-domain]
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.staging.TODO-P6-base-domain
+      - op: replace
+        path: /spec/rules/1/host
+        value: origin-app.staging.TODO-P6-base-domain

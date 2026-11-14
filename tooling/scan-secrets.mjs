@@ -6,6 +6,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 
+const INFRA_SCOPE = /^(?:infra\/|\.github\/workflows\/)/;
+
 export const SECRET_PATTERNS = [
   { name: 'cookie phiên khách hàng', re: /__Host-sid=[A-Za-z0-9_-]{20,}/ },
   { name: 'cookie phiên nhân viên', re: /__Host-staff_sid=[A-Za-z0-9_-]{20,}/ },
@@ -20,6 +22,28 @@ export const SECRET_PATTERNS = [
   { name: 'mã quyền giả lọt nhật ký', re: /fake_tok_[A-Za-z0-9_-]{4,}/, logsOnly: true },
   { name: 'lời nhắc AI lọt nhật ký', re: /PROMPT_CANARY_[A-Za-z0-9_]+/, logsOnly: true },
   { name: 'nội dung bài lọt nhật ký', re: /POST_CANARY_[A-Za-z0-9_]+/, logsOnly: true },
+  // 007 (hạ tầng): chỉ quét trong `infra/` và `.github/workflows/` (tài liệu/kiểm thử nơi khác có thể
+  // nêu tên khóa làm ví dụ). Giá trị rỗng, biến (`var.x`, `${…}`) hay chỗ giữ `<…>` không bị bắt.
+  {
+    name: 'khóa truy cập/bí mật S3 gán cứng',
+    re: /\b(?:access_key|secret_key)\s*=\s*"[^"$<]{4,}"/,
+    onlyIn: INFRA_SCOPE,
+  },
+  {
+    name: 'AWS_SECRET_ACCESS_KEY có giá trị',
+    re: /AWS_SECRET_ACCESS_KEY\s*[=:]\s*[^\s"'$<{]{4,}/,
+    onlyIn: INFRA_SCOPE,
+  },
+  {
+    name: 'bí mật tài khoản dịch vụ VNG gán cứng',
+    re: /\bclient_secret\s*=\s*"[^"$<]{4,}"/,
+    onlyIn: INFRA_SCOPE,
+  },
+  {
+    name: 'chuỗi kết nối có mật khẩu',
+    re: /postgres(?:ql)?:\/\/[^\s:@/$<{]+:[^\s@/$<{]+@/,
+    onlyIn: INFRA_SCOPE,
+  },
 ];
 
 /** Tệp nhật ký (chịu thêm mẫu `logsOnly`). */
@@ -43,10 +67,27 @@ const TEXT_EXT = new Set([
   '.txt',
   '.html',
   '.css',
+  '.tf',
+  '.tfvars',
+  '.hcl',
 ]);
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'dist-types']);
-// Bộ mẫu vi phạm của chính công cụ này.
-const ALLOW = [/^tooling\/test\/fixtures\/secrets\//];
+// `.terraform` (nhị phân provider), `.plans` (bản xem trước đã lưu): không phải mã nguồn.
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  '.git',
+  'coverage',
+  'dist-types',
+  '.terraform',
+  '.plans',
+]);
+// Bộ mẫu vi phạm của chính công cụ này; hồ sơ chứng thực cục bộ của `pnpm infra` (bị gitignore, chỉ
+// `.env.example` rỗng giá trị mới được quét).
+const ALLOW = [
+  /^tooling\/test\/fixtures\/secrets\//,
+  /^tooling\/test\/fixtures\/secrets-infra\//,
+  /^infra\/\.credentials\/(?!\.env\.example$)/,
+];
 
 function walk(dir, out = []) {
   // Thư mục chưa có (vd test-logs khi chưa chạy kiểm thử) → không có tệp.
@@ -85,6 +126,7 @@ export function scanFiles(files, root = process.cwd()) {
     lines.forEach((line, i) => {
       for (const p of SECRET_PATTERNS) {
         if (p.logsOnly === true && !isLog) continue;
+        if (p.onlyIn !== undefined && !p.onlyIn.test(rel)) continue;
         if (p.re.test(line)) findings.push({ file: rel, line: i + 1, name: p.name });
       }
     });

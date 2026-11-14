@@ -10,6 +10,7 @@
 | `STORAGE_DRIVER` | `memory` \| `s3` | có | |
 | `MAIL_TRANSPORT` | `memory` \| `smtp` | có (nay cả Worker) | có từ 004, chuyển khỏi `AuthConfig` |
 | `FAKE_STATE_STORE` | `memory` \| `sandbox` | khi có driver `fake` | `memory` ở API+Worker riêng tiến trình → trạng thái không chung (chỉ hợp cho kiểm thử) |
+| `STAGING_ALLOW_FAKES` | `true` \| `false` | không (mặc định `false`) | 007 R15: chỉ có hiệu lực khi `APP_ENV=staging`; xem mục 2a |
 | `S3_ENDPOINT` | URL | khi `s3` | MinIO dev: `http://minio:9000` |
 | `S3_PUBLIC_ENDPOINT` | URL | không | địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = `S3_ENDPOINT` |
 | `S3_REGION`, `S3_BUCKET` | chuỗi | khi `s3` | |
@@ -28,6 +29,23 @@
   trình thoát mã 1 (API và Worker như nhau – SC-006).
 - `FAKE_STATE_STORE=sandbox` mà chưa có schema `sandbox` → dừng: "Chưa có schema sandbox – chạy `pnpm db:setup`".
 - Khởi động thành công ghi một dòng `gateways.selected` (cả hai đơn vị) với lựa chọn từng thành phần.
+
+## 2a. Ngoại lệ thử nghiệm (007, R15)
+
+> **Thay đổi luật của SC-006 (005).** Trước 007, `staging` bị chặn mọi bản giả lập như `production`. Vì chưa có
+> bản thật của ba cổng nên ảnh không khởi động được ở thử nghiệm; 007 mở một ngoại lệ hẹp, có điều kiện.
+
+Khi `APP_ENV=staging` **và** `STAGING_ALLOW_FAKES=true`:
+
+1. Cho phép `PLATFORM_GATEWAY_DRIVER`, `AI_GATEWAY_DRIVER`, `NOTIFICATIONS_DRIVER` = `fake`, **chỉ với**
+   `FAKE_STATE_STORE=sandbox`. `FAKE_STATE_STORE=memory` vẫn bị từ chối.
+2. `STORAGE_DRIVER=memory` và `MAIL_TRANSPORT=memory` **vẫn bị từ chối**.
+3. `APP_ENV=production` bỏ qua biến và vẫn từ chối mọi bản giả lập.
+4. Khởi động ghi một dòng cảnh báo có cấu trúc `gateways.fakes_enabled_in_staging` (tên driver, không có bí mật).
+5. Các biến `*_DRIVER` vẫn bắt buộc khai tường minh ở thử nghiệm; schema `sandbox` được áp bởi migration khi cờ bật;
+   route `/dev/fakes/*` **không** được mở ở `staging` dù cờ bật (mục 3).
+
+Biến này chỉ đặt ở `overlays/staging/config.env`; kiểm thử `smoke-deploy` lỗi nếu bản phát hành có nó.
 
 ## 3. Endpoint quản trị giả lập (chỉ `APP_ENV ∈ {development, test}`)
 
