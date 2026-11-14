@@ -1,0 +1,124 @@
+// Chặng triển khai (008 US2, contracts/deploy-pipeline.md mục 1–2): dùng chung cho `deploy/staging/deploy` (nhánh dev)
+// và `deploy/production/deploy` (nhánh master). Tham số duy nhất là TÊN MÔI TRƯỜNG, suy từ thư mục của job.
+// Không có bước chờ người xác nhận; không có logic triển khai/kiểm tra trong Groovy – mọi thứ ở ops/ci/scripts/deploy.sh,
+// ops/deploy/**, `pnpm verify`. Thông tin xác thực chỉ lấy qua withCredentials, theo thư mục của job (FR-039).
+pipeline {
+  agent { label 'deploy' }
+  options {
+    timeout(time: 60, unit: 'MINUTES')
+    timestamps()
+    // Không hủy lần đang chạy (FR-035); các lần chờ được Jenkins gộp về commit mới nhất.
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(daysToKeepStr: '400'))
+  }
+  environment {
+    // Thư mục job `deploy/<môi trường>/deploy` → tên môi trường (staging | production).
+    ENV_NAME = "${env.JOB_NAME.tokenize('/')[1]}"
+    KIND = 'release'
+  }
+  stages {
+    stage('Kiểm tra nhánh và môi trường') {
+      steps {
+        sh 'set +x; bash ops/ci/scripts/deploy.sh guard'
+      }
+    }
+    stage('Loại triển khai') {
+      steps {
+        // `hotfix` khi pull request nguồn nằm trên nhánh hotfix/* (chỉ có ý nghĩa ở production).
+        withCredentials([usernamePassword(credentialsId: 'github-app-deploy', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN')]) {
+          script {
+            env.KIND = sh(returnStdout: true, script: 'set +x; corepack enable >/dev/null 2>&1; pnpm install --frozen-lockfile >/dev/null 2>&1; node ops/ci/scripts/deployment-record.mjs kind --sha "$GIT_COMMIT" || echo release').trim()
+          }
+        }
+      }
+    }
+    stage('Cài phụ thuộc') {
+      steps {
+        sh 'set +x; corepack enable && pnpm install --frozen-lockfile'
+      }
+    }
+    stage('1 · gates') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'github-app-deploy', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN')]) {
+          sh 'set +x; bash ops/ci/scripts/deploy.sh gate-env'
+        }
+        parallel(
+          static: { sh 'bash ops/ci/scripts/run-lane.sh static' },
+          db:     { sh 'bash ops/ci/scripts/run-lane.sh db' },
+          e2e:    { sh 'bash ops/ci/scripts/run-lane.sh e2e' },
+          image:  { sh 'bash ops/ci/scripts/run-lane.sh image' }
+        )
+        // Gộp báo cáo: không đạt → dừng (môi trường giữ nguyên). Không đăng lên GitHub ở chặng này.
+        sh '''
+          set +x
+          if node ops/ci/scripts/post-gate-checks.mjs --dry-run --sha "$GIT_COMMIT" --summary gates-summary.json verify-report-*.json; then
+            node ops/ci/scripts/deployment-record.mjs step --name gates --status passed --seconds 0 --state deploy-state.json
+          else
+            node ops/ci/scripts/deployment-record.mjs step --name gates --status failed --seconds 0 --state deploy-state.json
+            exit 1
+          fi
+        '''
+      }
+    }
+    stage('Cửa môi trường') {
+      steps {
+        script {
+          // `provisioned: false` → kết thúc "chưa có môi trường đích" (không đỏ), bỏ qua các bước đổi môi trường.
+          env.PROVISIONED = sh(returnStdout: true, script: 'set +x; bash ops/ci/scripts/deploy.sh env-gate').trim()
+        }
+      }
+    }
+    stage('2 · image') {
+      when { environment name: 'PROVISIONED', value: 'true' }
+      steps {
+        lock("deploy-${env.ENV_NAME}") {
+          withCredentials([usernamePassword(credentialsId: 'registry', usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD')]) {
+            sh 'set +x; bash ops/ci/scripts/deploy.sh image'
+          }
+        }
+      }
+    }
+    stage('3-6 · migrate, rollout, web, smoke') {
+      when { environment name: 'PROVISIONED', value: 'true' }
+      steps {
+        lock("deploy-${env.ENV_NAME}") {
+          withCredentials([
+            string(credentialsId: 'kubeconfig', variable: 'KUBE_TOKEN'),
+            usernamePassword(credentialsId: 'static-site', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY'),
+            string(credentialsId: 'smoke-token', variable: 'SMOKE_TOKEN'),
+            usernamePassword(credentialsId: 'smoke-login', usernameVariable: 'SMOKE_USER', passwordVariable: 'SMOKE_PASSWORD')
+          ]) {
+            sh 'set +x; bash ops/ci/scripts/deploy.sh migrate'
+            sh 'set +x; bash ops/ci/scripts/deploy.sh rollout'
+            sh 'set +x; bash ops/ci/scripts/deploy.sh web'
+            sh 'set +x; bash ops/ci/scripts/deploy.sh smoke'
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+      // 7 · notify: bản ghi + Telegram, bọc để KHÔNG làm đổi kết quả triển khai; rồi quét bí mật trong nhật ký.
+      catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+        withEnv(["BUILD_RESULT=${currentBuild.currentResult}"]) {
+        withCredentials([
+          usernamePassword(credentialsId: 'github-app-deploy', usernameVariable: 'GITHUB_APP', passwordVariable: 'GITHUB_TOKEN'),
+          string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_BOT_TOKEN'),
+          string(credentialsId: 'telegram-chat-id', variable: 'TELEGRAM_CHAT_ID')
+        ]) {
+          sh 'set +x; bash ops/ci/scripts/deploy.sh finish'
+        }
+        }
+      }
+      sh '''
+        set +x
+        for f in lane-*.log image.log; do
+          [ -f "$f" ] && { node tooling/scan-secrets.mjs "$f" || echo "Nhật ký $f chứa bí mật – xoay thông tin liên quan"; }
+        done
+        true
+      '''
+      archiveArtifacts artifacts: 'deploy-state.json,image.json,values.yaml,migrations.txt,verify-report-*.json', allowEmptyArchive: true
+    }
+  }
+}

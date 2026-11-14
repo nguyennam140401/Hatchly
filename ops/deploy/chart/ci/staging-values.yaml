@@ -1,0 +1,11 @@
+# Giá trị GIẢ chỉ để `helm lint` / `helm template` trong cổng check:pipeline (không phải giá trị triển khai).
+image:
+  repository: registry.example.invalid/app
+  digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+appVersion: 0123456789ab
+replicas: { api: 1, worker: 1 }
+ingress: { host: api.staging.example.invalid }
+envFromSecret: app-secrets
+config:
+  APP_ENV: staging
+  CORS_ORIGINS: https://app.staging.example.invalid

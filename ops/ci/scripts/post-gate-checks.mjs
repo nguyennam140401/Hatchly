@@ -6,7 +6,7 @@
 //   - `ci/gates`: kiểm tra tổng, `success` khi mọi báo cáo `passed` (đây là kiểm tra DUY NHẤT bắt buộc).
 // Biến môi trường: GITHUB_TOKEN (mã cài đặt của GitHub App "ci", quyền Checks: ghi). Mã thoát: 0 nếu đăng được và
 // mọi cổng đạt; 1 nếu có cổng không đạt; 2 nếu không đăng được.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const API = 'https://api.github.com';
@@ -94,13 +94,23 @@ async function post(repo, sha, check, env, fetchFn) {
 }
 
 export async function run(
-  { sha, repo, buildUrl, files, dryRun },
+  { sha, repo, buildUrl, files, dryRun, summaryFile },
   env = process.env,
   fetchFn = fetch,
 ) {
   const merged = mergeReports(files.map((f) => JSON.parse(readFileSync(f, 'utf8'))));
   const checks = buildChecks(merged, { buildUrl });
   for (const c of checks) console.log(`${c.name}: ${c.conclusion} – ${c.title}`);
+  if (summaryFile) {
+    // Tóm tắt cho chặng triển khai (DeploymentRecord.gates): đạt hay không + các cổng đã dùng ngoại lệ.
+    const excepted = merged.results.filter((r) => r.status === 'excepted').map((r) => r.name);
+    const failed =
+      merged.results.find((r) => r.status === 'failed' || r.status === 'skipped')?.name ?? '';
+    writeFileSync(
+      summaryFile,
+      JSON.stringify({ passed: merged.passed, excepted, failedGate: failed }),
+    );
+  }
   if (dryRun) return merged.passed ? 0 : 1;
   if (!env.GITHUB_TOKEN) {
     console.error('✖ thiếu GITHUB_TOKEN');
@@ -133,6 +143,7 @@ async function main(argv, env) {
       buildUrl: flag('--build-url') ?? '(không rõ)',
       files,
       dryRun: argv.includes('--dry-run'),
+      summaryFile: flag('--summary'),
     },
     env,
   );

@@ -30,7 +30,8 @@ thêm bot, lấy mã nhóm.
 | `staging/registry-user`, `staging/registry-password`       | kho ảnh test                                  | `deploy/staging/`    |
 | `staging/kubeconfig`                                       | mã ServiceAccount `ci-deployer` của cụm test  | `deploy/staging/`    |
 | `staging/static-site-key-id`, `staging/static-site-secret` | khóa S3 kho tệp tĩnh test                     | `deploy/staging/`    |
-| `staging/smoke-account`, `staging/smoke-token`             | tài khoản + mã kiểm tra khói test             | `deploy/staging/`    |
+| `staging/smoke-account`, `staging/smoke-password`          | email + mật khẩu tài khoản kiểm tra nội bộ test | `deploy/staging/`  |
+| `staging/smoke-token`                                      | mã `SMOKE_TOKEN` của điểm cuối kiểm tra khói  | `deploy/staging/`    |
 | `production/…`                                             | cùng bộ tên như `staging/…`, **giá trị khác** | `deploy/production/` |
 
 Tệp `staging/*` và `production/*` chỉ cần khi môi trường tương ứng đã có (tính năng 007).

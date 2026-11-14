@@ -84,6 +84,8 @@ export function checkPipeline({ root = '.', ci = false, steps, helm = defaultHel
       // `image:` mở đầu một khối (vd values.yaml: image: { repository, digest }) → không phải tham chiếu.
       if (value === '' || (value.startsWith('{') && !value.startsWith('{{'))) return;
       // Mẫu Helm: giá trị ghép từ tham số → phải ghép theo digest.
+      // Biến thay lúc triển khai (`${IMAGE_REF}` của migrate-job.yaml): release-image.mjs luôn trả `repo@sha256:…`.
+      if (/^\$\{[A-Z_]+\}$/.test(value)) return;
       const pinned = value.includes('{{')
         ? /@\s*\{\{|digest/i.test(value)
         : value.includes('@sha256:');
@@ -277,6 +279,80 @@ export function checkPipeline({ root = '.', ci = false, steps, helm = defaultHel
       for (const problem of item.errors) fail(item.file, problem);
       if (item.errors.length === 0 && item.expired) {
         warnings.push(`${rel(item.file)}: ngoại lệ đã hết hạn – xóa tệp này`);
+      }
+    }
+  }
+
+  // ---- 10. Mẫu Kubernetes không chứa Secret (FR-039): bí mật chỉ nằm trong cụm, không trong kho ----
+  const templateFiles = [
+    ...walk(at('ops', 'deploy', 'chart', 'templates')),
+    at('ops', 'deploy', 'migrate-job.yaml'),
+  ].filter((f) => existsSync(f));
+  for (const file of templateFiles) {
+    readLines(file).forEach((text, i) => {
+      if (/^\s*kind:\s*Secret/.test(text)) {
+        fail(
+          file,
+          'mẫu Kubernetes không được định nghĩa `kind: Secret` – bí mật chỉ nằm trong cụm',
+          i + 1,
+        );
+      }
+    });
+  }
+
+  // ---- 11. .trivyignore: mỗi mục kèm lý do + ngày hết hạn còn hiệu lực (008 FR-029, T083) ----
+  const trivyIgnore = at('.trivyignore');
+  if (existsSync(trivyIgnore)) {
+    const today = (now ?? new Date()).toISOString().slice(0, 10);
+    const lines = readLines(trivyIgnore);
+    lines.forEach((text, i) => {
+      const entry = text.trim();
+      if (entry === '' || entry.startsWith('#')) return;
+      // Khối chú thích liền ngay trên mục (các dòng `#` liên tiếp).
+      const block = [];
+      for (let j = i - 1; j >= 0 && lines[j].trim().startsWith('#'); j--)
+        block.unshift(lines[j].trim());
+      const note = block.join(' | ');
+      const reason = /#\s*lý do:\s*\S.{9,}/i.test(note);
+      const expiry = /(?:expires|hết hạn):\s*(\d{4}-\d{2}-\d{2})/i.exec(note)?.[1];
+      if (!reason || !expiry) {
+        fail(
+          trivyIgnore,
+          `"${entry}" thiếu dòng chú thích ngay trên: "# lý do: … " rồi "# expires: YYYY-MM-DD"`,
+          i + 1,
+        );
+      } else if (expiry < today) {
+        fail(
+          trivyIgnore,
+          `"${entry}" đã hết hạn ${expiry} – xử lý lỗ hổng hoặc gia hạn kèm lý do mới`,
+          i + 1,
+        );
+      }
+    });
+  }
+
+  // ---- 12. Jenkinsfile.ci khớp gate-lanes.json; job được nạp đều có tệp (008 R9) ----
+  const jenkinsfileCi = at('ops', 'ci', 'Jenkinsfile.ci');
+  if (existsSync(jenkinsfileCi) && existsSync(lanesFile)) {
+    const used = new Set(
+      [...readFileSync(jenkinsfileCi, 'utf8').matchAll(/run-lane\.sh\s+(\w+)/g)].map((m) => m[1]),
+    );
+    const lanes = new Set(Object.keys(JSON.parse(readFileSync(lanesFile, 'utf8')).lanes ?? {}));
+    for (const lane of lanes) {
+      if (!used.has(lane)) fail(jenkinsfileCi, `làn "${lane}" của gate-lanes.json không được chạy`);
+    }
+    for (const lane of used) {
+      if (!lanes.has(lane))
+        fail(jenkinsfileCi, `Jenkinsfile.ci chạy làn "${lane}" không có trong gate-lanes.json`);
+    }
+  }
+  const jobsYaml = at('ops', 'ci', 'jenkins', 'casc', 'jobs.yaml');
+  if (existsSync(jobsYaml)) {
+    for (const m of readFileSync(jobsYaml, 'utf8').matchAll(
+      /\/var\/jenkins_jobs\/(\S+\.groovy)/g,
+    )) {
+      if (!existsSync(at('ops', 'ci', 'jenkins', 'jobs', m[1]))) {
+        fail(jobsYaml, `tham chiếu ${m[1]} nhưng không có tệp ops/ci/jenkins/jobs/${m[1]}`);
       }
     }
   }

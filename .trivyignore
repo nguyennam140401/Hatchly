@@ -1,0 +1,5 @@
+# Danh sách lỗ hổng được bỏ qua khi quét ảnh bằng Trivy (008 FR-029). Ban đầu RỖNG.
+# Quy ước: MỖI mục (một mã CVE mỗi dòng) phải có ngay phía trên khối chú thích gồm hai dòng:
+#   # lý do: <vì sao chưa vá được / vì sao không ảnh hưởng> (≥ 10 ký tự)
+#   # expires: YYYY-MM-DD
+# Hết ngày thì `pnpm check:pipeline` báo đỏ để buộc xử lý hoặc gia hạn kèm lý do mới. Thay đổi qua pull request có chủ mã duyệt.

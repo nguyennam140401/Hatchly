@@ -7,5 +7,6 @@ jobs:
   - file: /var/jenkins_jobs/deploy.groovy
   - file: /var/jenkins_jobs/redeploy.groovy
   - file: /var/jenkins_jobs/maintenance_ruleset_drift.groovy
+  - file: /var/jenkins_jobs/maintenance_prune_web.groovy
   - file: /var/jenkins_jobs/maintenance_prune_images.groovy
   - file: /var/jenkins_jobs/maintenance_credential_age.groovy

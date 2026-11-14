@@ -83,7 +83,7 @@ kết quả cho mỗi mục.
 | Mục | Điểm cuối | Đạt khi |
 |---|---|---|
 | `api.health` | `GET {api}/healthz`, `/readyz` | 200, `version` = SHA mong đợi |
-| `db+queue` | `POST {api}/ops/smoke` rồi `GET {api}/ops/smoke/{id}` (thăm dò ≤ 60 giây) | `processedAt` có giá trị, `apiVersion` = `workerVersion` = SHA mong đợi |
+| `db+queue` | `POST {api}/api/v1/ops/smoke` rồi `GET {api}/api/v1/ops/smoke/{id}` (`{api}` = `api.baseUrl`; đường dẫn có tiền tố `/api/v1`) (thăm dò ≤ 60 giây) | `processedAt` có giá trị, `apiVersion` = `workerVersion` = SHA mong đợi |
 | `login` | điểm cuối đăng nhập / đăng xuất hiện có | đăng nhập tài khoản kiểm tra nội bộ thành công rồi đăng xuất |
 | `web` | `GET {web}/` + tệp JS chính | 200 qua HTTPS; `index.html` khớp `releases/<sha>/index.html` |
 
