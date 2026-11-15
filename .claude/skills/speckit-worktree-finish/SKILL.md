@@ -84,6 +84,7 @@ Nếu verify lỗi hoặc còn task chưa xong: ghi rõ trong câu hỏi và đ�
    người dùng tự xóa (thường do tệp đang bị chương trình khác mở).
 6. In: commit merge (`git log --oneline -1`), nhánh hiện tại, xác nhận worktree đã xóa
    (`git worktree list`).
+7. Nhắc: hook kế tiếp `speckit-wiki-ingest` sẽ cập nhật `docs/wiki` trên `<BASE>` (không tự commit).
 
 ## 5d. Đẩy nhánh và mở pull request (khi `<BASE>` được bảo vệ)
 
@@ -94,7 +95,8 @@ Nếu verify lỗi hoặc còn task chưa xong: ghi rõ trong câu hỏi và đ�
 4. **Không** xóa worktree và nhánh lúc này. Worktree chỉ dọn **sau khi pull request đã hợp nhất** (`gh pr view <số>
    --json state` = `MERGED`): khi đó chạy lại `/speckit-worktree-finish <NNN>` để dọn bằng `remove.sh` +
    `git branch -d`.
-5. Nhắc người dùng: kiểm tra `ci/gates` trên pull request; hợp nhất do người có vai `release-manager` bấm.
+5. Nhắc: wiki chưa được cập nhật; sau khi PR merge chạy `/speckit-wiki-ingest <NNN>` trên `<BASE>`.
+6. Nhắc người dùng: kiểm tra `ci/gates` trên pull request; hợp nhất do người có vai `release-manager` bấm.
 
 ## 5b. Giữ worktree
 

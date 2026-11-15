@@ -1,6 +1,8 @@
 # Hook của Spec Kit (đọc bởi .claude/skills/speckit-*/SKILL.md).
 # Lệnh `speckit.worktree.switch` → skill /speckit-worktree-switch (dấu chấm thành gạch ngang).
 # before_implement chạy thêm speckit.worktree.sync (merge nhánh gốc vào worktree) sau switch.
+# after_implement chạy lần lượt: speckit.worktree.finish → speckit.wiki.ingest (chỉ ghi wiki khi tính năng đã
+# merge vào dev; không tự commit).
 # Quy tắc: lệnh có mã tính năng ở đầu tham số (vd `/speckit-plan 003 …`) chạy trong worktree
 # impl/<NNN-…> (tạo nếu chưa có); không có mã, hoặc /speckit-specify → chạy ở repo chính.
 hooks:
@@ -52,4 +54,8 @@ hooks:
     - extension: worktree
       command: speckit.worktree.finish
       description: Hỏi xác nhận merge --no-ff về nhánh gốc rồi xóa worktree
+      optional: false
+    - extension: wiki
+      command: speckit.wiki.ingest
+      description: Sau merge vào dev, tổng hợp tri thức tính năng vào docs/wiki (không tự commit; bỏ qua nếu chưa merge)
       optional: false
