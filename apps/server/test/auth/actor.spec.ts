@@ -12,6 +12,7 @@ const owner: Actor = {
   role: 'owner',
   emailVerified: true,
   sessionId: 's',
+  detached: false,
 };
 const collaborator: Actor = { ...owner, role: 'collaborator' };
 const support: Actor = { kind: 'staff', staffId: 'st', role: 'support', sessionId: 's2' };
@@ -58,5 +59,17 @@ describe('actor', () => {
       expect(() => requireCustomer()).toThrow(/không phải khách hàng/);
     });
     expect(() => requireCustomer()).toThrow();
+  });
+  it('009: người ở tài khoản chờ – can() luôn false dù vai trò dữ liệu là owner', () => {
+    const detached: Actor = { ...owner, detached: true };
+    withActor(detached, () => {
+      expect(can('post.approve')).toBe(false);
+      expect(can('members.manage')).toBe(false);
+      expect(can('context.view')).toBe(false);
+      expect(requireCustomer().detached).toBe(true);
+    });
+    withActor(owner, () => {
+      expect(can('post.approve')).toBe(true);
+    });
   });
 });

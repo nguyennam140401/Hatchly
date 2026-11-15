@@ -1,9 +1,11 @@
-import { useId, useState, type SyntheticEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../lib/api-client';
 import { AuthLayout } from './AuthLayout';
 import { authApi } from './auth-api';
+import { TermsCheckbox } from './ConsentNotice';
 import { PasswordField } from './PasswordField';
+import { ProviderButtons } from './ProviderButtons';
 import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 
 // Đăng ký (US1, FR-001…FR-005): ô đồng ý điều khoản KHÔNG đặt sẵn (nguyên tắc VII). Phản hồi luôn là
@@ -13,7 +15,6 @@ import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 export const TERMS_VERSION = '2026-11';
 
 export function RegisterPage() {
-  const termsId = useId();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -108,36 +109,14 @@ export function RegisterPage() {
           hint="Ít nhất 8 ký tự. Tránh mật khẩu dễ đoán như 12345678."
           error={fieldErrors.password}
         />
-        <div style={{ ...styles.field, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-          <input
-            id={termsId}
-            type="checkbox"
-            checked={accepted}
-            onChange={(e) => {
-              setAccepted(e.target.checked);
-            }}
-            style={{ width: 24, height: 24, margin: 10 }}
-            aria-invalid={fieldErrors.acceptTerms !== undefined}
-            {...(fieldErrors.acceptTerms !== undefined
-              ? { 'aria-describedby': `${termsId}-err` }
-              : {})}
-          />
-          <div>
-            <label htmlFor={termsId}>
-              Tôi đồng ý với Điều khoản sử dụng và Chính sách bảo vệ dữ liệu cá nhân
-            </label>
-            {fieldErrors.acceptTerms !== undefined && (
-              <p id={`${termsId}-err`} style={styles.error}>
-                <span aria-hidden="true">⚠ </span>
-                {fieldErrors.acceptTerms}
-              </p>
-            )}
-          </div>
-        </div>
+        <TermsCheckbox checked={accepted} onChange={setAccepted} error={fieldErrors.acceptTerms} />
         <button type="submit" style={styles.primary} disabled={busy}>
           {busy ? 'Đang tạo…' : 'Tạo tài khoản'}
         </button>
       </form>
+      {/* 009: đăng ký bằng Google/Facebook – điều khoản được hỏi lại ở bước hoàn tất sau khi quay về. */}
+      <p style={{ textAlign: 'center', color: '#4b5563' }}>hoặc</p>
+      <ProviderButtons />
       <p>
         <Link to="/login" style={styles.link}>
           Đã có tài khoản? Đăng nhập

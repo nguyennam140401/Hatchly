@@ -48,6 +48,24 @@ class DuplicateController {
 @Module({ controllers: [DuplicateController] })
 class DuplicateModule {}
 
+// 009: `allowDetached` kèm quyền là khai báo vô nghĩa (người ở tài khoản chờ không có quyền nào).
+@Controller('z')
+class DetachedWithPermissionController {
+  @Get('bad')
+  @CustomerAccess({ allowDetached: true }, 'post.approve')
+  bad(): string {
+    return 'không';
+  }
+
+  @Get('good')
+  @CustomerAccess({ allowDetached: true, allowUnverifiedEmail: true })
+  good(): string {
+    return 'ok';
+  }
+}
+@Module({ controllers: [DetachedWithPermissionController] })
+class DetachedWithPermissionModule {}
+
 async function scan(extra: (new () => unknown)[] = []) {
   const moduleRef = await Test.createTestingModule({
     imports: [ApiAppModule.forRoot(config, { accessScan: 'log' }), ...extra],
@@ -92,5 +110,34 @@ describe('Khai báo truy cập', () => {
     const app = moduleRef.createNestApplication({ logger: false });
     await expect(app.init()).rejects.toBeInstanceOf(AccessDeclarationError);
     await app.close().catch(() => undefined);
+  });
+  it('009: allowDetached kèm quyền → báo đúng tên, lỗi khởi động nêu lý do', async () => {
+    const result = await scan([DetachedWithPermissionModule]);
+    expect(result.invalid).toEqual(['DetachedWithPermissionController.bad']);
+    expect(result.missing).toEqual([]);
+    expect(new AccessDeclarationError(result).message).toContain(
+      'allowDetached kèm quyền (người ở tài khoản chờ không có quyền nào): DetachedWithPermissionController.bad',
+    );
+    await expect(
+      Test.createTestingModule({
+        imports: [
+          ApiAppModule.forRoot(config, { accessScan: 'throw' }),
+          DetachedWithPermissionModule,
+        ],
+      })
+        .compile()
+        .then(async (m) => {
+          const app = m.createNestApplication({ logger: false });
+          try {
+            await app.init();
+          } finally {
+            await app.close().catch(() => undefined);
+          }
+        }),
+    ).rejects.toThrow(AccessDeclarationError);
+  });
+
+  it('009: ApiAppModule không có khai báo allowDetached kèm quyền', async () => {
+    expect((await scan()).invalid).toEqual([]);
   });
 });

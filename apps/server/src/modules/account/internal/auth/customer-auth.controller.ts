@@ -104,7 +104,7 @@ export class CustomerAuthController {
   }
 
   @Patch('email')
-  @CustomerAccess({ allowUnverifiedEmail: true })
+  @CustomerAccess({ allowUnverifiedEmail: true, allowDetached: true })
   @HttpCode(202)
   changeEmail(
     @ValidBody(changeEmailInput) body: ChangeEmailInput,
@@ -133,7 +133,7 @@ export class CustomerAuthController {
   }
 
   @Post('logout')
-  @CustomerAccess({ allowUnverifiedEmail: true })
+  @CustomerAccess({ allowUnverifiedEmail: true, allowDetached: true })
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     const actor = requireCustomer();
@@ -143,7 +143,7 @@ export class CustomerAuthController {
   }
 
   @Post('logout-all')
-  @CustomerAccess({ allowUnverifiedEmail: true })
+  @CustomerAccess({ allowUnverifiedEmail: true, allowDetached: true })
   @HttpCode(204)
   async logoutAll(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     const actor = requireCustomer();
@@ -163,7 +163,7 @@ export class CustomerAuthController {
   }
 
   @Get('me')
-  @CustomerAccess({ allowUnverifiedEmail: true })
+  @CustomerAccess({ allowUnverifiedEmail: true, allowDetached: true })
   async me(): Promise<MeResponse> {
     const actor = requireCustomer();
     const me = await tenantTx((db) => loadMeInTx(db, actor.userId));
@@ -201,7 +201,7 @@ export class CustomerAuthController {
   }
 
   @Post('password/change')
-  @CustomerAccess()
+  @CustomerAccess({ allowDetached: true })
   @HttpCode(204)
   async change(
     @ValidBody(changePasswordInput) body: ChangePasswordInput,

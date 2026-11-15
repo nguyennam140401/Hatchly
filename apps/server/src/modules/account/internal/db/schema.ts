@@ -1,9 +1,11 @@
-// Bảng của module Tài khoản & Gói – phần xác thực (004, data-model.md mục 2–3).
-// 5 bảng tenant (RLS `tenant_isolation`, account_id đứng đầu chỉ mục trừ các ngoại lệ có lý do) và
-// 3 bảng dùng chung (nhân viên nội bộ, phiên nhân viên, bộ đếm chống dò). Bảng gốc account.accounts
-// định nghĩa ở lõi (core/db/tenant-root.ts).
+// Bảng của module Tài khoản & Gói – phần xác thực (004, data-model.md mục 2–3) và đăng nhập Google /
+// Facebook, lời mời, thành viên cũ (009, data-model.md mục 1–3).
+// 7 bảng tenant (RLS `tenant_isolation`, account_id đứng đầu chỉ mục trừ các ngoại lệ có lý do) và
+// 5 bảng dùng chung (nhân viên nội bộ, phiên nhân viên, bộ đếm chống dò, lượt đăng nhập qua nhà cung
+// cấp, yêu cầu của Meta). Bảng gốc account.accounts định nghĩa ở lõi (core/db/tenant-root.ts).
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   customType,
   index,
@@ -51,12 +53,20 @@ export const users = tenantTable(
     terms_version: text('terms_version').notNull(),
     terms_accepted_at: timestamptz('terms_accepted_at').notNull(),
     password_changed_at: timestamptz('password_changed_at'),
+    /** 009: thời điểm bị gỡ khỏi tài khoản (đang ở tài khoản chờ); NULL khi thuộc một tài khoản thật. */
+    detached_at: timestamptz('detached_at'),
+    /** 009: đã gửi thư báo trước khi xóa (FR-028a). */
+    deletion_notice_sent_at: timestamptz('deletion_notice_sent_at'),
   },
   (t) => [
     uniqueIndex('users_email_normalized_key').on(t.email_normalized),
     unique('users_account_id_id_key').on(t.account_id, t.id),
     check('users_status_check', sql`${t.status} IN ('active', 'disabled')`),
     check('users_display_name_length', sql`char_length(${t.display_name}) BETWEEN 1 AND 80`),
+    check(
+      'users_deletion_notice_check',
+      sql`${t.deletion_notice_sent_at} IS NULL OR ${t.detached_at} IS NOT NULL`,
+    ),
   ],
   {
     indexExceptions: {
@@ -79,6 +89,9 @@ export const loginIdentities = tenantTable(
     /** Chuỗi PHC argon2id; chỉ có với `password`. */
     password_hash: text('password_hash'),
     last_used_at: timestamptz('last_used_at'),
+    /** 009: email và tên phía nhà cung cấp lúc liên kết (FR-014) – không có với `password`. */
+    provider_email: text('provider_email'),
+    provider_display_name: text('provider_display_name'),
   },
   (t) => [
     uniqueIndex('login_identities_provider_subject_key').on(t.provider, t.provider_subject),
@@ -90,6 +103,10 @@ export const loginIdentities = tenantTable(
     check(
       'login_identities_password_hash_check',
       sql`(${t.provider} = 'password') = (${t.password_hash} IS NOT NULL)`,
+    ),
+    check(
+      'login_identities_provider_profile_check',
+      sql`${t.provider} <> 'password' OR (${t.provider_email} IS NULL AND ${t.provider_display_name} IS NULL)`,
     ),
   ],
   {
@@ -105,9 +122,10 @@ export const memberships = tenantTable(
   account,
   'memberships',
   {
-    user_id: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    // 009 (data-model mục 1): MÃ THAM CHIẾU, không khóa ngoại. Sau khi gỡ, dòng `users` sang tài khoản
+    // chờ còn dòng `removed` ở lại tài khoản cũ; khóa ngoại ON DELETE CASCADE sẽ xóa dòng này ở TENANT
+    // KHÁC khi người dùng bị xóa sau 90 ngày. Mọi ghi vào bảng này đi qua dịch vụ/hàm của module.
+    user_id: uuid('user_id').notNull(),
     role: text('role', { enum: ['owner', 'collaborator'] }).notNull(),
     seat: smallint('seat').notNull(),
     status: text('status', { enum: ['active', 'removed', 'disabled'] })
@@ -136,6 +154,10 @@ const SESSION_REVOKE_REASONS = [
   'email_verified',
   'member_removed',
   'user_disabled',
+  // 009
+  'identity_link_reset',
+  'account_joined',
+  'account_claimed',
 ] as const;
 export type SessionRevokeReason = (typeof SESSION_REVOKE_REASONS)[number];
 
@@ -155,6 +177,12 @@ export const sessions = tenantTable(
     revoke_reason: text('revoke_reason', { enum: SESSION_REVOKE_REASONS }),
     /** vd "Chrome · Android", ≤ 60 ký tự – không lưu chuỗi UA đầy đủ. */
     user_agent_summary: text('user_agent_summary'),
+    /**
+     * 009 (research R11): lần xác nhận lại danh tính gần nhất. Phiên "mới xác nhận" khi
+     * coalesce(reauthenticated_at, created_at) ≥ now() − REAUTH_WINDOW_MINUTES. Phiên cấp do xoay vòng
+     * (claim, accept-existing) mang mốc của phiên cũ.
+     */
+    reauthenticated_at: timestamptz('reauthenticated_at'),
   },
   (t) => [
     uniqueIndex('sessions_token_hash_key').on(t.token_hash),
@@ -207,6 +235,86 @@ export const authTokens = tenantTable(
       auth_tokens_token_hash_key: 'tra mã một lần trước khi biết tenant – R8',
     },
   },
+);
+
+export const INVITATION_STATUSES = ['pending', 'accepted', 'cancelled', 'expired'] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+
+/**
+ * Lời mời cộng tác viên (009, data-model mục 2). Ghế trên lời mời + chỉ mục duy nhất theo ghế là chốt
+ * chặn giới hạn 2 chỗ (research R9); mọi chuyển trạng thái là `UPDATE … WHERE status = 'pending'`.
+ */
+export const invitations = tenantTable(
+  account,
+  'invitations',
+  {
+    /** Dạng hiển thị. */
+    email: text('email').notNull(),
+    /** Cùng cách chuẩn hóa với `users`. */
+    email_normalized: text('email_normalized').notNull(),
+    invited_by_user_id: uuid('invited_by_user_id').notNull(),
+    role: text('role', { enum: ['collaborator'] })
+      .notNull()
+      .default('collaborator'),
+    seat: smallint('seat').notNull(),
+    status: text('status', { enum: INVITATION_STATUSES }).notNull().default('pending'),
+    /** SHA-256 của mã trong liên kết; đổi mỗi lần "Gửi lại". */
+    token_hash: bytea('token_hash').notNull(),
+    /** Tên cửa hàng lúc gửi (research R17). */
+    account_label: text('account_label'),
+    last_sent_at: timestamptz('last_sent_at').notNull(),
+    expires_at: timestamptz('expires_at').notNull(),
+    accepted_user_id: uuid('accepted_user_id'),
+    /** Thời điểm rời `pending`. */
+    closed_at: timestamptz('closed_at'),
+  },
+  (t) => [
+    uniqueIndex('invitations_account_seat_pending_key')
+      .on(t.account_id, t.seat)
+      .where(sql`status = 'pending'`),
+    uniqueIndex('invitations_account_email_pending_key')
+      .on(t.account_id, t.email_normalized)
+      .where(sql`status = 'pending'`),
+    uniqueIndex('invitations_token_hash_key').on(t.token_hash),
+    index('invitations_email_pending_idx')
+      .on(t.email_normalized)
+      .where(sql`status = 'pending'`),
+    check('invitations_role_check', sql`${t.role} = 'collaborator'`),
+    check('invitations_seat_range', sql`${t.seat} BETWEEN 1 AND 2`),
+    check(
+      'invitations_status_check',
+      sql.raw(`status IN (${INVITATION_STATUSES.map((s) => `'${s}'`).join(', ')})`),
+    ),
+    check(
+      'invitations_account_label_length',
+      sql`${t.account_label} IS NULL OR char_length(${t.account_label}) <= 120`,
+    ),
+  ],
+  {
+    indexExceptions: {
+      invitations_token_hash_key: 'tra lời mời theo mã trước khi biết tenant – FR-022',
+      invitations_email_pending_idx:
+        'liệt kê lời mời đang chờ của một email cho người ở tài khoản chờ – FR-027',
+    },
+  },
+);
+
+/**
+ * Tên của thành viên đã gỡ (009, research R8) – để bài/media họ tạo vẫn hiện tên người tạo. Không lưu
+ * email. Xóa khi người đó tham gia lại, hoặc sau 12 tháng.
+ */
+export const formerMembers = tenantTable(
+  account,
+  'former_members',
+  {
+    /** Mã tham chiếu, KHÔNG khóa ngoại: người dùng đã rời tenant, có thể đã bị xóa. */
+    user_id: uuid('user_id').notNull(),
+    /** Tên lúc bị gỡ. */
+    display_name: text('display_name').notNull(),
+    removed_at: timestamptz('removed_at').notNull().defaultNow(),
+    removed_by_user_id: uuid('removed_by_user_id').notNull(),
+  },
+  (t) => [unique('former_members_account_user_key').on(t.account_id, t.user_id)],
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -293,6 +401,11 @@ export const THROTTLE_KINDS = [
   'mail_reset',
   'mail_verify',
   'register_ip',
+  // 009 (data-model mục 5)
+  'mail_invite',
+  'invite_account',
+  'mail_link_confirm',
+  'oauth_start_ip',
 ] as const;
 export type ThrottleKind = (typeof THROTTLE_KINDS)[number];
 
@@ -315,4 +428,122 @@ export const authThrottle = sharedTable(
     ),
   ],
   { reason: 'Bộ đếm chống dò theo email/địa chỉ mạng trước khi biết tenant – FR-007' },
+);
+
+export const OAUTH_PROVIDERS = ['google', 'facebook'] as const;
+export const OAUTH_PURPOSES = ['login', 'link', 'reauth', 'invite'] as const;
+export type OAuthPurpose = (typeof OAUTH_PURPOSES)[number];
+export const OAUTH_FLOW_STAGES = [
+  'started',
+  'signed_in',
+  'needs_signup',
+  'needs_email',
+  'needs_link_confirm',
+  'awaiting_email',
+  'completed',
+  'failed',
+] as const;
+export type OAuthFlowStage = (typeof OAUTH_FLOW_STAGES)[number];
+
+const quoted = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
+
+/**
+ * Lượt đăng nhập qua nhà cung cấp + phần chờ xác nhận (009, research R5, data-model mục 3). Sống ≤ 24
+ * giờ, việc định kỳ xóa. Mọi chuyển giai đoạn: `UPDATE … WHERE id AND stage = $expected AND
+ * expires_at > now()`. Cột tài khoản đích tên `target_tenant_id` (không phải `account_id`) vì đây là
+ * bảng dùng chung, không có RLS.
+ */
+export const oauthFlows = sharedTable(
+  account,
+  'oauth_flows',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidV7()),
+    /** SHA-256 của cookie `__Host-oauth`. */
+    flow_token_hash: bytea('flow_token_hash').notNull(),
+    /** SHA-256 của `state` gửi nhà cung cấp. */
+    state_hash: bytea('state_hash').notNull(),
+    /** Chỉ Google (PKCE); về NULL ngay khi quay về. */
+    code_verifier: text('code_verifier'),
+    provider: text('provider', { enum: OAUTH_PROVIDERS }).notNull(),
+    purpose: text('purpose', { enum: OAUTH_PURPOSES }).notNull(),
+    stage: text('stage', { enum: OAUTH_FLOW_STAGES }).notNull().default('started'),
+    /** Người đang đăng nhập (`link`, `reauth`). */
+    actor_user_id: uuid('actor_user_id'),
+    /** Lời mời (`invite`). */
+    invitation_id: uuid('invitation_id'),
+    terms_version: text('terms_version'),
+    terms_accepted_at: timestamptz('terms_accepted_at'),
+    /** Có sau khi quay về. */
+    provider_subject: text('provider_subject'),
+    provider_email: text('provider_email'),
+    provider_email_verified: boolean('provider_email_verified').notNull().default(false),
+    provider_display_name: text('provider_display_name'),
+    /** Người dùng nhập ở bước hoàn tất. */
+    claimed_email: text('claimed_email'),
+    claimed_email_normalized: text('claimed_email_normalized'),
+    display_name: text('display_name'),
+    /** Người dùng đã có cần xác nhận liên kết. */
+    target_user_id: uuid('target_user_id'),
+    target_tenant_id: uuid('target_tenant_id'),
+    /** Cách (a) của FR-011 – xác nhận bằng mật khẩu – được phép. */
+    password_allowed: boolean('password_allowed').notNull().default(false),
+    /** Băm mã trong liên kết gửi email. */
+    mail_token_hash: bytea('mail_token_hash'),
+    /** Mã kết quả/lỗi cho web (không phải mã của nhà cung cấp). */
+    result_code: text('result_code'),
+    expires_at: timestamptz('expires_at').notNull(),
+    created_at: timestamptz('created_at').notNull().defaultNow(),
+    updated_at: timestamptz('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdateFn(() => sql`now()`),
+    closed_at: timestamptz('closed_at'),
+  },
+  (t) => [
+    uniqueIndex('oauth_flows_flow_token_hash_key').on(t.flow_token_hash),
+    uniqueIndex('oauth_flows_mail_token_hash_key').on(t.mail_token_hash),
+    index('oauth_flows_expires_at_idx').on(t.expires_at),
+    check('oauth_flows_provider_check', sql.raw(`provider IN (${quoted(OAUTH_PROVIDERS)})`)),
+    check('oauth_flows_purpose_check', sql.raw(`purpose IN (${quoted(OAUTH_PURPOSES)})`)),
+    check('oauth_flows_stage_check', sql.raw(`stage IN (${quoted(OAUTH_FLOW_STAGES)})`)),
+  ],
+  {
+    reason:
+      'Lượt đăng nhập qua nhà cung cấp và yêu cầu xác nhận liên kết xảy ra trước khi biết tenant – FR-007, FR-010',
+  },
+);
+
+/**
+ * Yêu cầu gỡ ứng dụng / xóa dữ liệu của Meta (009, FR-009a). Chỉ lưu HMAC của mã người dùng Facebook
+ * (nhận ra thông báo lặp) và mã xác nhận ngẫu nhiên – không có mã rõ. Giữ 12 tháng.
+ */
+export const metaDeletionRequests = sharedTable(
+  account,
+  'meta_deletion_requests',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidV7()),
+    /** Ngẫu nhiên 16 byte, base64url. */
+    confirmation_code: text('confirmation_code').notNull(),
+    kind: text('kind', { enum: ['deauthorize', 'data_deletion'] }).notNull(),
+    subject_hmac: bytea('subject_hmac').notNull(),
+    /** Tạo với `no_data`; chuyển `completed` khi đã xóa được danh tính. */
+    status: text('status', { enum: ['completed', 'no_data'] })
+      .notNull()
+      .default('no_data'),
+    received_at: timestamptz('received_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('meta_deletion_requests_confirmation_code_key').on(t.confirmation_code),
+    unique('meta_deletion_requests_kind_subject_key').on(t.kind, t.subject_hmac),
+    check('meta_deletion_requests_kind_check', sql`${t.kind} IN ('deauthorize', 'data_deletion')`),
+    check('meta_deletion_requests_status_check', sql`${t.status} IN ('completed', 'no_data')`),
+  ],
+  {
+    reason:
+      'Yêu cầu của Meta không gắn tài khoản khách hàng và trang trạng thái là công khai – FR-009a',
+  },
 );

@@ -80,6 +80,7 @@ export async function makePlatformHarness(
           role: 'owner',
           emailVerified: true,
           sessionId: uuidV7(),
+          detached: false,
         },
       },
       fn,

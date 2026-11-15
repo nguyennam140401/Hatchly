@@ -244,3 +244,100 @@ export interface ErrorBody {
     retryAfterSeconds?: number;
   };
 }
+
+// ----- 009: đăng nhập qua nhà cung cấp giả lập (OAUTH_DRIVER=fake) -----
+
+export type FakeScenario =
+  | 'google_verified'
+  | 'google_unverified'
+  | 'facebook_with_email'
+  | 'facebook_no_email'
+  | 'cancel'
+  | 'provider_down';
+
+export interface OAuthScenario {
+  scenario: FakeScenario;
+  sub?: string;
+  email?: string;
+  name?: string;
+}
+
+/** Nhà cung cấp của một kịch bản (`cancel`, `provider_down` mặc định Google). */
+export function providerOf(scenario: FakeScenario): 'google' | 'facebook' {
+  return scenario.startsWith('facebook') ? 'facebook' : 'google';
+}
+
+/** Đường dẫn + truy vấn của một địa chỉ tuyệt đối (để gọi lại máy chủ kiểm thử). */
+export function pathOf(url: string): string {
+  const u = new URL(url);
+  return `${u.pathname}${u.search}`;
+}
+
+/**
+ * Đi tiếp từ `authorizationUrl` của bản giả lập: trang giả lập (chọn kịch bản) → đường quay về thật.
+ * Trả phản hồi 303 của đường quay về; cookie của lượt/phiên nằm trong `agent`.
+ */
+export async function followFakeProvider(
+  agent: Agent,
+  authorizationUrl: string,
+  input: OAuthScenario,
+): Promise<TestResponse> {
+  const authorize = new URL(authorizationUrl);
+  authorize.searchParams.set('scenario', input.scenario);
+  for (const key of ['sub', 'email', 'name'] as const) {
+    const value = input[key];
+    if (value !== undefined) authorize.searchParams.set(key, value);
+  }
+  const page = await agent.get(`${authorize.pathname}${authorize.search}`);
+  if (page.status !== 302) throw new Error(`fake authorize ${page.status} ${page.text}`);
+  return agent.get(pathOf(page.headers.location!));
+}
+
+/**
+ * Chạy trọn vòng `start` → trang giả lập → `callback` với `purpose: 'login'`. Trả `agent` giữ cookie
+ * (`__Host-oauth`, và `__Host-sid` nếu danh tính đã liên kết) cùng phản hồi của đường quay về.
+ */
+export async function oauthLogin(
+  t: TestApp,
+  input: OAuthScenario & { agent?: Agent; provider?: 'google' | 'facebook' },
+): Promise<{ agent: Agent; callback: TestResponse }> {
+  const agent = input.agent ?? t.agent();
+  const provider = input.provider ?? providerOf(input.scenario);
+  const start = await agent.post(`/api/v1/auth/oauth/${provider}/start`, { purpose: 'login' });
+  if (start.status !== 200) throw new Error(`oauth start ${start.status} ${start.text}`);
+  const { authorizationUrl } = start.body as { authorizationUrl: string };
+  return { agent, callback: await followFakeProvider(agent, authorizationUrl, input) };
+}
+
+export interface PendingBody {
+  provider: 'google' | 'facebook';
+  purpose: string;
+  stage: string;
+  suggestedDisplayName: string | null;
+  suggestedEmail: string | null;
+  emailRequired: boolean;
+  methods: string[];
+  hint: string | null;
+  error: { code: string; message: string; actions: { kind: string; label: string }[] } | null;
+}
+
+export async function oauthPending(agent: Agent): Promise<PendingBody> {
+  const res = await agent.get('/api/v1/auth/oauth/pending');
+  if (res.status !== 200) throw new Error(`pending ${res.status} ${res.text}`);
+  return res.body as PendingBody;
+}
+
+/** Đăng ký người MỚI bằng nhà cung cấp giả lập (email đã xác minh) – trả tác nhân đã đăng nhập. */
+export async function oauthSignup(
+  t: TestApp,
+  input: OAuthScenario & { displayName?: string },
+): Promise<{ agent: Agent; me: MeBody }> {
+  const { agent } = await oauthLogin(t, input);
+  const res = await agent.post('/api/v1/auth/oauth/signup', {
+    displayName: input.displayName ?? 'Chủ tiệm',
+    acceptTerms: true,
+    termsVersion: '2026-11',
+  });
+  if (res.status !== 200) throw new Error(`oauth signup ${res.status} ${res.text}`);
+  return { agent, me: res.body as MeBody };
+}

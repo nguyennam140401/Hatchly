@@ -43,6 +43,18 @@ describe('tooling/scan-secrets.mjs', () => {
     expect(at('clean.tfvars')).toEqual([]);
   });
 
+  it('009: tham số đường quay về OAuth và signed_request chỉ bị bắt trong tệp nhật ký', () => {
+    const found = scan([join(dir, 'leaky-oauth.ndjson')], '/').map((f) => [f.line, f.name]);
+    expect(found).toEqual([
+      // Dòng 1 có cả `state=xyz` nhưng quá ngắn để là giá trị thật – chỉ `code` bị bắt.
+      [1, 'mã ủy quyền OAuth lọt nhật ký'],
+      [2, 'state OAuth lọt nhật ký'],
+      [3, 'signed_request của Meta lọt nhật ký'],
+    ]);
+    // Mã nguồn và kiểm thử dựng URL có `?code=` là bình thường (không phải nhật ký).
+    expect(scan([join(dir, 'canary-in-source.ts')], '/')).toEqual([]);
+  });
+
   it('không bắt tên cookie hay tiền tố đứng một mình', () => {
     expect(scan([join(dir, 'clean.ts')], '/')).toEqual([]);
   });

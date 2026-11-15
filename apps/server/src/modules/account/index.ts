@@ -8,3 +8,5 @@ export {
   type StaffOps,
   type StaffSummaryRow,
 } from './internal/auth/staff-ops';
+// 009: trang ủy quyền giả của Google/Facebook – tầng ghép CHỈ đăng ký khi OAUTH_DRIVER=fake.
+export { FakeAuthorizeController } from './internal/auth/oauth/fake-authorize.controller';

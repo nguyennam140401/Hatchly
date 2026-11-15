@@ -4,6 +4,7 @@ import { ApiError } from '../../lib/api-client';
 import { AuthLayout } from './AuthLayout';
 import { authApi, safeNext } from './auth-api';
 import { PasswordField } from './PasswordField';
+import { ProviderButtons } from './ProviderButtons';
 import { ErrorNotice, styles, TextField } from './ui';
 
 // Đăng nhập (US2, FR-006, FR-007). Thành công → quay về `next` NỘI BỘ hợp lệ hoặc "/"; email chưa
@@ -64,6 +65,9 @@ export function LoginPage() {
           {busy ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
       </form>
+      {/* 009: đăng nhập bằng Google/Facebook (không có ở lối vào nhân viên nội bộ). */}
+      <p style={{ textAlign: 'center', color: '#4b5563' }}>hoặc</p>
+      <ProviderButtons />
       <p style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
         <Link to="/forgot-password" style={styles.link}>
           Quên mật khẩu?

@@ -98,6 +98,77 @@ Mọi dòng nhật ký có `actor_id`, `actor_kind`. Pino che `cookie`, `set-coo
 băm vào nhật ký hay `infra.audit_log.metadata` (chỉ `{ ip, ua_family, reason }`). Kiểm thử
 `test/auth/auth-secrets-in-logs.e2e.spec.ts` và `pnpm check:secrets` chặn hồi quy.
 
+## Đăng nhập Google / Facebook, cách đăng nhập, lời mời (009)
+
+Mã ở `modules/account/internal/auth/` (thư mục `oauth/` cho vòng đăng nhập). Hợp đồng HTTP:
+`specs/009-social-login-members/contracts/auth-http-api.md`.
+
+**Vòng đăng nhập.** `POST /auth/oauth/{provider}/start` mở một dòng `account.oauth_flows` (bảng dùng
+chung, chỉ qua `authTx`) và đặt cookie `__Host-oauth` (`HttpOnly; Secure; SameSite=Lax`, 30 phút). Nhà
+cung cấp chuyển về `GET /auth/oauth/{provider}/callback`, điểm cuối này **luôn 303** về `/oauth/result`
+không tham số; web đọc kết quả bằng `GET /auth/oauth/pending`. CSDL chỉ giữ SHA-256 của cookie, `state`
+và mã trong thư. Giai đoạn (`oauth-flow.service.ts`, mọi chuyển đổi là cập nhật có điều kiện):
+
+```text
+started → signed_in | needs_signup | needs_email | needs_link_confirm | completed | failed
+needs_signup → completed          needs_email → awaiting_email
+needs_link_confirm → completed | awaiting_email          awaiting_email → completed
+(mọi giai đoạn chưa kết thúc) → failed
+```
+
+**Không tự gộp tài khoản.** Email của nhà cung cấp trùng người dùng đã có → `needs_link_confirm`: phải
+nhập đúng mật khẩu (chỉ khi người đó có mật khẩu và email đã xác minh) hoặc mở liên kết gửi tới email
+đó. Nhánh email **tự nhập** trả lời giống hệt nhau dù email đã có người dùng hay chưa.
+
+**Độ tin của email.** Google: đúng giá trị `email_verified` của ID token. Facebook: có trả email = đã
+xác minh, không trả = chưa. Quy tắc Facebook nằm ở **một dòng** trong
+`oauth/arctic.providers.ts` (`emailVerified: hasEmail`) – đổi ở đó nếu giả định của research R3 sai.
+
+**Bản giả lập.** `OAUTH_DRIVER=fake` (mặc định ở development/test; staging/production từ chối khởi
+động). Trang `GET /api/v1/dev/oauth/fake/authorize` cho chọn kịch bản `google_verified`,
+`google_unverified`, `facebook_with_email`, `facebook_no_email`, `cancel`, `provider_down`; thêm
+`&email=…&name=…&sub=…` để dựng tình huống. Kiểm thử dùng `oauthLogin(...)` trong
+`test/auth/helpers/app.ts`. Ở staging/production chưa đặt `OAUTH_DRIVER` thì đăng nhập Google/Facebook ở
+trạng thái "chưa bật": `start` trả 503 `PROVIDER_UNAVAILABLE`, đăng nhập bằng email vẫn chạy.
+
+**Tài khoản chờ và `allowDetached`.** Cộng tác viên bị gỡ được chuyển sang một tài khoản
+`status = 'unclaimed'` của riêng họ (`CustomerActor.detached = true`). Mặc định mọi điểm cuối trả 403
+`NO_ACCOUNT` cho họ. Điểm cuối **cá nhân** (không đụng dữ liệu kinh doanh) mở bằng:
+
+```ts
+@CustomerAccess({ allowDetached: true })                              // không kèm quyền
+@CustomerAccess({ allowDetached: true, allowUnverifiedEmail: true })
+```
+
+`allowDetached` kèm quyền là lỗi khi khởi động. Điểm cuối nghiệp vụ mới **không** thêm cờ này.
+
+**Xác nhận lại danh tính.** Liên kết, gỡ cách đăng nhập và tạo mật khẩu đòi phiên "mới xác nhận":
+`coalesce(sessions.reauthenticated_at, created_at)` trong `REAUTH_WINDOW_MINUTES` (10) phút, đọc dòng
+phiên trong giao dịch. Chưa đủ → 403 `REAUTH_REQUIRED` (hành động `reauth`). Phiên cấp do xoay vòng
+(`claim`, `accept-existing`) mang mốc của phiên cũ.
+
+**Ghế.** Ghế vai trò `active` ∪ ghế lời mời `pending` ⊆ {1, 2}. Mọi thao tác đổi ghế lấy
+`pg_advisory_xact_lock(hashtextextended('account.seats:' || account_id, 0))` trước khi đọc ghế
+(`lockSeats` trong `invitations.service.ts`, cùng biểu thức trong migration `0016`).
+
+**Việc nền** (`modules/account/jobs.ts`): `account.mail_notice` (`notify`, tenant – thư không mã, dữ
+liệu việc chỉ có mã tham chiếu), `account.auth_housekeeping` (mỗi 10 phút), `account.detached_users`
+(mỗi giờ – báo trước 7 ngày rồi xóa người ở tài khoản chờ sau 90 ngày).
+
+**Thông báo của Meta.** `POST /auth/facebook/deauthorize` và `POST /auth/facebook/data-deletion` là máy
+gọi máy, được miễn kiểm tra nguồn gửi bằng danh sách **cố định** `META_CALLBACK_PATHS` trong
+`core/auth/origin-check.middleware.ts`; tính xác thực dựa vào chữ ký `signed_request`
+(`parseSignedRequest`). Không thêm đường dẫn nào khác vào danh sách này.
+
+**Biến cấu hình**: `OAUTH_DRIVER`, `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_APP_ID/SECRET`,
+`FACEBOOK_GRAPH_VERSION`, `OAUTH_FLOW_TTL_MINUTES`, `LINK_CONFIRM_TTL_MINUTES`, `REAUTH_WINDOW_MINUTES`,
+`INVITE_TTL_DAYS`, `INVITE_MAX_PER_ACCOUNT_PER_DAY`, `DETACHED_RETENTION_DAYS`, `DETACHED_NOTICE_DAYS`
+(`apps/server/.env.example`).
+
+**Nhật ký.** Nhật ký yêu cầu của `/api/v1/auth/oauth/*` và `/api/v1/dev/oauth/*` không ghi chuỗi truy
+vấn; `signed_request`, `code_verifier`, `invitationToken` luôn bị che. `code`/`state` chỉ bị che ở tham
+số truy vấn (tên quá chung – che ở mọi nơi sẽ làm mất mã lỗi trong nhật ký).
+
 ## Kiểm thử
 
 - Đơn vị: `pnpm --filter @app/server test` (guard với `SessionResolver` giả, quyền, cookie, mật khẩu…).

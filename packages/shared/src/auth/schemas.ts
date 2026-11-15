@@ -71,3 +71,62 @@ export type ChangePasswordInput = z.infer<typeof changePasswordInput>;
 
 export const staffLoginInput = loginInput;
 export type StaffLoginInput = LoginInput;
+
+// ----- 009: đăng nhập Google/Facebook, cách đăng nhập, thành viên, lời mời -----
+
+const AcceptTerms = {
+  /** Ô đồng ý điều khoản – web KHÔNG đặt sẵn (nguyên tắc VII). */
+  acceptTerms: z.literal(true),
+  termsVersion: z.string().min(1).max(40),
+};
+
+/** Bắt đầu vòng đăng nhập; `invite`: phải đồng ý điều khoản TRƯỚC khi sang nhà cung cấp. */
+export const oauthStartRequest = z.discriminatedUnion('purpose', [
+  z.object({ purpose: z.literal('login') }),
+  z.object({ purpose: z.literal('invite'), invitationToken: OneTimeTokenInput, ...AcceptTerms }),
+]);
+export type OAuthStartRequest = z.infer<typeof oauthStartRequest>;
+
+/** `email` chỉ dùng ở giai đoạn `needs_email` (nhà cung cấp không trả email đã xác minh). */
+export const oauthSignupRequest = z.object({
+  displayName: DisplayNameInput,
+  email: EmailInput.optional(),
+  ...AcceptTerms,
+});
+export type OAuthSignupRequest = z.infer<typeof oauthSignupRequest>;
+
+export const oauthLinkPasswordRequest = z.object({ password: ExistingPasswordInput });
+export type OAuthLinkPasswordRequest = z.infer<typeof oauthLinkPasswordRequest>;
+
+export const oauthConfirmRequest = z.object({ token: OneTimeTokenInput });
+export type OAuthConfirmRequest = z.infer<typeof oauthConfirmRequest>;
+
+export const loginMethodStartRequest = z.object({ purpose: z.enum(['link', 'reauth']) });
+export type LoginMethodStartRequest = z.infer<typeof loginMethodStartRequest>;
+
+export const reauthRequest = z.object({ password: ExistingPasswordInput });
+export type ReauthRequest = z.infer<typeof reauthRequest>;
+
+export const inviteRequest = z.object({ email: EmailInput });
+export type InviteRequest = z.infer<typeof inviteRequest>;
+
+export const invitationPreviewRequest = z.object({ token: OneTimeTokenInput });
+export type InvitationPreviewRequest = z.infer<typeof invitationPreviewRequest>;
+
+export const invitationAcceptRequest = z.object({
+  token: OneTimeTokenInput,
+  displayName: DisplayNameInput,
+  password: NewPasswordInput,
+  ...AcceptTerms,
+});
+export type InvitationAcceptRequest = z.infer<typeof invitationAcceptRequest>;
+
+/** Người đang ở tài khoản chờ chấp nhận bằng mã trong liên kết HOẶC mã lời mời trong danh sách của họ. */
+export const acceptExistingRequest = z.union([
+  z.object({ token: OneTimeTokenInput }).strict(),
+  z.object({ invitationId: z.uuid() }).strict(),
+]);
+export type AcceptExistingRequest = z.infer<typeof acceptExistingRequest>;
+
+export const claimAccountRequest = z.object(AcceptTerms);
+export type ClaimAccountRequest = z.infer<typeof claimAccountRequest>;

@@ -40,7 +40,9 @@ export class PasswordResetService {
     if (!(await this.throttle.consume('register_ip', `forgot:${meta.ip}`))) throw rateLimited();
     const email = normalizeEmail(emailInput);
     const found = email === null ? undefined : await lookupEmail(email.emailNormalized);
-    if (email === null || found?.password_hash == null) return { status: 'check_email' };
+    // 009 (research R14): người chưa có mật khẩu (chỉ dùng Google/Facebook) cũng nhận thư – để TẠO
+    // mật khẩu. Phản hồi không đổi.
+    if (email === null || found === undefined) return { status: 'check_email' };
     if (!(await this.throttle.consume('mail_reset', email.emailNormalized))) {
       return { status: 'check_email' };
     }
@@ -55,7 +57,8 @@ export class PasswordResetService {
         }),
       ),
     );
-    this.mail.sendAfterCommit('resetPassword', email.email, {
+    const template = found.password_hash === null ? 'setPassword' : 'resetPassword';
+    this.mail.sendAfterCommit(template, email.email, {
       displayName: found.display_name,
       token,
       userId: found.user_id,
@@ -72,10 +75,11 @@ export class PasswordResetService {
     if (found === undefined) throw tokenInvalid('reset_password');
     const normalized = assertStrongPassword('newPassword', newPassword, found.email_normalized);
     const passwordHash = await this.hasher.hash(normalized);
+    let created = false;
     const result = await runInAccountScope(found.account_id, () =>
       tenantTx(async (db) => {
         if (!(await consumeToken(db, found.token_id))) throw tokenInvalid('reset_password');
-        await db
+        const updated = await db
           .update(loginIdentities)
           .set({ password_hash: passwordHash })
           .where(
@@ -83,7 +87,19 @@ export class PasswordResetService {
               eq(loginIdentities.user_id, found.user_id),
               eq(loginIdentities.provider, 'password'),
             ),
-          );
+          )
+          .returning({ id: loginIdentities.id });
+        // 009: chưa có cách đăng nhập bằng mật khẩu → tạo mới (FR-017).
+        created = updated.length === 0;
+        if (created) {
+          await db.insert(loginIdentities).values({
+            account_id: found.account_id,
+            user_id: found.user_id,
+            provider: 'password',
+            provider_subject: found.user_id,
+            password_hash: passwordHash,
+          });
+        }
         await db
           .update(users)
           .set({ password_changed_at: sql`now()` })
@@ -98,7 +114,7 @@ export class PasswordResetService {
           actorType: 'user',
           actorId: found.user_id,
           accountId: found.account_id,
-          action: 'auth.password.reset',
+          action: created ? 'auth.password.set' : 'auth.password.reset',
           ip: meta.ip,
           uaFamily: userAgentSummary(meta.userAgent),
         });

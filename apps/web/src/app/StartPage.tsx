@@ -79,6 +79,21 @@ export function StartPage() {
           >
             Hồ sơ kinh doanh
           </Link>
+          {session.me.permissions.includes('members.manage') && (
+            <Link
+              to="/settings/members"
+              style={{
+                ...retryButton,
+                background: '#fff',
+                color: '#1d4ed8',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Thành viên
+            </Link>
+          )}
           <a
             href="/settings/security"
             style={{

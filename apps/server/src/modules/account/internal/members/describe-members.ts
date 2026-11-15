@@ -1,6 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import { tenantTx } from '../../../../core';
-import { memberships, users } from '../db/schema';
+import { formerMembers, memberships, users } from '../db/schema';
 
 // Tên hiển thị + trạng thái thành viên cho module khác (006 contracts/context-public-api.md mục 3).
 // Chạy trong tenantTx CỦA NGƯỜI GỌI (dùng lại giao dịch nếu đang mở) – không nhận accountId: RLS chỉ
@@ -35,11 +35,21 @@ export async function describeMembers(userIds: readonly string[]): Promise<Membe
       .from(users)
       .leftJoin(memberships, eq(memberships.user_id, users.id))
       .where(inArray(users.id, ids));
-    return rows.map((r) => ({
+    const present = rows.map((r) => ({
       userId: r.userId,
       displayName: r.displayName,
       status: toStatus(r.memberStatus, r.userStatus),
     }));
+    // 009: người đã bị gỡ không còn dòng `users` trong tenant này (đã sang tài khoản chờ) – tên lúc bị
+    // gỡ nằm ở `former_members`, để bài/media họ tạo vẫn hiển thị được tác giả.
+    const seen = new Set(present.map((p) => p.userId));
+    const missing = ids.filter((id) => !seen.has(id));
+    if (missing.length === 0) return present;
+    const former = await db
+      .select({ userId: formerMembers.user_id, displayName: formerMembers.display_name })
+      .from(formerMembers)
+      .where(inArray(formerMembers.user_id, missing));
+    return [...present, ...former.map((f) => ({ ...f, status: 'removed' as const }))];
   });
 }
 

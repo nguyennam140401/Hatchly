@@ -1,0 +1,23 @@
+# Quy tắc cảnh báo của đăng nhập qua nhà cung cấp (009 T086, contracts/module-api.md mục 6, hiến pháp VIII).
+# Nạp vào Prometheus cùng queue.rules.yml. Ngưỡng nằm trong tệp này – đổi không cần sửa mã.
+#
+# Tên chỉ số Prometheus suy từ chỉ số OpenTelemetry (meter `app.account`): dấu chấm → gạch dưới, bộ đếm
+# thêm `_total`, histogram có đơn vị giây thêm `_seconds`. Nhãn chỉ có `provider`/`outcome`/`event`/
+# `template` – KHÔNG có account_id, email hay mã người dùng (FR-031).
+groups:
+  - name: auth
+    rules:
+      - alert: AuthOAuthProviderErrorRateHigh
+        expr: >-
+          sum by (provider) (rate(auth_oauth_total{outcome="provider_error"}[15m]))
+          / sum by (provider) (rate(auth_oauth_total[15m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hơn 20% lượt đăng nhập qua một nhà cung cấp lỗi do nhà cung cấp trong 15 phút'
+          description: >-
+            Tỷ lệ `outcome=provider_error` của nhãn `provider` vượt 20%. Kiểm tra trang trạng thái của
+            Google/Meta, thông tin ứng dụng (khóa, địa chỉ quay về) và nhật ký auth.oauth.failed
+            (trường detail). Người dùng vẫn đăng nhập được bằng email + mật khẩu; màn hình đã nêu rõ
+            cách đó.

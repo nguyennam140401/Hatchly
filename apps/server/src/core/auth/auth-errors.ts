@@ -54,6 +54,17 @@ export function forbidden(missing: Permission, role: Role): AppError {
   });
 }
 
+/** 009: người gọi đang ở tài khoản chờ – không còn thuộc tài khoản nào (FR-027). */
+export function noAccount(): AppError {
+  return new AppError({
+    code: ERROR_CODES.NO_ACCOUNT,
+    httpStatus: 403,
+    message: AUTH_ERROR_MESSAGES.NO_ACCOUNT,
+    actions: [{ kind: 'navigate', label: 'Xem lựa chọn của bạn', href: '/no-account' }],
+    detail: 'detached',
+  });
+}
+
 export function accessNotDeclared(): AppError {
   return new AppError({
     code: ERROR_CODES.ACCESS_NOT_DECLARED,

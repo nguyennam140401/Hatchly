@@ -29,6 +29,12 @@ export { ValidBody, ValidParam, ValidQuery } from './validation/decorators';
 // SessionCache (hàm hạn chế – quy tắc auth-tx-restricted, account-scope-restricted).
 export { AUTH_CONFIG, resolveAuthConfig, type AuthConfig } from './config/auth-config';
 export {
+  OAUTH_CONFIG,
+  resolveOAuthConfig,
+  type OAuthConfig,
+  type OAuthDriver,
+} from './config/oauth-config';
+export {
   PERMISSIONS,
   PERMISSION_LIST,
   PERMISSION_DENIED_MESSAGES,
@@ -48,6 +54,7 @@ export {
   type StaffActor,
 } from './auth/actor';
 export { SESSION_RESOLVER, type Resolved, type SessionResolver } from './auth/session-resolver';
+export { ACCOUNT_LABEL_RESOLVER, type AccountLabelResolver } from './auth/account-label';
 export { MailModule } from './mail/mail.module';
 export { MAILER, type MailDeliveryResult, type MailMessage, type Mailer } from './mail/mailer';
 export { MemoryMailTransport } from './mail/memory.transport';
