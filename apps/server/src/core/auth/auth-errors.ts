@@ -1,4 +1,4 @@
-import { AUTH_ERROR_MESSAGES, ERROR_CODES } from '@app/shared/core';
+import { AUTH_ERROR_MESSAGES, ERROR_CODES, type SessionEndReason } from '@app/shared/core';
 import { AppError } from '../errors/app-error';
 import {
   PERMISSION_CONTACT_OWNER_LABELS,
@@ -10,7 +10,11 @@ import {
 // Lỗi của lớp chặn quyền (contracts/auth-http-api.md mục 3). Thông điệp tiếng Việt đời thường, luôn
 // kèm ít nhất một hành động khắc phục (nguyên tắc VI); mã gốc chỉ ở `support.detail`.
 
-export function unauthenticated(audience: 'customer' | 'staff', detail: string): AppError {
+export function unauthenticated(
+  audience: 'customer' | 'staff',
+  detail: string,
+  reason?: SessionEndReason,
+): AppError {
   return new AppError({
     code: ERROR_CODES.UNAUTHENTICATED,
     httpStatus: 401,
@@ -23,6 +27,7 @@ export function unauthenticated(audience: 'customer' | 'staff', detail: string):
       },
     ],
     detail,
+    ...(reason !== undefined ? { reason } : {}),
   });
 }
 

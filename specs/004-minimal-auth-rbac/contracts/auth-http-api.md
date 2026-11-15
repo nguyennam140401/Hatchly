@@ -63,7 +63,7 @@ Không bao giờ trả `passwordHash`, mã phiên hay `token_hash`. `permissions
 
 | Mã | HTTP | Thông điệp (tiếng Việt đời thường) | `actions` |
 |---|---|---|---|
-| `UNAUTHENTICATED` | 401 | "Bạn cần đăng nhập để tiếp tục." | `navigate` → `/login` |
+| `UNAUTHENTICATED` | 401 | "Bạn cần đăng nhập để tiếp tục." | `navigate` → `/login`  Từ 011: thân lỗi có thể kèm `error.reason` ∈ `expired·revoked·password_changed·removed·locked` (tùy chọn; thiếu = `expired`). Hiện máy chủ điền `expired` khi cookie có nhưng phiên không còn hiệu lực. |
 | `FORBIDDEN` | 403 | Theo quyền thiếu, vd "Chỉ chủ tài khoản mới duyệt được bài." | `navigate` (quay lại) + `contact_owner` khi là cộng tác viên |
 | `EMAIL_NOT_VERIFIED` | 403 | "Hãy xác nhận email để tiếp tục." | `resend_verification` |
 | `ACCESS_NOT_DECLARED` | 403 | "Chức năng này tạm thời không dùng được." | `contact_support` (lỗi lập trình) |
