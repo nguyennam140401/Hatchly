@@ -45,6 +45,13 @@ class SpecialController {
     return { account: currentAccountId() };
   }
 
+  /** 009: điểm cuối cho cả người ở tài khoản chờ (`allowDetached`) – chỉ cần đăng nhập, không kèm quyền. */
+  @Get('customer-detached')
+  @CustomerAccess({ allowDetached: true })
+  detached(): unknown {
+    return { account: currentAccountId() };
+  }
+
   @Get('public')
   @Public()
   pub(): unknown {

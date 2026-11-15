@@ -3,6 +3,7 @@ import { systemTx, tenantTx } from '../../../../core';
 import { runInAccountScope } from '../../../../core/auth/account-scope';
 import { authTx } from '../../../../core/db/auth-tx';
 import { writeAuthAudit } from './audit';
+import { recordInvitation } from './auth-metrics';
 
 // Việc định kỳ `account.auth_housekeeping` (009, contracts/module-api.md mục 4) – mỗi 10 phút, Worker.
 // Chạy lại an toàn: `auth_housekeeping()` chỉ trả lời mời VỪA chuyển `expired` trong lần gọi đó (lần
@@ -37,6 +38,7 @@ export async function runAuthHousekeeping(): Promise<HousekeepingResult> {
       ),
     );
   }
+  recordInvitation('expired', expired.length);
   // Bảng dùng chung (không tenant): lượt đã kết thúc hoặc quá hạn > 24 giờ; yêu cầu của Meta > 12 tháng.
   const deleted = await authTx(async (db) => {
     const flows = await db.execute(sql`

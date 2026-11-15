@@ -25,6 +25,7 @@ import { authTx } from '../../../../core/db/auth-tx';
 import { enqueueMailNotice } from '../../jobs';
 import { invitations, memberships, sessions, users } from '../db/schema';
 import { writeAuthAudit, type AuthAuditAction } from './audit';
+import { recordInvitation } from './auth-metrics';
 import { normalizeEmail } from './email';
 import {
   emailInvalid,
@@ -327,8 +328,64 @@ export class InvitationsService {
       await this.audit(db, 'account.invitation.sent', actor, meta);
       return { row, inviterName, created: true };
     });
+    recordInvitation(result.created ? 'sent' : 'resent');
     this.sendInvite(result.row, result.inviterName, token);
     return { view: this.view(result.row), created: result.created };
+  }
+
+  /**
+   * CHỈ cho dữ liệu mẫu/kiểm thử (`pnpm dev:seed-auth`, T087): tạo một lời mời đang chờ, KHÔNG gửi thư,
+   * KHÔNG qua bộ đếm; trả mã để nơi gọi in ra ở máy dev. Vẫn lấy khóa ghế và tránh ghế đang dùng.
+   */
+  async seedPending(input: {
+    accountId: string;
+    invitedByUserId: string;
+    email: string;
+  }): Promise<{ invitationId: string; token: string; seat: number }> {
+    const email = normalizeEmail(input.email);
+    if (email === null) throw emailInvalid();
+    const token = newToken();
+    const now = new Date();
+    return runInAccountScope(input.accountId, () =>
+      tenantTx(async (db) => {
+        await lockSeats(db, input.accountId);
+        const taken = await db
+          .select({ seat: memberships.seat })
+          .from(memberships)
+          .where(eq(memberships.status, 'active'));
+        const used = new Set([
+          ...taken.map((t) => t.seat),
+          ...(await InvitationsService.pendingSeats(db)),
+        ]);
+        const seat = SEATS.find((s) => !used.has(s));
+        if (seat === undefined) throw seatsFull();
+        const inviter = await db
+          .select({ name: users.display_name })
+          .from(users)
+          .where(eq(users.id, input.invitedByUserId))
+          .limit(1);
+        const rows = await db
+          .insert(invitations)
+          .values({
+            id: uuidV7(),
+            account_id: input.accountId,
+            email: email.email,
+            email_normalized: email.emailNormalized,
+            invited_by_user_id: input.invitedByUserId,
+            role: 'collaborator',
+            seat,
+            status: 'pending',
+            account_label: fallbackLabel(inviter[0]?.name).slice(0, 120),
+            token_hash: hashToken(token),
+            last_sent_at: now,
+            expires_at: new Date(now.getTime() + this.config.inviteTtlDays * DAY_MS),
+          })
+          .returning({ id: invitations.id });
+        const row = rows[0];
+        if (row === undefined) throw notFound();
+        return { invitationId: row.id, token, seat };
+      }),
+    );
   }
 
   /** `POST /members/invitations/:id/resend`: mã mới, hạn tính lại; mã cũ hết hiệu lực. */
@@ -371,6 +428,7 @@ export class InvitationsService {
       await this.audit(db, 'account.invitation.resent', actor, meta);
       return { row, inviterName: inviter[0]?.name ?? '' };
     });
+    recordInvitation('resent');
     this.sendInvite(result.row, result.inviterName, token);
     return this.view(result.row);
   }
@@ -387,6 +445,7 @@ export class InvitationsService {
       if (rows.length === 0) throw notFound();
       await this.audit(db, 'account.invitation.cancelled', actor, meta);
     });
+    recordInvitation('cancelled');
   }
 
   // ===== Phía người được mời =====
@@ -521,6 +580,8 @@ export class InvitationsService {
         dedupeKey: `account.notice:invite_accepted:${input.invitationId}`,
       });
     }
+    // Bước ghi cuối của giao dịch chấp nhận – chỉ số không đếm khi bước trước đó đã hoàn tác.
+    recordInvitation('accepted');
   }
 
   /**

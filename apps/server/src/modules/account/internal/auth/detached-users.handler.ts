@@ -6,6 +6,7 @@ import { purgeAccountJobs } from '../../../queue';
 import { enqueueMailNotice } from '../../jobs';
 import { users } from '../db/schema';
 import { writeAuthAudit } from './audit';
+import { recordDetachedPurged } from './auth-metrics';
 
 // Việc định kỳ `account.detached_users` (009, research R18, FR-028a) – mỗi giờ, Worker.
 // (1) Báo trước: người ở tài khoản chờ đủ (retention − notice) ngày → đặt `deletion_notice_sent_at` bằng
@@ -101,6 +102,7 @@ export async function runDetachedUsers(config: {
     });
     if (!removed) continue;
     purged += 1;
+    recordDetachedPurged();
     config.onPurged?.();
     // Kiểm toán không gắn tài khoản (đã xóa) và không có dữ liệu cá nhân – chỉ mã người dùng.
     await authTx((db) =>

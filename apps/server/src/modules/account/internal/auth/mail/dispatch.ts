@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AUTH_CONFIG, MAILER, type AuthConfig, type Mailer } from '../../../../../core';
+import { recordMailFailed, recordMailSend } from '../auth-metrics';
 import { renderTemplate, type TemplateName, type TemplateVars } from './templates';
 
 // Gửi thư SAU khi giao dịch đã xác nhận, không chờ trong luồng phản hồi (R9): thời gian phản hồi không
@@ -26,9 +27,10 @@ export class MailDispatcher {
     to: string,
     vars: Omit<TemplateVars, 'webBaseUrl'> & { userId?: string | null | undefined },
   ): void {
+    const committedAt = process.hrtime.bigint(); // mốc đo SC-004: giao dịch vừa xác nhận
     const job = new Promise<void>((resolve) => {
       setImmediate(() => {
-        void this.send(template, to, vars).finally(resolve);
+        void this.send(template, to, vars, committedAt).finally(resolve);
       });
     });
     this.pending.add(job);
@@ -39,6 +41,7 @@ export class MailDispatcher {
     template: TemplateName,
     to: string,
     vars: Omit<TemplateVars, 'webBaseUrl'> & { userId?: string | null | undefined },
+    committedAt: bigint,
   ): Promise<void> {
     let timer: NodeJS.Timeout | undefined;
     try {
@@ -52,7 +55,9 @@ export class MailDispatcher {
           }, SEND_TIMEOUT_MS);
         }),
       ]);
+      recordMailSend(template, Number(process.hrtime.bigint() - committedAt) / 1e9);
     } catch (err) {
+      recordMailFailed(template);
       this.logger.warn({
         msg: 'mail.send_failed',
         event: 'mail.send_failed',

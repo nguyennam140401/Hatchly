@@ -299,10 +299,10 @@ sửa một ký tự chữ ký → 400.
 
 **Purpose**: Cổng chất lượng xuyên suốt, quan sát, dữ liệu mẫu, tài liệu.
 
-- [ ] T084 [P] Mở rộng `apps/server/test/auth/access-matrix.e2e.spec.ts` + `support/access-matrix.module.ts`: thêm cột "người ở tài khoản chờ" – mọi điểm cuối **không** nằm trong danh sách `+detached` của contracts/auth-http-api.md (mục 2, 4, 5, 7) phải trả 403 `NO_ACCOUNT`; thêm 25 điểm cuối mới vào ma trận với đúng mức truy cập (Public / Customer / `+unverified` / `+detached` / `members.manage`); bổ sung `apps/server/test/auth/account-id-injection.e2e.spec.ts`: gửi `accountId` trong thân/truy vấn tới `/members/*`, `/invitations/*`, `/account/claim` không đổi tài khoản thao tác
-- [ ] T085 [P] Mở rộng `apps/server/test/auth/auth-secrets-in-logs.e2e.spec.ts` (SC-008): chạy trọn các luồng US1–US5 + Meta rồi quét nhật ký, phản hồi lỗi, `infra.audit_log.metadata` và dữ liệu việc trong `pgboss`: không có `code`, `state`, `code_verifier`, `signed_request`, mã lời mời, mã xác nhận, mật khẩu, mã phiên, email; không dòng nhật ký nào của `/auth/oauth/*` có chuỗi truy vấn. Thêm kiểm thử `apps/server/test/auth/audit-coverage.e2e.spec.ts`: mỗi hành động trong 19 hành động của data-model mục 7 có ít nhất một bản ghi sau khi chạy luồng tương ứng (FR-029)
-- [ ] T086 [P] Chỉ số và cảnh báo (contracts/module-api.md mục 6): `auth_oauth_total{provider, outcome}`, `account_invitations_total{event}`, `account_detached_purged_total` tại các dịch vụ tương ứng (theo cách đăng ký chỉ số hiện có của 004/003); thêm hai histogram để đo SC-002 và SC-004: `auth_oauth_callback_duration_seconds{provider}` (từ lúc nhận callback đến lúc trả 303) và `account_mail_send_duration_seconds{template}` (từ lúc giao dịch xác nhận đến lúc bên gửi thư nhận – ít nhất cho `inviteMember`); thêm quy tắc cảnh báo "tỷ lệ `outcome=provider_error` của một nhà cung cấp > 20% trong 15 phút" vào tệp mới `ops/alerts/auth.rules.yml` (theo mẫu `ops/alerts/queue.rules.yml`) kèm ca kiểm thử `apps/server/test/unit/auth/alert-rules.spec.ts` (theo mẫu `apps/server/test/unit/queue/alert-rules.spec.ts`)
-- [ ] T087 [P] Mở rộng `apps/server/src/ops/seed-auth.ts`: thêm một cộng tác viên, một lời mời đang chờ (in liên kết `/join#token=…` ra console **chỉ ở dev**) và một người ở tài khoản chờ; cập nhật `apps/server/test/ops/seed-auth.spec.ts` (chạy hai lần không tạo trùng)
+- [X] T084 [P] Mở rộng `apps/server/test/auth/access-matrix.e2e.spec.ts` + `support/access-matrix.module.ts`: thêm cột "người ở tài khoản chờ" – mọi điểm cuối **không** nằm trong danh sách `+detached` của contracts/auth-http-api.md (mục 2, 4, 5, 7) phải trả 403 `NO_ACCOUNT`; thêm 25 điểm cuối mới vào ma trận với đúng mức truy cập (Public / Customer / `+unverified` / `+detached` / `members.manage`); bổ sung `apps/server/test/auth/account-id-injection.e2e.spec.ts`: gửi `accountId` trong thân/truy vấn tới `/members/*`, `/invitations/*`, `/account/claim` không đổi tài khoản thao tác
+- [X] T085 [P] Mở rộng `apps/server/test/auth/auth-secrets-in-logs.e2e.spec.ts` (SC-008): chạy trọn các luồng US1–US5 + Meta rồi quét nhật ký, phản hồi lỗi, `infra.audit_log.metadata` và dữ liệu việc trong `pgboss`: không có `code`, `state`, `code_verifier`, `signed_request`, mã lời mời, mã xác nhận, mật khẩu, mã phiên, email; không dòng nhật ký nào của `/auth/oauth/*` có chuỗi truy vấn. Thêm kiểm thử `apps/server/test/auth/audit-coverage.e2e.spec.ts`: mỗi hành động trong 19 hành động của data-model mục 7 có ít nhất một bản ghi sau khi chạy luồng tương ứng (FR-029)
+- [X] T086 [P] Chỉ số và cảnh báo (contracts/module-api.md mục 6): `auth_oauth_total{provider, outcome}`, `account_invitations_total{event}`, `account_detached_purged_total` tại các dịch vụ tương ứng (theo cách đăng ký chỉ số hiện có của 004/003); thêm hai histogram để đo SC-002 và SC-004: `auth_oauth_callback_duration_seconds{provider}` (từ lúc nhận callback đến lúc trả 303) và `account_mail_send_duration_seconds{template}` (từ lúc giao dịch xác nhận đến lúc bên gửi thư nhận – ít nhất cho `inviteMember`); thêm quy tắc cảnh báo "tỷ lệ `outcome=provider_error` của một nhà cung cấp > 20% trong 15 phút" vào tệp mới `ops/alerts/auth.rules.yml` (theo mẫu `ops/alerts/queue.rules.yml`) kèm ca kiểm thử `apps/server/test/unit/auth/alert-rules.spec.ts` (theo mẫu `apps/server/test/unit/queue/alert-rules.spec.ts`)
+- [X] T087 [P] Mở rộng `apps/server/src/ops/seed-auth.ts`: thêm một cộng tác viên, một lời mời đang chờ (in liên kết `/join#token=…` ra console **chỉ ở dev**) và một người ở tài khoản chờ; cập nhật `apps/server/test/ops/seed-auth.spec.ts` (chạy hai lần không tạo trùng)
 - [X] T088 [P] Cập nhật `apps/server/docs/auth.md`: đăng nhập qua nhà cung cấp (sơ đồ `oauth_flows.stage`, cookie `__Host-oauth`, bản giả lập và kịch bản), độ tin của email (Google theo `email_verified`; Facebook có trả email = đã xác minh; cách đổi lại ở một dòng), tài khoản chờ + `allowDetached` (cách khai báo điểm cuối mới), xác nhận lại danh tính, ghế + khóa `account.seats`, ba loại việc nền, hai điểm cuối Meta và danh sách miễn kiểm tra nguồn gửi, biến cấu hình
 - [X] T089 [P] Cập nhật `.specify/memory/architecture.md` lên v1.5: bảng mới của schema `account`, thuật ngữ Việt → Anh ở research "Thuật ngữ mới", trạng thái `unclaimed`, loại việc `account.mail_notice` / `account.detached_users` / `account.auth_housekeeping`, Google + Meta (đăng nhập) là bên nhận dữ liệu ở nước ngoài, ghi chú "báo cáo đếm tài khoản phải lọc `unclaimed`"
 - [X] T090 Rà soát giao diện toàn bộ 7 trang mới (`OAuthResultPage`, `OAuthConfirmPage`, `LoginMethodsPage`, `NoAccountPage`, `DataDeletionStatusPage`, `MembersPage`, `JoinPage`) theo SC-011 và FR-033: `pnpm --filter @app/web test` xanh với `vitest-axe` ở 360 px; thao tác hết được bằng bàn phím; vùng chạm ≥ 44 × 44 px; trạng thái bằng chữ + biểu tượng; mỗi lỗi có ít nhất một hành động; không màn hình/thư nào có số tiền; `pnpm check:web-bundle` sạch
@@ -420,16 +420,18 @@ Việc **chưa** đánh dấu và lý do:
 - **T057** – hồ sơ kinh doanh (006) chưa có trường tên cửa hàng nên không có gì để nhà cung cấp
   `ACCOUNT_LABEL_RESOLVER` đọc. Cổng đảo phụ thuộc đã có (T017); lời mời và thư dùng "tài khoản của
   {tên người mời}". Làm khi hồ sơ có tên cửa hàng.
-- **T084** – chưa thêm cột "người ở tài khoản chờ" và 25 điểm cuối mới vào ma trận truy cập; mức truy
-  cập của từng điểm cuối mới hiện được kiểm rải rác trong các e2e của từng câu chuyện.
-- **T085** – chưa mở rộng quét bí mật trong nhật ký cho các luồng 009 và chưa có `audit-coverage`.
-- **T086** – chưa có chỉ số `auth_oauth_total`, `account_invitations_total`,
-  `account_detached_purged_total`, hai histogram và quy tắc cảnh báo `ops/alerts/auth.rules.yml`.
-- **T087** – `pnpm dev:seed-auth` chưa tạo lời mời đang chờ và người ở tài khoản chờ.
-- **T091** – đã chạy và sạch: `pnpm lint`, `pnpm typecheck`, `pnpm check:boundaries`,
-  `pnpm check:secrets`, `pnpm db:lint-migrations`, `pnpm check:web-bundle`, kiểm thử đơn vị / `test:db` /
-  `test:queue` của máy chủ, kiểm thử web và shared. Chưa chạy: `pnpm db:check` (cần CSDL dev),
-  `pnpm verify`. `pnpm infra check` đỏ ở `tooling/test/infra/power.spec.ts` do thiếu
+- **T084, T085, T086, T087** – đã làm (2026-11-15, lượt tiếp theo): cột "người ở tài khoản chờ" + bảng 25
+  điểm cuối mới ở `access-matrix.e2e.spec.ts`, kiểm thử chèn mã tài khoản, quét bí mật cho luồng 009 (đã
+  phát hiện và che `res.headers.location` trong nhật ký), `audit-coverage.e2e.spec.ts` (17 hành động do API
+  + 2 hành động của Worker khóa bằng khẳng định ở spec hàng chờ), chỉ số/cảnh báo (`auth-metrics.ts`,
+  `ops/alerts/auth.rules.yml`), dữ liệu mẫu có lời mời chờ + người ở tài khoản chờ (còn 1 cộng tác viên
+  mẫu thay vì 2 để chừa chỗ cho lời mời). Hợp đồng mục 7 đã sửa: `POST /auth/email/resend` vẫn Public.
+- **T091** – đã chạy và sạch: `pnpm lint`, `pnpm check:boundaries`, `pnpm check:secrets`,
+  `pnpm db:lint-migrations`, `pnpm check:web-bundle`, kiểm thử đơn vị máy chủ (417 qua), web (89), shared
+  (47); các e2e mới/đổi của lượt này chạy xanh riêng lẻ trên CSDL tạm. **Chưa chạy lại trọn bộ**
+  `test:db`, `test:queue`, `db:check`, `pnpm verify` ở lượt này (Docker Desktop đang tắt → không có
+  Postgres). `pnpm typecheck` đỏ duy nhất ở `tooling/test/check-wiki.spec.ts` (đến từ commit `9d541c9`
+  trên `dev`, không do 009). `pnpm infra check` đỏ ở `tooling/test/infra/power.spec.ts` do thiếu
   `tooling/infra/commands/kubeconfig.mjs` – không do 009 thay đổi.
 - **T092** – chưa chạy tay quickstart trên trình duyệt (xem quickstart.md mục 4).
 

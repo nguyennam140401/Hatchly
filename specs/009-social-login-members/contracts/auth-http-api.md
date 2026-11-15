@@ -160,7 +160,8 @@ giữ mốc xác nhận lại danh tính của phiên cũ (không tự thành "m
 | `POST /auth/login` | người ở tài khoản chờ đăng nhập được (trước đây 403 khi membership `removed`) |
 | `POST /auth/password/forgot` | gửi thư cả khi người dùng chưa có mật khẩu (FR-017); phản hồi không đổi |
 | `POST /auth/password/reset` | tạo cách đăng nhập `password` nếu chưa có; kiểm toán `auth.password.set` |
-| `POST /auth/password/change`, `PATCH /auth/email`, `POST /auth/email/resend` | thêm `+detached` |
+| `POST /auth/password/change`, `PATCH /auth/email` | thêm `+detached` |
+| `POST /auth/email/resend` | không đổi – vẫn Public từ 004 (gửi lại theo email, không lộ email có tồn tại) |
 
 ## 8. Mã lỗi mới
 

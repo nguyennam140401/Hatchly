@@ -20,6 +20,7 @@ import { DbQueryError } from '../../../../../core/db/errors';
 import { enqueueMailNotice } from '../../../jobs';
 import { loginIdentities, memberships, sessions, users } from '../../db/schema';
 import { writeAuthAudit, type AuthAuditAction, type OAuthFailureReason } from '../audit';
+import { markCallbackFailed, recordOAuth, withCallbackOutcome } from '../auth-metrics';
 import { normalizeEmail } from '../email';
 import {
   emailInvalid,
@@ -234,6 +235,7 @@ export class OAuthLoginService {
     meta: RequestMeta,
     detail?: string,
   ): Promise<void> {
+    markCallbackFailed(reason);
     if (flowId !== undefined) await this.flows.fail(flowId, code);
     await authTx((db) => this.audit(db, 'auth.oauth.failed', meta, {}, { reason, provider }));
     this.logger.warn({
@@ -262,6 +264,22 @@ export class OAuthLoginService {
    * đã liên kết (đăng nhập) hoặc khi chấp nhận lời mời xong.
    */
   async handleCallback(input: {
+    provider: ProviderName;
+    code: string | undefined;
+    state: string | undefined;
+    error: string | undefined;
+    flowToken: string | undefined;
+    actor: CustomerActor | null;
+    meta: RequestMeta;
+  }): Promise<{ session: IssuedSession | null }> {
+    // Đo SC-002 (nhận callback → trả kết quả) và đếm kết quả theo nhà cung cấp (cảnh báo T086).
+    const started = process.hrtime.bigint();
+    const { value, outcome } = await withCallbackOutcome(() => this.runCallback(input));
+    recordOAuth(input.provider, outcome, Number(process.hrtime.bigint() - started) / 1e9);
+    return value;
+  }
+
+  private async runCallback(input: {
     provider: ProviderName;
     code: string | undefined;
     state: string | undefined;

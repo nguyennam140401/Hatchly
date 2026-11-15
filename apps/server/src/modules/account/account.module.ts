@@ -131,6 +131,7 @@ export class AccountModule {
         // Tra cứu chỉ đọc (006) – dùng được ở cả Worker.
         describeMembers: (userIds) => describeMembers(userIds),
         addMember: apiOnly('addMember'),
+        createPendingInvitation: apiOnly('createPendingInvitation'),
         removeMember: apiOnly('removeMember'),
         disableMember: apiOnly('disableMember'),
         createVerifiedOwner: apiOnly('createVerifiedOwner'),
@@ -207,14 +208,16 @@ export class AccountModule {
         MetaCallbacksService,
         {
           provide: ACCOUNT_PUBLIC_API,
-          inject: [MembersService, StaffService, RegistrationService],
+          inject: [MembersService, StaffService, RegistrationService, InvitationsService],
           useFactory: (
             members: MembersService,
             staff: StaffService,
             registration: RegistrationService,
+            invitations: InvitationsService,
           ): AccountPublicApi => ({
             listActiveMembers,
             addMember: (input) => members.addMember(input),
+            createPendingInvitation: (input) => invitations.seedPending(input),
             removeMember: async (input) => {
               await members.removeMember(input);
             },

@@ -42,6 +42,9 @@ export const REDACT_PATHS = [
   '*.invitationToken',
   'req.query.code',
   'req.query.state',
+  // Địa chỉ chuyển hướng của phản hồi có thể mang `code`/`state` (trang giả lập → đường quay về). Đường
+  // quay về thật chỉ chuyển tới `{WEB}/oauth/result` không tham số, nên che hẳn không mất thông tin vận hành.
+  'res.headers.location',
 ];
 
 /**

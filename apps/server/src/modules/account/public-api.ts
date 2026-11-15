@@ -41,6 +41,15 @@ export interface AccountPublicApi {
   }): Promise<{ userId: string; seat: number }>;
   /** Gỡ cộng tác viên (chủ → OWNER_REQUIRED); thu hồi mọi phiên của người đó. Chỉ kiểm thử/dữ liệu mẫu. */
   removeMember(input: { accountId: string; userId: string; byUserId: string }): Promise<void>;
+  /**
+   * Tạo một lời mời đang chờ, không gửi thư, trả mã lời mời (009 T087). CHỈ cho dữ liệu mẫu/kiểm thử;
+   * người dùng thật mời qua `POST /members/invitations`. Chiếm một ghế như lời mời thật.
+   */
+  createPendingInvitation(input: {
+    accountId: string;
+    invitedByUserId: string;
+    email: string;
+  }): Promise<{ invitationId: string; token: string; seat: number }>;
   /** Khóa cộng tác viên; thu hồi mọi phiên của người đó. Chỉ kiểm thử/dữ liệu mẫu. */
   disableMember(input: { accountId: string; userId: string; byUserId: string }): Promise<void>;
   /**
