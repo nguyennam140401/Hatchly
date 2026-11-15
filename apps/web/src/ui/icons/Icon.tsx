@@ -59,5 +59,5 @@ export function Icon({ name, title, className }: IconProps) {
     title === undefined
       ? ({ 'aria-hidden': true, focusable: false } as const)
       : ({ role: 'img', 'aria-label': title } as const);
-  return <Svg className={cn('size-5 shrink-0', className)} {...a11y} />;
+  return <Svg className={cn('size-6 shrink-0', className)} {...a11y} />;
 }
