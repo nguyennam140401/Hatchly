@@ -46,3 +46,4 @@ export {
 export { SwitchField } from './form/fields/SwitchField';
 export { TagListField } from './form/fields/TagListField';
 export { IdeaListField, type IdeaListFieldProps } from './form/fields/IdeaListField';
+export { StaleNotice, type StaleNoticeProps } from './alert/StaleNotice';

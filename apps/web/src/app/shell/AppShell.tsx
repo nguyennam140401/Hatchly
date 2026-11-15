@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useRefreshAll } from '../../lib/api/hooks';
 import { t } from '../../lib/i18n/t';
+import { useNavCounts } from '../../lib/notifications/counts';
 import { NavBar } from '../../ui/nav/NavBar';
 import { Sidebar } from '../../ui/nav/Sidebar';
 import { TopBar } from '../../ui/nav/TopBar';
@@ -21,7 +22,7 @@ const ROOT_PATHS = new Set<string>(['/', '/more', ...NAV_ITEMS.map((i) => i.path
  */
 export function AppShell() {
   const desktop = useIsDesktop();
-  const { sidebar, bottom } = useNavItems();
+  const { sidebar, bottom } = useNavItems(useNavCounts());
   const refresh = useRefreshAll();
   const location = useLocation();
   const navigate = useNavigate();

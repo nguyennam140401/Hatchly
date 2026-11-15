@@ -1,6 +1,7 @@
 import { ErrorResponse } from '@app/shared/core';
 import { setApiReachable } from './connectivity';
 import { AppError, classify } from './errors';
+import { withVersion } from './version';
 
 // Lớp gọi API duy nhất của web (FR-029). Chỉ thư mục này được gọi `fetch`. Cookie phiên là HttpOnly: web không
 // đọc mã phiên; trình duyệt tự gửi cookie (credentials: 'same-origin').
@@ -21,7 +22,7 @@ export interface RequestOptions<T> {
   silentAuth?: boolean;
   /** Thao tác ghi an toàn để phát lại một lần sau khi đăng nhập lại (không đụng đăng/duyệt/xóa). */
   safeToReplay?: boolean;
-  /** Phiên bản bản ghi khi sửa (khóa lạc quan) – cách gửi do `version.ts` quyết định. */
+  /** Phiên bản bản ghi khi sửa (khóa lạc quan) – được thêm vào thân dưới tên `expectedVersion` (xem `version.ts`). */
   version?: number;
   headers?: Record<string, string>;
 }
@@ -140,6 +141,8 @@ async function request<T>(
   options: RequestOptions<T> = {},
 ): Promise<T> {
   assertNoTenantIdentifier(path, options.body);
+  // Khóa lạc quan: `version` đi trong thân dưới tên `expectedVersion` (cách thống nhất của 006, xem version.ts).
+  if (options.version !== undefined) options = { ...options, body: withVersion(options.body, options.version) };
   try {
     return await execute(method, path, options);
   } catch (err) {

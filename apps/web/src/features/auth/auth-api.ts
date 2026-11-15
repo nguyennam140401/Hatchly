@@ -6,6 +6,7 @@ import {
   type RegisterInput,
 } from '@app/shared/auth';
 import { apiRequest, type RequestOptions } from '../../lib/api-client';
+import { endLocalSession } from '../../lib/session/clear-account-data';
 
 // Lời gọi API xác thực (contracts/auth-http-api.md). Phản hồi kiểm bằng lược đồ dùng chung.
 
@@ -30,8 +31,8 @@ export const authApi = {
     apiRequest('PATCH', `${A}/email`, { body: { email }, schema: CheckEmailResponse }),
   login: (body: LoginInput) =>
     apiRequest('POST', `${A}/login`, { body, schema: MeResponse, silentAuth: true }),
-  logout: () => apiRequest<undefined>('POST', `${A}/logout`),
-  logoutAll: () => apiRequest<undefined>('POST', `${A}/logout-all`),
+  logout: () => apiRequest<undefined>('POST', `${A}/logout`).finally(endLocalSession),
+  logoutAll: () => apiRequest<undefined>('POST', `${A}/logout-all`).finally(endLocalSession),
   forgot: (email: string) =>
     apiRequest('POST', `${A}/password/forgot`, { body: { email }, schema: CheckEmailResponse }),
   reset: (token: string, newPassword: string) =>

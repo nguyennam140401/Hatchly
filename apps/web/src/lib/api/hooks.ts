@@ -28,7 +28,14 @@ export function useApiQuery<T>(
   const { staleTime, gcTime } = FRESHNESS[options.freshness];
   return useQuery<T, AppError>({
     queryKey: key,
-    queryFn: ({ signal }) => fn({ signal }),
+    // `signal` chỉ được đọc khi `fn` cần: đọc nó đánh dấu "hủy được" và react-query sẽ hủy lời gọi khi rời màn.
+    // Mặc định KHÔNG hủy để phản hồi đến muộn vẫn cập nhật dữ liệu dùng chung (FR-023).
+    queryFn: (context) =>
+      fn({
+        get signal() {
+          return context.signal;
+        },
+      }),
     staleTime,
     gcTime,
     ...(options.enabled !== undefined ? { enabled: options.enabled } : {}),
