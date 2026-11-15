@@ -1,4 +1,5 @@
 import { ErrorResponse } from '@app/shared/core';
+import { setApiReachable } from './connectivity';
 import { AppError, classify } from './errors';
 
 // Lớp gọi API duy nhất của web (FR-029). Chỉ thư mục này được gọi `fetch`. Cookie phiên là HttpOnly: web không
@@ -91,6 +92,7 @@ async function execute<T>(
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    setApiReachable(false);
     throw new AppError({
       kind: 'network',
       status: 0,
@@ -100,6 +102,7 @@ async function execute<T>(
     });
   }
 
+  setApiReachable(true);
   if (res.status === 204) return undefined as T;
   let json: unknown;
   try {

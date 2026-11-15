@@ -1,6 +1,7 @@
 // Mọi chuỗi hiển thị dùng chung ở một nơi (FR-029). Nhãn của thành phần dùng chung BẮT BUỘC nằm ở đây;
 // chuỗi riêng của màn hình nghiệp vụ có thể giữ cạnh màn hình.
 export const vi = {
+  'app.name': 'Trợ lý đăng bài',
   'common.loading': 'Đang tải',
   'common.retry': 'Thử lại',
   'common.saving': 'Đang lưu…',

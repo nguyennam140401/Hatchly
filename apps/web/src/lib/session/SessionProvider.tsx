@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createQueryClient } from '../api/query-client';
 import { queryKeys } from '../api/query-keys';
-import { clearAllAccountData } from './clear-account-data';
+import { clearAllAccountData, registerAccountDataCleaner } from './clear-account-data';
 import { SessionContext, type SessionValue } from './context';
 import { listenSessionEvents } from './tab-sync';
 
@@ -19,6 +19,15 @@ export interface SessionProviderProps {
 /** Cấp phiên + một QueryClient RIÊNG của phiên này (không dùng chung giữa các tài khoản). */
 export function SessionProvider({ me, refresh, onRemoteEnd, children }: SessionProviderProps) {
   const [client] = useState(createQueryClient);
+
+  // Mọi lần dọn dữ liệu tài khoản (đổi người, đăng xuất ở tab khác) cũng xóa bộ nhớ truy vấn của phiên này.
+  useEffect(
+    () =>
+      registerAccountDataCleaner(() => {
+        client.clear();
+      }),
+    [client],
+  );
 
   useEffect(() => {
     client.setQueryData(queryKeys.session.me(), me);

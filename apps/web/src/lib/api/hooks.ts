@@ -74,3 +74,11 @@ export function useApiMutation<V, R, Op extends string>(
     },
   });
 }
+
+/** Làm mới mọi dữ liệu đang hiển thị (nút "Thử lại" của biểu ngữ mất mạng). */
+export function useRefreshAll(): () => void {
+  const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries();
+  };
+}

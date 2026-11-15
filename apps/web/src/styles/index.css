@@ -55,3 +55,12 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Công cụ kiểm tra của danh mục thành phần (chỉ dùng ở /_catalog): giả lập cỡ chữ 200% và tương phản cao. */
+[data-catalog-text='200'] {
+  zoom: 2;
+}
+
+[data-catalog-contrast='high'] {
+  filter: contrast(1.5);
+}
