@@ -22,6 +22,7 @@
     "check:release-source": "node tooling/check-release-source.mjs",
     "check:image": "node tooling/check-image.mjs",
     "check:pipeline": "node tooling/check-pipeline.mjs",
+    "wiki:check": "node tooling/check-wiki.mjs",
     "test": "pnpm -r test",
     "verify": "node tooling/verify.mjs",
     "db:up": "docker compose up -d postgres mailpit",
