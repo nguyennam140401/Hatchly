@@ -39,6 +39,7 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 - [ai-budget.md](concepts/ai-budget.md) — Ngân sách AI và Cổng AI ( draft)
 - [auth-rbac.md](concepts/auth-rbac.md) — Xác thực và phân quyền (RBAC) ( current)
 - [ci-cd.md](concepts/ci-cd.md) — CI/CD với Jenkins và cổng chất lượng ( current)
+- [feature-status.md](concepts/feature-status.md) — Danh sách tính năng và trạng thái đáp ứng ( current)
 - [infra-envs.md](concepts/infra-envs.md) — Hạ tầng và môi trường (Terraform, VNG Cloud) ( current)
 - [migrations.md](concepts/migrations.md) — Migration CSDL tương thích ngược ( current)
 - [module-boundaries.md](concepts/module-boundaries.md) — Ranh giới module (modular monolith) ( current)
