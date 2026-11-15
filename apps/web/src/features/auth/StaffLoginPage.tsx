@@ -6,6 +6,11 @@ import { authApi } from './auth-api';
 import { PasswordField } from './PasswordField';
 import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 
+const STAFF_ROLE_LABEL: Record<StaffMeResponse['role'], string> = {
+  admin: 'Quản trị',
+  support: 'Hỗ trợ',
+};
+
 // Lối vào nội bộ (US4, FR-010, FR-016): tách khỏi đăng nhập của khách hàng; phiên ngắn. Màn hình tra
 // cứu hỗ trợ làm ở tính năng sau – ở đây chỉ báo đã đăng nhập.
 
@@ -31,7 +36,7 @@ export function StaffLoginPage() {
     <AuthLayout title="Đăng nhập nội bộ">
       {staff !== null ? (
         <InfoNotice>
-          {`Đã đăng nhập: ${staff.staff.displayName} (${staff.role === 'admin' ? 'Quản trị' : 'Hỗ trợ'}).`}{' '}
+          {`Đã đăng nhập: ${staff.staff.displayName} (${STAFF_ROLE_LABEL[staff.role]}).`}{' '}
           Phiên tự hết sau 30 phút không dùng.
         </InfoNotice>
       ) : (

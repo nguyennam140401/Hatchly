@@ -1,0 +1,57 @@
+/* Điểm vào CSS của ứng dụng (011). Giá trị thiết kế chỉ ở tokens.css – không viết cứng ở nơi khác. */
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* Phông Be Vietnam Pro tự lưu (ADR-10: không CDN nước ngoài); latin + vietnamese cho các độ đậm dùng ở Figma. */
+@import '@fontsource/be-vietnam-pro/latin-400.css';
+@import '@fontsource/be-vietnam-pro/latin-500.css';
+@import '@fontsource/be-vietnam-pro/latin-600.css';
+@import '@fontsource/be-vietnam-pro/latin-700.css';
+@import '@fontsource/be-vietnam-pro/vietnamese-400.css';
+@import '@fontsource/be-vietnam-pro/vietnamese-500.css';
+@import '@fontsource/be-vietnam-pro/vietnamese-600.css';
+@import '@fontsource/be-vietnam-pro/vietnamese-700.css';
+
+:root {
+  /* Khoảng đệm đáy cho thanh điều hướng dưới trên điện thoại có tai thỏ. */
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--color-surface-100);
+    color: var(--color-ink);
+  }
+
+  body {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    background-color: var(--color-surface-100);
+    color: var(--color-ink);
+  }
+
+  /* Vòng tiêu điểm thấy được với mọi phần tử tương tác (WCAG 2.4.7). */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+/* Giảm chuyển động theo cài đặt hệ điều hành: thời lượng về 0, trạng thái vẫn có chữ. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

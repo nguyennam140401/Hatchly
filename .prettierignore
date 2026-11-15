@@ -20,3 +20,6 @@ infra/modules/**/charts/**/templates/
 
 # Mẫu Helm (008) – không phải YAML hợp lệ
 ops/deploy/chart/templates/
+
+# Sinh từ figma-tokens.json bởi tooling/sync-design-tokens.mjs
+apps/web/src/styles/tokens.css

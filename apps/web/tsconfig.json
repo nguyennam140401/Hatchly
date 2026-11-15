@@ -7,7 +7,7 @@
     "jsx": "react-jsx",
     "rootDir": ".",
     "outDir": "dist-types",
-    "types": ["vite/client"]
+    "types": ["vite/client", "vite-plugin-svgr/client"]
   },
-  "include": ["src", "test", "vite.config.ts", "vitest.config.ts"]
+  "include": ["src", "test", "e2e", "vite.config.ts", "vitest.config.ts"]
 }
