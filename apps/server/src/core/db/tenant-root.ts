@@ -34,7 +34,12 @@ export const accounts = accountSchema.table(
     deleted_at: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   },
   () => [
-    check('accounts_status_check', sql`status IN ('active', 'suspended', 'expired', 'deleting')`),
+    // 'unclaimed' (009, research R6): tài khoản chờ của người không thuộc tài khoản nào – không có gói,
+    // hồ sơ hay kênh. Báo cáo đếm tài khoản khách hàng PHẢI lọc trạng thái này.
+    check(
+      'accounts_status_check',
+      sql`status IN ('active', 'suspended', 'expired', 'deleting', 'unclaimed')`,
+    ),
     pgPolicy('tenant_isolation', {
       as: 'permissive',
       for: 'all',

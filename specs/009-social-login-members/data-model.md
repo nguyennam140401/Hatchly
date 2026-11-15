@@ -236,3 +236,26 @@ lý do trong `indexExceptions`. Số tệp đánh lại nếu trùng khi hợp n
 Bên nhận/chuyển dữ liệu ở nước ngoài mới: **Google** và **Meta** (đăng nhập) – chiều nhận về tên, email,
 mã người dùng; chiều gửi đi chỉ có tham số giao thức. Phải thêm vào danh sách chuyển dữ liệu xuyên biên
 giới (Kiến trúc dữ liệu mục 9) và màn hình đồng ý/chính sách quyền riêng tư (FR-032).
+
+## 11. Điểm lệch khi thi công (cập nhật sau implement)
+
+- **Số migration thực tế**: `0015_account_social_members_tables.sql` và
+  `0016_account_social_members_functions.sql` (số `0014` đã bị tính năng 008 dùng trên `dev`). Mọi chỗ
+  trong tài liệu ghi `0014`/`0015` hiểu là hai tệp này.
+- **Hàm bổ sung** `account.auth_invitation_account(p_invitation_id uuid) RETURNS uuid` (cấp cho `app`):
+  trả mã tài khoản của một lời mời `pending`, chưa quá hạn, tài khoản không `deleting`/đã xóa. Cần để
+  mở giao dịch tenant của tài khoản mời (kiểm toán + việc gửi thư cùng giao dịch với việc chấp nhận)
+  khi người ở tài khoản chờ chấp nhận theo mã lời mời và ở đường quay về của nhà cung cấp. Quyền tham
+  gia vẫn do `auth_accept_invitation_*` quyết định. Tổng cộng 12 hàm (9 cho `app`, 3 cho `system`).
+- **Chữ ký chốt** của các hàm: đúng như liệt kê ở tasks.md T011; `auth_resolve_session_v2` trả thêm
+  `display_name` (như bản cũ) và `detached`.
+- **Sơ đồ `oauth_flows`**: thêm cạnh `→ failed` từ mọi giai đoạn chưa kết thúc. Không có cạnh
+  `needs_signup → needs_link_confirm`: khi email vừa bị người khác đăng ký giữa chừng, lượt bị đóng với
+  `OAUTH_FLOW_INVALID` và lần bắt đầu lại sẽ đi nhánh xác nhận liên kết.
+- **Nhánh email tự nhập không được phát mã** (người dùng đã có danh tính cùng nhà cung cấp; người dùng
+  bị khóa): lượt vẫn chuyển `awaiting_email` và ghi `result_code` nội bộ thay vì chuyển `failed`, để
+  `GET /auth/oauth/pending` cũng không phân biệt được với trường hợp email mới.
+- **Nhãn tài khoản (research R17)**: hồ sơ kinh doanh hiện chưa có trường tên cửa hàng nên chưa có nhà
+  cung cấp `ACCOUNT_LABEL_RESOLVER`; lời mời và thư dùng "tài khoản của {tên người mời}".
+- **Kiểm toán `account.user.purged`**: ghi `account_id = NULL` (tài khoản chờ đã bị xóa), `reason =
+  user:{mã}`; `account.member.removed` ghi `reason = user:{mã người bị gỡ}`.

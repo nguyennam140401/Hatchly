@@ -163,6 +163,30 @@ export const AppConfigSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // ----- Đăng nhập Google/Facebook, lời mời, tài khoản chờ (009, contracts/module-api.md mục 6) -----
+  /**
+   * `real` | `fake`. development/test: thiếu → `fake`. staging/production: `fake` bị từ chối; thiếu →
+   * đăng nhập qua nhà cung cấp chưa bật (điểm cuối trả 503, đăng nhập bằng email vẫn chạy).
+   */
+  OAUTH_DRIVER: z.enum(['real', 'fake']).optional(),
+  /** Bắt buộc ở API khi `OAUTH_DRIVER=real`. */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: secret(z.string().min(1).optional()),
+  FACEBOOK_APP_ID: z.string().min(1).optional(),
+  /** Cũng dùng để kiểm `signed_request` của Meta (FR-009a). */
+  FACEBOOK_APP_SECRET: secret(z.string().min(1).optional()),
+  /** Phiên bản Graph API cho lời gọi `/me` (vd `v21.0`). */
+  FACEBOOK_GRAPH_VERSION: z
+    .string()
+    .regex(/^v\d{1,3}\.\d{1,2}$/)
+    .default('v21.0'),
+  OAUTH_FLOW_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(10),
+  LINK_CONFIRM_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
+  REAUTH_WINDOW_MINUTES: z.coerce.number().int().min(1).max(120).default(10),
+  INVITE_TTL_DAYS: z.coerce.number().int().min(1).max(60).default(7),
+  INVITE_MAX_PER_ACCOUNT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(10),
+  DETACHED_RETENTION_DAYS: z.coerce.number().int().min(2).max(3650).default(90),
+  DETACHED_NOTICE_DAYS: z.coerce.number().int().min(1).max(365).default(7),
   /** Trần chi phí AI việc hệ thống (xu hướng) mỗi tuần, micro-USD. */
   AI_SYSTEM_WEEKLY_CAP_MICRO_USD: z.coerce.number().int().min(0).default(2_000_000),
   /** Hết thời gian chờ phản hồi `submit` → kết quả `unknown` (không bao giờ `transient`). */

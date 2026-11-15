@@ -249,6 +249,9 @@ cá nhân nên ở `features/auth`.
 | Xóa toàn bộ dữ liệu khi Meta yêu cầu; ẩn danh `former_members` theo yêu cầu | FR-14 |
 | Tài khoản `unclaimed` phải bị bỏ qua ở việc mở chu kỳ / kiểm tra gói | Tính năng gói dịch vụ (FR-13) |
 
+Các mục trong bảng trên **không** được làm trong tính năng này (xác nhận sau implement). Việc còn nợ của
+chính tính năng này: xem `tasks.md` (các việc chưa đánh dấu) và `quickstart.md` mục 5.
+
 ## Complexity Tracking
 
 | Điểm lệch / đánh đổi | Vì sao cần | Phương án đơn giản hơn bị loại vì |

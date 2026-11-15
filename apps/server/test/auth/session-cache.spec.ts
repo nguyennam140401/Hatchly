@@ -12,6 +12,7 @@ const actor = (userId: string): Actor => ({
   role: 'owner',
   emailVerified: true,
   sessionId: `s-${userId}`,
+  detached: false,
 });
 
 function cacheAt(start = 1_000_000) {
@@ -71,5 +72,22 @@ describe('SessionCache', () => {
     cache.evictWhere((a) => a.kind === 'user' && a.userId === 'u1');
     expect(cache.get(hashToken('y'))).toBeUndefined();
     expect(cache.get(hashToken('z'))).toBeDefined();
+  });
+  it('009: giữ nguyên cờ detached của người ở tài khoản chờ; evictWhere theo người dùng bỏ được mục đó', () => {
+    const { cache } = cacheAt();
+    const shell: Actor = {
+      kind: 'user',
+      userId: 'u9',
+      accountId: 'acc-shell',
+      role: 'owner',
+      emailVerified: true,
+      sessionId: 's-u9',
+      detached: true,
+    };
+    cache.set(hashToken('d'), shell, far);
+    expect(cache.get(hashToken('d'))).toMatchObject({ detached: true, accountId: 'acc-shell' });
+    // Gỡ / tham gia lại / nhận tài khoản: phiên cũ bị xóa ở CSDL → bỏ mục trên bản API này.
+    cache.evictWhere((a) => a.kind === 'user' && a.userId === 'u9');
+    expect(cache.get(hashToken('d'))).toBeUndefined();
   });
 });

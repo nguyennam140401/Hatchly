@@ -122,7 +122,10 @@ export function SecuritySettingsPage() {
         )}
       </section>
 
-      <p style={{ marginTop: 32 }}>
+      <p style={{ marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <Link to="/settings/login-methods" style={styles.link}>
+          Cách đăng nhập
+        </Link>
         <Link to="/" style={styles.link}>
           Về trang chính
         </Link>

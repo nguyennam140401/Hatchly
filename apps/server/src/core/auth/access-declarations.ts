@@ -15,6 +15,8 @@ export interface AccessScanResult {
   missing: string[];
   /** `Controller.method` (hoặc Controller) có hơn một khai báo. */
   duplicated: string[];
+  /** 009: `Controller.method` khai báo `allowDetached` KÈM quyền (vô nghĩa – không ai qua được). */
+  invalid: string[];
   /** Mọi handler đã duyệt với khai báo hiệu lực. */
   handlers: { name: string; declaration: AccessDeclaration | null }[];
 }
@@ -26,7 +28,7 @@ export function scanAccessDeclarations(
   discovery: DiscoveryService,
   scanner: MetadataScanner,
 ): AccessScanResult {
-  const result: AccessScanResult = { missing: [], duplicated: [], handlers: [] };
+  const result: AccessScanResult = { missing: [], duplicated: [], invalid: [], handlers: [] };
   for (const wrapper of discovery.getControllers()) {
     const metatype = wrapper.metatype as ControllerClass | null | undefined;
     if (typeof metatype !== 'function') continue;
@@ -41,6 +43,13 @@ export function scanAccessDeclarations(
         const declaration = readAccessDeclaration(method as Handler, metatype);
         result.handlers.push({ name, declaration });
         if (declaration === null) result.missing.push(name);
+        if (
+          declaration?.kind === 'customer' &&
+          declaration.allowDetached &&
+          declaration.permissions.length > 0
+        ) {
+          result.invalid.push(name);
+        }
       } catch (err) {
         if (!(err instanceof DuplicateAccessDeclarationError)) throw err;
         result.duplicated.push(name);
@@ -51,7 +60,12 @@ export function scanAccessDeclarations(
   return result;
 }
 
-/** Lỗi khởi động (development/test) khi có handler thiếu/trùng khai báo. */
+/** Có handler thiếu/trùng/sai khai báo không. */
+export function hasAccessScanProblems(scan: AccessScanResult): boolean {
+  return scan.missing.length > 0 || scan.duplicated.length > 0 || scan.invalid.length > 0;
+}
+
+/** Lỗi khởi động (development/test) khi có handler thiếu/trùng/sai khai báo. */
 export class AccessDeclarationError extends Error {
   constructor(readonly scan: AccessScanResult) {
     super(
@@ -59,6 +73,9 @@ export class AccessDeclarationError extends Error {
         'Điểm cuối thiếu hoặc trùng khai báo truy cập (@Public/@CustomerAccess/@StaffAccess):',
         ...scan.missing.map((n) => `  - thiếu: ${n}`),
         ...scan.duplicated.map((n) => `  - trùng: ${n}`),
+        ...scan.invalid.map(
+          (n) => `  - allowDetached kèm quyền (người ở tài khoản chờ không có quyền nào): ${n}`,
+        ),
       ].join('\n'),
     );
     this.name = 'AccessDeclarationError';

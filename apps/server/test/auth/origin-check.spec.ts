@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isOriginAllowed,
+  META_CALLBACK_PATHS,
   originCheckMiddleware,
 } from '../../src/core/auth/origin-check.middleware';
 
@@ -65,5 +66,30 @@ describe('origin-check', () => {
     expect(isOriginAllowed(machine('/api/v1/ops/smoke/abc?x=1'), allowed)).toBe(true);
     expect(isOriginAllowed(machine('/api/v1/ops/smoke-khac'), allowed)).toBe(false);
     expect(isOriginAllowed(machine('/api/v1/auth/login'), allowed)).toBe(false);
+  });
+  it('009: đúng hai điểm cuối của Meta được miễn; mọi đường dẫn khác vẫn bị kiểm', () => {
+    const post = (url: string) => isOriginAllowed({ method: 'POST', headers: {}, url }, allowed);
+    expect(META_CALLBACK_PATHS).toEqual([
+      '/api/v1/auth/facebook/deauthorize',
+      '/api/v1/auth/facebook/data-deletion',
+    ]);
+    for (const path of META_CALLBACK_PATHS) {
+      expect(post(path), path).toBe(true);
+      expect(post(`${path}?x=1`), `${path}?x=1`).toBe(true);
+    }
+    for (const path of [
+      '/api/v1/auth/facebook/deauthorize/extra',
+      '/api/v1/auth/facebook/deauthorized',
+      '/api/v1/auth/facebook/data-deletion-status',
+      '/api/v1/auth/facebook',
+      '/api/v1/auth/facebook/',
+      '/api/v1/auth/facebook/DEAUTHORIZE',
+      '/api/v1/auth/oauth/facebook/start',
+      '/api/v1/auth/login',
+      '/x/api/v1/auth/facebook/deauthorize',
+      '/api/v1/members/invitations',
+    ]) {
+      expect(post(path), path).toBe(false);
+    }
   });
 });

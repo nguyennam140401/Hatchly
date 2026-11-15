@@ -17,6 +17,13 @@ type State =
   | { kind: 'verify' }
   | { kind: 'error'; error: ApiError };
 
+/** 009: người ở tài khoản chờ chỉ vào được các trang này; mọi trang nghiệp vụ → /no-account. */
+export const DETACHED_PATHS: readonly string[] = [
+  '/no-account',
+  '/settings/login-methods',
+  '/settings/security',
+];
+
 export function loginPath(location: { pathname: string; search: string; hash: string }): string {
   const here = `${location.pathname}${location.search}${location.hash}`;
   return here === '/' ? '/login' : `/login?next=${encodeURIComponent(here)}`;
@@ -81,6 +88,9 @@ export function SessionGate() {
         </main>
       );
     case 'ok':
+      if (state.me.account.status === 'unclaimed' && !DETACHED_PATHS.includes(location.pathname)) {
+        return <Navigate to="/no-account" replace />;
+      }
       return (
         <SessionContext.Provider value={value}>
           <Outlet />

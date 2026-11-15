@@ -55,6 +55,8 @@ export interface AccountPublicApi {
   /**
    * Tên hiển thị và trạng thái của các người dùng thuộc tài khoản trong ngữ cảnh (006).
    * Người không thuộc tài khoản này (hoặc mã không tồn tại) không có trong kết quả.
+   * 009: người đã bị gỡ khỏi tài khoản này vẫn có trong kết quả với `status: 'removed'` và tên lúc bị
+   * gỡ (lấy từ `former_members`).
    * Chạy trong tenantTx của người gọi – không nhận accountId; không ngữ cảnh → TENANT_CONTEXT_MISSING.
    * Tối đa 100 mã mỗi lần (vượt → lỗi lập trình).
    */

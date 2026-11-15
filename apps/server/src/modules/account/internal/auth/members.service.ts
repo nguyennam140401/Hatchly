@@ -1,12 +1,21 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
-import { tenantTx, uuidV7, type Db } from '../../../../core';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import {
+  ACCOUNT_LABEL_RESOLVER,
+  tenantTx,
+  uuidV7,
+  type AccountLabelResolver,
+  type Db,
+} from '../../../../core';
+import { userAgentSummary } from '../../../../core/auth/client-ip';
 import { runInAccountScope } from '../../../../core/auth/account-scope';
 import { DbQueryError } from '../../../../core/db/errors';
 import { loginIdentities, memberships, users } from '../db/schema';
 import { writeAuthAudit } from './audit';
 import { normalizeEmail } from './email';
 import { emailInvalid, ownerRequired, seatsFull } from './errors';
+import { InvitationsService, lockSeats } from './invitations.service';
+import { MailDispatcher } from './mail/dispatch';
 import { PasswordHasher } from './password/password-hasher';
 import { SessionService } from './session.service';
 import { assertStrongPassword } from './staff.service';
@@ -27,13 +36,17 @@ export interface AddMemberInput {
   addedByUserId: string;
 }
 
-export type MemberTransition = 'removed' | 'disabled' | 'active';
+export type MemberTransition = 'disabled' | 'active';
 
 @Injectable()
 export class MembersService {
   constructor(
     @Inject(SessionService) private readonly sessions: SessionService,
     @Inject(PasswordHasher) private readonly hasher: PasswordHasher,
+    @Inject(MailDispatcher) private readonly mail: MailDispatcher,
+    @Optional()
+    @Inject(ACCOUNT_LABEL_RESOLVER)
+    private readonly labels?: AccountLabelResolver,
   ) {}
 
   /** Thêm cộng tác viên vào ghế trống nhỏ nhất; trùng ghế thử lại một lần rồi SEATS_FULL. */
@@ -68,11 +81,16 @@ export class MembersService {
     email: { email: string; emailNormalized: string },
     passwordHash: string | null,
   ): Promise<{ userId: string; seat: number }> {
+    // 009 (research R9): đổi ghế luôn dưới khóa của tài khoản, và tránh ghế lời mời đang chờ giữ.
+    await lockSeats(db, input.accountId);
     const taken = await db
       .select({ seat: memberships.seat })
       .from(memberships)
       .where(eq(memberships.status, 'active'));
-    const used = new Set(taken.map((r) => r.seat));
+    const used = new Set([
+      ...taken.map((r) => r.seat),
+      ...(await InvitationsService.pendingSeats(db)),
+    ]);
     const seat = [1, 2].find((s) => !used.has(s));
     if (seat === undefined) throw seatsFull();
     const userId = uuidV7();
@@ -113,9 +131,57 @@ export class MembersService {
     return { userId, seat };
   }
 
-  /** Gỡ cộng tác viên (`active|disabled → removed`). Chủ → OWNER_REQUIRED. */
-  removeMember(input: { accountId: string; userId: string; byUserId: string }): Promise<void> {
-    return this.transition(input, ['active', 'disabled'], 'removed');
+  /**
+   * Gỡ cộng tác viên (009 – US4): `member_detach` chuyển người đó sang một TÀI KHOẢN CHỜ của riêng họ
+   * (vai trò ở đây thành `removed`, phiên bị xóa, tên lưu ở `former_members`). Chủ → OWNER_REQUIRED.
+   * Thư `memberRemoved` gửi sau khi giao dịch xác nhận (người nhận đã rời tenant – research R16); gửi
+   * lỗi không làm hỏng thao tác gỡ.
+   */
+  async removeMember(input: {
+    accountId: string;
+    userId: string;
+    byUserId: string;
+    meta?: { ip: string; userAgent: string | undefined } | undefined;
+  }): Promise<'detached' | 'not_found'> {
+    const removed = await runInAccountScope(input.accountId, () =>
+      tenantTx(async (db) => {
+        const target = await db
+          .select({ email: users.email, name: users.display_name })
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+        const called = await db.execute<{ outcome: 'detached' | 'not_found' | 'owner' }>(sql`
+          SELECT account.member_detach(
+            ${input.userId}::uuid, ${uuidV7()}::uuid, ${uuidV7()}::uuid, ${uuidV7()}::uuid,
+            ${input.byUserId}::uuid
+          ) AS outcome`);
+        const outcome = called.rows[0]?.outcome ?? 'not_found';
+        if (outcome === 'owner') throw ownerRequired();
+        if (outcome === 'not_found' || target[0] === undefined) return null;
+        await writeAuthAudit(db, {
+          actorType: 'user',
+          actorId: input.byUserId,
+          accountId: input.accountId,
+          action: 'account.member.removed',
+          ip: input.meta?.ip,
+          uaFamily: input.meta === undefined ? undefined : userAgentSummary(input.meta.userAgent),
+          // Ai bị gỡ – mã người dùng, không phải dữ liệu cá nhân.
+          reason: `user:${input.userId}`,
+        });
+        // Đọc nhãn tài khoản TRƯỚC khi xác nhận (sau đó người nhận không còn trong tenant này).
+        const label = (await this.labels?.currentAccountLabel()) ?? undefined;
+        return { ...target[0], label };
+      }),
+    );
+    if (removed === null) return 'not_found';
+    // Phiên đã bị hàm xóa: bỏ mục bộ nhớ đệm trên bản này; bản khác hết hạn ≤ 60 giây.
+    this.sessions.evictUser(input.userId);
+    this.mail.sendAfterCommit('memberRemoved', removed.email, {
+      displayName: removed.name,
+      accountLabel: removed.label,
+      userId: input.userId,
+    });
+    return 'detached';
   }
 
   /** Khóa cộng tác viên (`active → disabled`). */
@@ -130,7 +196,7 @@ export class MembersService {
 
   private async transition(
     input: { accountId: string; userId: string; byUserId: string },
-    from: ('active' | 'disabled' | 'removed')[],
+    from: ('active' | 'disabled')[],
     to: MemberTransition,
   ): Promise<void> {
     await runInAccountScope(input.accountId, () =>
@@ -153,19 +219,10 @@ export class MembersService {
           actorType: 'user',
           actorId: input.byUserId,
           accountId: input.accountId,
-          action:
-            to === 'removed'
-              ? 'account.member.removed'
-              : to === 'disabled'
-                ? 'account.member.disabled'
-                : 'account.member.enabled',
+          action: to === 'disabled' ? 'account.member.disabled' : 'account.member.enabled',
         });
         if (to !== 'active') {
-          await this.sessions.revokeAllForUser(
-            db,
-            input.userId,
-            to === 'removed' ? 'member_removed' : 'user_disabled',
-          );
+          await this.sessions.revokeAllForUser(db, input.userId, 'user_disabled');
         }
       }),
     );

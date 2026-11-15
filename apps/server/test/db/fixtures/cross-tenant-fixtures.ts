@@ -2,10 +2,12 @@
 // đây hoặc trong `CROSS_TENANT_EXEMPT` (bảng đã có spec riêng). `cross-tenant-coverage.db.spec.ts` đọc
 // sổ đăng ký bảng và báo lỗi khi có bảng mới chưa khai báo – quên là bị bắt.
 // Chép mẫu: thêm bảng tenant mới → thêm một mục `{ table, insertRow, updateRow, … }` dưới đây.
+import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import type { Db } from '../../../src/core/db/transaction';
 import { uuidV7 } from '../../../src/core/ids/uuid-v7';
+import { formerMembers, invitations } from '../../../src/modules/account/internal/db/schema';
 import { businessProfiles, profileVersions } from '../../../src/modules/context/internal/db/schema';
 import type { CrossTenantOptions } from '../helpers/cross-tenant';
 
@@ -29,6 +31,34 @@ type AnyFixture = CrossTenantOptions<PgTable, any>;
 
 /** `schema.table` → fixture. */
 export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
+  // 009: lời mời đã đóng (không chiếm ghế – tránh chỉ mục duy nhất theo ghế của lời mời đang chờ).
+  'account.invitations': {
+    table: invitations,
+    insertRow: () => {
+      const email = `moi.${randomBytes(6).toString('hex')}@example.test`;
+      return {
+        email,
+        email_normalized: email,
+        invited_by_user_id: uuidV7(),
+        seat: 1,
+        status: 'cancelled' as const,
+        token_hash: randomBytes(32),
+        last_sent_at: new Date(),
+        expires_at: new Date(Date.now() + 86_400_000),
+        closed_at: new Date(),
+      };
+    },
+    updateRow: () => ({ account_label: 'sửa' }),
+  } satisfies CrossTenantOptions<typeof invitations>,
+  'account.former_members': {
+    table: formerMembers,
+    insertRow: () => ({
+      user_id: uuidV7(),
+      display_name: 'Thành viên cũ',
+      removed_by_user_id: uuidV7(),
+    }),
+    updateRow: () => ({ display_name: 'sửa' }),
+  } satisfies CrossTenantOptions<typeof formerMembers>,
   'context.business_profiles': {
     table: businessProfiles,
     onePerAccount: true,

@@ -66,6 +66,7 @@ async function main(): Promise<void> {
     MAIL_TRANSPORT: 'memory',
     ARGON2_MEMORY_KIB: '64',
     ARGON2_TIME_COST: '1',
+    OAUTH_DRIVER: 'fake',
   });
 
   const accounts = app.get<AccountPublicApi>(ACCOUNT_PUBLIC_API);

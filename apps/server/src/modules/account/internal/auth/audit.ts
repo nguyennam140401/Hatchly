@@ -1,7 +1,7 @@
 import { auditLog } from '../../../../core/db/audit-log.log-table';
 import { getExecutionContext, type Db } from '../../../../core';
 
-// Nhật ký kiểm toán cho sự kiện xác thực (FR-018, R11). `metadata` CHỈ có { ip, ua_family, reason } –
+// Nhật ký kiểm toán cho sự kiện xác thực (FR-018, R11). `metadata` CHỈ có { ip, ua_family, reason, provider } –
 // KHÔNG BAO GIỜ có email, mật khẩu, mã hay băm. Ghi trong cùng giao dịch với thao tác khi có
 // (tenantTx), còn sự kiện không có giao dịch nghiệp vụ (đăng nhập thất bại) ghi qua authTx.
 
@@ -26,7 +26,30 @@ export const AUTH_AUDIT_ACTIONS = [
   'staff.disabled',
   'staff.password_reset',
   'staff.request',
+  // 009 (data-model mục 7). `account.member.removed` đã có ở trên.
+  'auth.oauth.succeeded',
+  'auth.oauth.failed',
+  'auth.register.oauth',
+  'auth.identity.link_requested',
+  'auth.identity.link_confirmed',
+  'auth.identity.link_denied',
+  'auth.identity.linked',
+  'auth.identity.unlinked',
+  'auth.identity.unlinked_by_provider',
+  'auth.password.set',
+  'auth.reauth',
+  'account.invitation.sent',
+  'account.invitation.resent',
+  'account.invitation.cancelled',
+  'account.invitation.accepted',
+  'account.invitation.expired',
+  'account.claimed',
+  'account.user.purged',
 ] as const;
+
+/** Lý do của `auth.oauth.failed` (data-model mục 7). */
+export type OAuthFailureReason =
+  'cancelled' | 'state_mismatch' | 'expired' | 'provider_error' | 'account_unavailable';
 export type AuthAuditAction = (typeof AUTH_AUDIT_ACTIONS)[number];
 
 export interface AuthAuditEntry {
@@ -39,6 +62,8 @@ export interface AuthAuditEntry {
   uaFamily?: string | null | undefined;
   /** Mã lý do dạng máy đọc (vd `bad_password`, `unknown_email`, `blocked`). */
   reason?: string | null | undefined;
+  /** 009: nhà cung cấp đăng nhập liên quan (`google` | `facebook`). */
+  provider?: 'google' | 'facebook' | null | undefined;
 }
 
 /** Ghi một dòng infra.audit_log trong giao dịch `db` (tenantTx hoặc authTx). */
@@ -53,6 +78,8 @@ export async function writeAuthAudit(db: Db, entry: AuthAuditEntry): Promise<voi
       ip: entry.ip ?? null,
       ua_family: entry.uaFamily ?? null,
       reason: entry.reason ?? null,
+      // Chỉ thêm khóa khi có – dòng của 004 giữ nguyên hình dạng { ip, ua_family, reason }.
+      ...(entry.provider != null ? { provider: entry.provider } : {}),
     },
   });
 }

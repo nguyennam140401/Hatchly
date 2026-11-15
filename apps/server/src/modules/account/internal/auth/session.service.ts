@@ -88,8 +88,10 @@ export class SessionService implements SessionResolver {
         role: 'owner' | 'collaborator';
         email_verified: boolean;
         absolute_expires_at: Date | string;
+        detached: boolean;
       }>(
-        sql`SELECT * FROM account.auth_resolve_session(${tokenHash}, ${CUSTOMER_TOUCH_AFTER}::interval, ${idle}::interval)`,
+        // Bản 2 (009, R20): thêm cột `detached`; hàm cũ giữ cho bản API cũ khi phát hành.
+        sql`SELECT * FROM account.auth_resolve_session_v2(${tokenHash}, ${CUSTOMER_TOUCH_AFTER}::interval, ${idle}::interval)`,
       );
       return result.rows[0];
     });
@@ -102,6 +104,7 @@ export class SessionService implements SessionResolver {
         role: row.role,
         emailVerified: row.email_verified,
         sessionId: row.session_id,
+        detached: row.detached,
       },
       absoluteExpiresAt: new Date(row.absolute_expires_at),
     };
@@ -116,7 +119,16 @@ export class SessionService implements SessionResolver {
   /** Tạo phiên mới trong giao dịch tenant `db` đang mở. */
   async insertSession(
     db: Db,
-    input: { accountId: string; userId: string; userAgent: string | undefined },
+    input: {
+      accountId: string;
+      userId: string;
+      userAgent: string | undefined;
+      /**
+       * 009 (research R11): phiên cấp do XOAY VÒNG (nhận tài khoản, tham gia lại qua lời mời) mang mốc
+       * xác nhận danh tính của phiên cũ – xoay phiên không phải là xác thực lại.
+       */
+      reauthenticatedAt?: Date | undefined;
+    },
   ): Promise<IssuedSession> {
     const token = newToken();
     const now = Date.now();
@@ -131,6 +143,9 @@ export class SessionService implements SessionResolver {
       idle_expires_at: new Date(now + this.config.sessionIdleDays * DAY_MS),
       absolute_expires_at: absoluteExpiresAt,
       user_agent_summary: userAgentSummary(input.userAgent),
+      ...(input.reauthenticatedAt !== undefined
+        ? { reauthenticated_at: input.reauthenticatedAt }
+        : {}),
     });
     return { sessionId: id, token, absoluteExpiresAt };
   }
@@ -140,6 +155,7 @@ export class SessionService implements SessionResolver {
     accountId: string;
     userId: string;
     userAgent: string | undefined;
+    reauthenticatedAt?: Date | undefined;
   }): Promise<IssuedSession> {
     return runInAccountScope(input.accountId, () =>
       tenantTx((db) => this.insertSession(db, input)),
@@ -179,6 +195,11 @@ export class SessionService implements SessionResolver {
     this.cache.evictWhere(
       (a) => a.kind === 'user' && a.userId === userId && a.sessionId !== options.exceptSessionId,
     );
+  }
+
+  /** Bỏ mọi mục bộ nhớ đệm phiên của người dùng trên bản API này (phiên đã bị hàm CSDL xóa). */
+  evictUser(userId: string): void {
+    this.cache.evictWhere((a) => a.kind === 'user' && a.userId === userId);
   }
 
   // ----- Đăng nhập bằng mật khẩu (FR-006, FR-007, R2, R6) -----

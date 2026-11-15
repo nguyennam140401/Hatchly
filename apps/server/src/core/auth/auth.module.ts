@@ -15,7 +15,11 @@ import {
   MetadataScanner,
 } from '@nestjs/core';
 import { AUTH_CONFIG, type AuthConfig } from '../config/auth-config';
-import { AccessDeclarationError, scanAccessDeclarations } from './access-declarations';
+import {
+  AccessDeclarationError,
+  hasAccessScanProblems,
+  scanAccessDeclarations,
+} from './access-declarations';
 import { AccessGuard } from './access.guard';
 import { SessionCache } from './session-cache';
 import { StaffAuditInterceptor } from './staff-audit.interceptor';
@@ -40,13 +44,14 @@ class AccessDeclarationCheck implements OnApplicationBootstrap {
 
   onApplicationBootstrap(): void {
     const scan = scanAccessDeclarations(this.discovery, this.scanner);
-    if (scan.missing.length === 0 && scan.duplicated.length === 0) return;
+    if (!hasAccessScanProblems(scan)) return;
     if (this.mode === 'throw') throw new AccessDeclarationError(scan);
     this.logger.error({
       msg: 'auth.access_not_declared',
       event: 'auth.access_not_declared',
       missing: scan.missing,
       duplicated: scan.duplicated,
+      invalid: scan.invalid,
     });
   }
 }

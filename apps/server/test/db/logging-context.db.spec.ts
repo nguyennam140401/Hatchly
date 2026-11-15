@@ -75,6 +75,7 @@ describeDb('account_id trong nhật ký', () => {
           role: 'owner',
           emailVerified: true,
           sessionId: 's',
+          detached: false,
         },
       },
       async () => {

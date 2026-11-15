@@ -35,8 +35,13 @@ export function requireStaff(): StaffActor {
   return actor;
 }
 
-/** Người gọi hiện tại có quyền này không (false khi chưa đăng nhập). */
+/**
+ * Người gọi hiện tại có quyền này không (false khi chưa đăng nhập). Người ở tài khoản chờ (009) giữ
+ * ghế chủ của tài khoản chờ về mặt dữ liệu nhưng KHÔNG có quyền nào.
+ */
 export function can(permission: Permission): boolean {
   const actor = currentActor();
-  return actor !== null && roleHasPermission(actor.role, permission);
+  if (actor === null) return false;
+  if (actor.kind === 'user' && actor.detached) return false;
+  return roleHasPermission(actor.role, permission);
 }

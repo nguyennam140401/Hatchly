@@ -1,6 +1,6 @@
 # Đặc tả kiến trúc triển khai – Ứng dụng AI tạo & đăng nội dung MXH
 
-- Phiên bản: 1.4 (2026-11-10) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
+- Phiên bản: 1.5 (2026-11-15) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
   001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn;
   v1.2 theo tính năng 002 (lớp CSDL): vai trò `system` đặt được ngữ cảnh tenant và chịu RLS, biểu thức
   RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11; v1.3 theo tính năng 003
@@ -451,6 +451,24 @@ Thuật ngữ hạ tầng (môi trường, stack, bản xem trước, bản ghi 
 `specs/007-terraform-infra-environments/data-model.md` mục 1.
 
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
+
+### 11.x Bổ sung v1.5 – tính năng 009 (đăng nhập Google/Facebook, lời mời, tài khoản chờ)
+
+- **Bảng mới của schema `account`**: tenant – `invitations` (lời mời cộng tác viên), `former_members`
+  (tên thành viên đã gỡ); dùng chung (chỉ qua `authTx`) – `oauth_flows` (lượt đăng nhập qua nhà cung
+  cấp), `meta_deletion_requests` (yêu cầu của Meta, chỉ HMAC). `memberships.user_id` không còn khóa
+  ngoại tới `users` (mã tham chiếu).
+- **Trạng thái tài khoản `unclaimed`** ("tài khoản chờ"): của người không thuộc tài khoản kinh doanh
+  nào; không có gói, hồ sơ, kênh. **Mọi báo cáo đếm tài khoản và mọi việc quét tài khoản (mở chu kỳ,
+  kiểm tra gói) phải lọc `status <> 'unclaimed'`.**
+- **Loại việc**: `account.mail_notice` (`notify`, tenant), `account.auth_housekeeping` (`scheduled`,
+  system, mỗi 10 phút), `account.detached_users` (`scheduled`, system, mỗi giờ).
+- **Bên nhận dữ liệu ở nước ngoài mới**: Google và Meta (đăng nhập) – nhận về tên, email, mã người
+  dùng; gửi đi chỉ tham số giao thức. Phải có trong danh sách chuyển dữ liệu xuyên biên giới.
+- **Thuật ngữ Việt → Anh**: tài khoản chờ → `unclaimed` account / `detached` (người gọi); lời mời →
+  `invitation`; ghế → `seat`; cách đăng nhập → `login_identity` / login method; lượt đăng nhập →
+  `oauth_flow`; xác nhận lại danh tính → `reauth`; nhận tài khoản → `claim`; gỡ thành viên →
+  `member_detach`; thành viên đã gỡ → `former_member`; nhà cung cấp đăng nhập → `identity provider`.
 
 ## 12. Việc còn mở ảnh hưởng triển khai
 

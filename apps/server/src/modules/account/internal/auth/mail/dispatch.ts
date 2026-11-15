@@ -42,11 +42,8 @@ export class MailDispatcher {
   ): Promise<void> {
     let timer: NodeJS.Timeout | undefined;
     try {
-      const content = renderTemplate(template, {
-        webBaseUrl: this.config.webBaseUrl,
-        displayName: vars.displayName,
-        token: vars.token,
-      });
+      // `userId` chỉ dùng cho nhật ký lỗi bên dưới – mẫu thư bỏ qua khóa lạ.
+      const content = renderTemplate(template, { ...vars, webBaseUrl: this.config.webBaseUrl });
       await Promise.race([
         this.mailer.send({ to, ...content }),
         new Promise<never>((_, reject) => {

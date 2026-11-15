@@ -4,6 +4,8 @@ import {
   clearSessionCookie,
   CUSTOMER_SESSION_COOKIE,
   hashToken,
+  OAUTH_FLOW_COOKIE,
+  OAUTH_FLOW_COOKIE_MAX_AGE_SECONDS,
   readCookie,
   setSessionCookie,
   STAFF_SESSION_COOKIE,
@@ -63,5 +65,28 @@ describe('cookies', () => {
   it('hashToken = SHA-256 của mã', () => {
     expect(hashToken('abc').equals(createHash('sha256').update('abc').digest())).toBe(true);
     expect(hashToken('abc')).toHaveLength(32);
+  });
+  it('009: cookie lượt đăng nhập __Host-oauth – HttpOnly; Secure; SameSite=Lax; Path=/; 30 phút; xóa được', () => {
+    expect(OAUTH_FLOW_COOKIE).toBe('__Host-oauth');
+    expect(OAUTH_FLOW_COOKIE_MAX_AGE_SECONDS).toBe(1800);
+    const res = fakeRes();
+    setSessionCookie(
+      res as never,
+      OAUTH_FLOW_COOKIE,
+      'ma_luot-123',
+      OAUTH_FLOW_COOKIE_MAX_AGE_SECONDS,
+    );
+    expect(res.headers['set-cookie']).toEqual([
+      '__Host-oauth=ma_luot-123; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=1800',
+    ]);
+    // SameSite=Lax để cookie đi kèm lần chuyển hướng GET từ nhà cung cấp về; không có Domain.
+    expect(String((res.headers['set-cookie'] as string[])[0])).not.toMatch(/Domain=/i);
+    clearSessionCookie(res as never, OAUTH_FLOW_COOKIE);
+    expect((res.headers['set-cookie'] as string[])[1]).toBe(
+      '__Host-oauth=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
+    );
+    expect(readCookie({ headers: { cookie: '__Host-oauth=ma_luot-123' } }, OAUTH_FLOW_COOKIE)).toBe(
+      'ma_luot-123',
+    );
   });
 });

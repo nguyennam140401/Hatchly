@@ -31,6 +31,19 @@ export const SECRET_PATTERNS = [
   { name: 'mã quyền giả lọt nhật ký', re: /fake_tok_[A-Za-z0-9_-]{4,}/, logsOnly: true },
   { name: 'lời nhắc AI lọt nhật ký', re: /PROMPT_CANARY_[A-Za-z0-9_]+/, logsOnly: true },
   { name: 'nội dung bài lọt nhật ký', re: /POST_CANARY_[A-Za-z0-9_]+/, logsOnly: true },
+  // 009 (research R19, FR-030): tham số của đường quay về đăng nhập Google/Facebook và thông báo của
+  // Meta – CHỈ quét trong nhật ký. Thấy = chuỗi truy vấn của /auth/oauth/* hoặc thân yêu cầu bị ghi ra.
+  {
+    name: 'mã ủy quyền OAuth lọt nhật ký',
+    re: /[?&]code=[A-Za-z0-9._~%/+-]{6,}/,
+    logsOnly: true,
+  },
+  { name: 'state OAuth lọt nhật ký', re: /[?&]state=[A-Za-z0-9._~%+-]{6,}/, logsOnly: true },
+  {
+    name: 'signed_request của Meta lọt nhật ký',
+    re: /signed_request["']?\s*[=:]\s*["']?[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}/,
+    logsOnly: true,
+  },
   // 007 (hạ tầng): chỉ quét trong `infra/` và `.github/workflows/` (tài liệu/kiểm thử nơi khác có thể
   // nêu tên khóa làm ví dụ). Giá trị rỗng, biến (`var.x`, `${…}`) hay chỗ giữ `<…>` không bị bắt.
   {

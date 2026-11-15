@@ -4,7 +4,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CustomerAccess, Public, StaffAccess } from '../../src/core/auth/access.decorators';
-import { currentActor } from '../../src/core/auth/actor';
+import { can, currentActor } from '../../src/core/auth/actor';
 import { AuthModule } from '../../src/core/auth/auth.module';
 import { hashToken } from '../../src/core/auth/cookies';
 import { SessionCache } from '../../src/core/auth/session-cache';
@@ -53,6 +53,26 @@ class GuardTestController {
     return 'ok';
   }
 
+  // 009: điểm cuối cá nhân mở cho người ở tài khoản chờ.
+  @Get('personal')
+  @CustomerAccess({ allowDetached: true })
+  personal(): unknown {
+    return { actor: currentActor(), account: currentAccountId(), canApprove: can('post.approve') };
+  }
+
+  @Get('personal-unverified')
+  @CustomerAccess({ allowDetached: true, allowUnverifiedEmail: true })
+  personalUnverified(): string {
+    return 'ok';
+  }
+
+  // Khai báo SAI (kiểm tra khởi động bắt); guard vẫn phải từ chối.
+  @Get('personal-with-permission')
+  @CustomerAccess({ allowDetached: true }, 'post.approve')
+  personalWithPermission(): string {
+    return 'không bao giờ tới với người ở tài khoản chờ';
+  }
+
   @Post('approve/:accountId')
   @CustomerAccess('post.approve')
   approve(): unknown {
@@ -80,15 +100,30 @@ const owner: CustomerActor = {
   role: 'owner',
   emailVerified: true,
   sessionId: 's1',
+  detached: false,
 };
 const collaborator: CustomerActor = { ...owner, userId: 'u-col', role: 'collaborator' };
 const unverified: CustomerActor = { ...owner, userId: 'u-unv', emailVerified: false };
+// 009: người ở tài khoản chờ – giữ ghế chủ của tài khoản chờ nhưng không có quyền nào.
+const detached: CustomerActor = {
+  ...owner,
+  userId: 'u-det',
+  accountId: 'acc-shell',
+  detached: true,
+};
+const detachedUnverified: CustomerActor = {
+  ...detached,
+  userId: 'u-det-unv',
+  emailVerified: false,
+};
 const support: StaffActor = { kind: 'staff', staffId: 'st-1', role: 'support', sessionId: 's9' };
 
 const customers: Record<string, CustomerActor> = {
   'tok-owner': owner,
   'tok-col': collaborator,
   'tok-unv': unverified,
+  'tok-det': detached,
+  'tok-det-unv': detachedUnverified,
 };
 const staffs: Record<string, StaffActor> = { 'tok-support': support };
 
@@ -289,5 +324,115 @@ describe('AccessGuard – dải mạng nhân viên', () => {
       .expect(403);
     expect((res.body as { error: { code: string } }).error.code).toBe('IP_NOT_ALLOWED');
     expect(audits.map((a) => a.result)).toEqual(['denied_ip']);
+  });
+});
+
+describe('AccessGuard – người ở tài khoản chờ (009, contracts/module-api.md mục 1)', () => {
+  let app: INestApplication;
+  const customerMap = byHash(customers);
+  const resolver: SessionResolver = {
+    resolveCustomer(hash) {
+      const actor = customerMap.get(hash.toString('hex'));
+      return Promise.resolve(actor === undefined ? null : { actor, absoluteExpiresAt: far });
+    },
+    resolveStaff: () => Promise.resolve(null),
+  };
+  const warnings: Record<string, unknown>[] = [];
+
+  beforeAll(async () => {
+    const config = loadConfig({
+      APP_ENV: 'test',
+      LOG_LEVEL: 'fatal',
+      ...TEST_AUTH_ENV,
+      DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:1/app',
+    });
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        CoreModule.forRoot('api', config),
+        AuthModule.forRoot(resolveAuthConfig(config), { accessScan: 'log' }),
+      ],
+      controllers: [GuardTestController],
+      providers: [{ provide: SESSION_RESOLVER, useValue: resolver }],
+    }).compile();
+    app = moduleRef.createNestApplication({
+      logger: {
+        log: () => undefined,
+        error: () => undefined,
+        warn: (entry: unknown) => {
+          if (typeof entry === 'object' && entry !== null) {
+            warnings.push(entry as Record<string, unknown>);
+          }
+        },
+      },
+    });
+    app.use(requestContextMiddleware);
+    await app.init();
+  });
+  afterAll(async () => {
+    await app.close();
+  });
+  beforeEach(() => {
+    warnings.length = 0;
+  });
+
+  const http = () => request(app.getHttpServer() as Server);
+  const sid = (t: string) => `__Host-sid=${t}`;
+  const code = (res: { body: unknown }) => (res.body as { error: { code: string } }).error.code;
+
+  it('không có allowDetached → 403 NO_ACCOUNT + nhật ký auth.denied (reason: detached)', async () => {
+    for (const path of ['/t/me', '/t/verified']) {
+      const res = await http().get(path).set('cookie', sid('tok-det')).expect(403);
+      expect(code(res), path).toBe('NO_ACCOUNT');
+      expect((res.body as { error: { actions: { href?: string }[] } }).error.actions[0]?.href).toBe(
+        '/no-account',
+      );
+    }
+    const denied = warnings.filter((w) => w.event === 'auth.denied');
+    expect(denied).toHaveLength(2);
+    expect(denied[0]).toMatchObject({
+      reason: 'detached',
+      actor_id: 'u-det',
+      account_id: 'acc-shell',
+    });
+  });
+
+  it('điểm cuối đòi quyền → NO_ACCOUNT (không phải FORBIDDEN) dù vai trò dữ liệu là owner', async () => {
+    const res = await http()
+      .post('/t/approve/acc-a')
+      .set('cookie', sid('tok-det'))
+      .set('origin', 'http://app.test')
+      .expect(403);
+    expect(code(res)).toBe('NO_ACCOUNT');
+  });
+
+  it('kiểm detached chạy SAU khi gắn người gọi và TRƯỚC kiểm email', async () => {
+    // Chưa xác minh + ở tài khoản chờ, điểm cuối không có cờ nào → NO_ACCOUNT, không phải EMAIL_NOT_VERIFIED.
+    const res = await http().get('/t/verified').set('cookie', sid('tok-det-unv')).expect(403);
+    expect(code(res)).toBe('NO_ACCOUNT');
+    // Có allowDetached nhưng không allowUnverifiedEmail → tới bước kiểm email.
+    const email = await http().get('/t/personal').set('cookie', sid('tok-det-unv')).expect(403);
+    expect(code(email)).toBe('EMAIL_NOT_VERIFIED');
+    await http().get('/t/personal-unverified').set('cookie', sid('tok-det-unv')).expect(200);
+  });
+
+  it('allowDetached → qua, gắn người gọi + tài khoản chờ; can() luôn false', async () => {
+    const res = await http().get('/t/personal').set('cookie', sid('tok-det')).expect(200);
+    expect(res.body).toMatchObject({
+      actor: { userId: 'u-det', detached: true },
+      account: 'acc-shell',
+      canApprove: false,
+    });
+    // Người thuộc tài khoản thật vẫn dùng điểm cuối này bình thường.
+    const normal = await http().get('/t/personal').set('cookie', sid('tok-owner')).expect(200);
+    expect(normal.body).toMatchObject({ actor: { detached: false }, canApprove: true });
+  });
+
+  it('allowDetached kèm quyền (khai báo sai) → guard vẫn từ chối người ở tài khoản chờ', async () => {
+    const res = await http()
+      .get('/t/personal-with-permission')
+      .set('cookie', sid('tok-det'))
+      .expect(403);
+    expect(code(res)).toBe('FORBIDDEN');
+    await http().get('/t/personal-with-permission').set('cookie', sid('tok-owner')).expect(200);
   });
 });

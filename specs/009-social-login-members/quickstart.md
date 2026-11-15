@@ -115,3 +115,31 @@ chỉ có tên + email (FR-005) và nhật ký không có `code=`, `state=`.
 có email **chưa bấm xác nhận** rồi đăng nhập → `GET /me?fields=email` phải **không** trả email (ứng dụng
 đi vào kịch bản B). Đối chiếu thêm mô tả trường `email` trong tài liệu Graph API hiện hành. Nếu Facebook
 có trả email chưa xác nhận: đặt `emailVerified = false` cho Facebook ở bản `arctic` và báo chủ sản phẩm.
+
+## 4. Kết quả kiểm chứng (sau implement)
+
+Kiểm chứng **tự động** bằng nhà cung cấp giả lập (`OAUTH_DRIVER=fake`) trên CSDL thử:
+
+| Kịch bản | Kiểm thử tự động | Kết quả |
+|---|---|---|
+| A, B – đăng nhập / đăng ký Google, Facebook (kể cả không trả email) | `test/auth/oauth-login.e2e.spec.ts` | đạt |
+| C – trùng email, xác nhận trước khi liên kết (ma trận SC-003) | `test/auth/oauth-link-confirm.e2e.spec.ts` | đạt |
+| D – mời cộng tác viên (mật khẩu + nhà cung cấp) | `test/auth/members-invite.e2e.spec.ts` | đạt |
+| E – gỡ, tài khoản chờ, nhận lời mời lại, tự tạo tài khoản | `test/auth/members-remove.e2e.spec.ts` | đạt |
+| F – cách đăng nhập, xác nhận lại danh tính | `test/auth/login-methods.e2e.spec.ts` | đạt |
+| G – thông báo của Meta | `test/auth/meta-callbacks.e2e.spec.ts`, `signed-request.spec.ts` | đạt |
+| H – báo trước và xóa sau 90 ngày | `test/queue/account-jobs.queue.spec.ts` | đạt |
+
+**Chưa chạy tay** trên trình duyệt ở 360 px với Mailpit (cần `docker compose` của dự án; chỉ chạy ở một
+checkout). Giao diện mới được kiểm bằng kiểm thử thành phần + `vitest-axe` (`apps/web/test`).
+
+## 5. Bắt buộc trước khi phát hành (không làm được trong CI)
+
+1. Kiểm giả định email Facebook với tài liệu Meta hiện hành và tài khoản thử (research R3, mục 3 ở trên).
+2. Chạy kịch bản A, B, C, G với `OAUTH_DRIVER=real` và khóa của ứng dụng thử nghiệm.
+3. Thêm Google và Meta (đăng nhập) vào danh sách chuyển dữ liệu xuyên biên giới trong `TaiLieuDacTa/`
+   (Kiến trúc dữ liệu mục 9) và trang chính sách quyền riêng tư `/privacy` (FR-032).
+4. Ingress bỏ chuỗi truy vấn trong nhật ký truy cập cho `/api/v1/auth/oauth/*`.
+5. Đăng ký địa chỉ quay về với Google/Meta và hai địa chỉ nhận thông báo của Meta; đưa
+   `GOOGLE_CLIENT_*`, `FACEBOOK_APP_*` vào kho bí mật; đặt `OAUTH_DRIVER=real` ở môi trường thật (không
+   đặt = đăng nhập Google/Facebook chưa bật, trả 503).

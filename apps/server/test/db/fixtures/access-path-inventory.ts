@@ -16,6 +16,20 @@ export const ACCESS_PATH_INVENTORY: Record<string, AccessPathEntry> = {
   'function:account.auth_lookup_email': { proof: 'test/db/auth-functions.db.spec.ts' },
   'function:account.auth_register': { proof: 'test/db/auth-functions.db.spec.ts' },
   'function:account.auth_resolve_session': { proof: 'test/db/auth-functions.db.spec.ts' },
+  // 009 (migration 0016): hàm của đăng nhập qua nhà cung cấp, lời mời, tài khoản chờ.
+  'function:account.auth_accept_invitation_existing': {
+    proof: 'test/db/social-functions.db.spec.ts',
+  },
+  'function:account.auth_accept_invitation_new': { proof: 'test/db/social-functions.db.spec.ts' },
+  'function:account.auth_find_invitation': { proof: 'test/db/social-functions.db.spec.ts' },
+  'function:account.auth_invitation_account': { proof: 'test/db/social-functions.db.spec.ts' },
+  'function:account.auth_lookup_identity': { proof: 'test/db/social-functions.db.spec.ts' },
+  'function:account.auth_pending_invitations_for_email': {
+    proof: 'test/db/social-functions.db.spec.ts',
+  },
+  'function:account.auth_register_oauth': { proof: 'test/db/social-functions.db.spec.ts' },
+  'function:account.auth_resolve_session_v2': { proof: 'test/db/social-functions.db.spec.ts' },
+  'function:account.member_detach': { proof: 'test/db/invitations-isolation.db.spec.ts' },
   // ---- (c) bảng việc nền dùng chung ----
   'table:pgboss.job_common': { proof: 'test/queue/queue-privileges.queue.spec.ts' },
 };

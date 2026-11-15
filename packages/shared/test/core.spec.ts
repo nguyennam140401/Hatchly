@@ -137,7 +137,8 @@ describe('ERROR_CODES', () => {
 
   it('có mã lỗi xác thực (004) và mỗi mã có thông điệp tiếng Việt', () => {
     const authCodes = Object.keys(AUTH_ERROR_MESSAGES);
-    expect(authCodes).toHaveLength(14);
+    // 14 mã của 004 + 17 mã của 009 (contracts/auth-http-api.md mục 8).
+    expect(authCodes).toHaveLength(31);
     for (const code of authCodes) {
       expect((ERROR_CODES as Record<string, string>)[code]).toBe(code);
       expect(AUTH_ERROR_MESSAGES[code as keyof typeof AUTH_ERROR_MESSAGES].length).toBeGreaterThan(

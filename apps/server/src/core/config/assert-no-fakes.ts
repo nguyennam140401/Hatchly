@@ -30,6 +30,8 @@ export function resolveGatewayDefaults(config: AppConfig): AppConfig {
     out.STORAGE_DRIVER ??= 'memory';
     // Hiện mọi driver cổng chỉ có `fake` → luôn cần kho trạng thái (bản thật thêm giá trị `real` sau).
     out.FAKE_STATE_STORE ??= 'memory';
+    // 009: nhà cung cấp đăng nhập giả lập (không gọi ra ngoài).
+    out.OAUTH_DRIVER ??= 'fake';
   } else {
     for (const variable of [
       'PLATFORM_GATEWAY_DRIVER',
@@ -52,6 +54,12 @@ export function resolveGatewayDefaults(config: AppConfig): AppConfig {
       if (out[variable] === undefined) issues.push({ variable, reason: 'bắt buộc' });
     }
   }
+  if (out.DETACHED_NOTICE_DAYS >= out.DETACHED_RETENTION_DAYS) {
+    issues.push({
+      variable: 'DETACHED_NOTICE_DAYS',
+      reason: 'phải nhỏ hơn DETACHED_RETENTION_DAYS',
+    });
+  }
   if (issues.length > 0) throw new ConfigError(issues);
   return out;
 }
@@ -64,6 +72,8 @@ export function fakeSelections(config: AppConfig): string[] {
   if (config.NOTIFICATIONS_DRIVER === 'fake') found.push('NOTIFICATIONS_DRIVER=fake');
   if (config.STORAGE_DRIVER === 'memory') found.push('STORAGE_DRIVER=memory');
   if (config.MAIL_TRANSPORT === 'memory') found.push('MAIL_TRANSPORT=memory');
+  // 009: bản giả lập cho phép đăng nhập bằng danh tính tùy ý → KHÔNG nằm trong ngoại lệ thử nghiệm.
+  if (config.OAUTH_DRIVER === 'fake') found.push('OAUTH_DRIVER=fake');
   if (config.FAKE_STATE_STORE !== undefined) {
     found.push(`FAKE_STATE_STORE=${config.FAKE_STATE_STORE}`);
   }

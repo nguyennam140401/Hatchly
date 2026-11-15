@@ -110,7 +110,27 @@ export const AUTH_ERROR_MESSAGES = {
   EMAIL_ALREADY_VERIFIED: 'Email của bạn đã được xác nhận.',
   IP_NOT_ALLOWED: 'Lối vào nội bộ không mở cho mạng này.',
   OWNER_REQUIRED: 'Tài khoản phải luôn có một chủ tài khoản.',
-  SEATS_FULL: 'Tài khoản đã đủ 2 cộng tác viên.',
+  SEATS_FULL: 'Đã đủ 2 cộng tác viên. Gỡ một người hoặc hủy một lời mời để mời người khác.',
+  // ----- 009 (contracts/auth-http-api.md mục 8). `{provider}` = Google/Facebook, `{email}` = email được mời.
+  OAUTH_CANCELLED: 'Bạn chưa hoàn tất đăng nhập bằng {provider}.',
+  OAUTH_FAILED: 'Chưa đăng nhập được bằng {provider}. Hãy thử lại hoặc đăng nhập bằng email.',
+  OAUTH_FLOW_INVALID: 'Phiên đăng nhập này đã hết hạn. Hãy bắt đầu lại.',
+  PROVIDER_UNAVAILABLE: '{provider} đang gặp sự cố. Bạn có thể đăng nhập bằng cách khác.',
+  IDENTITY_IN_USE: 'Tài khoản {provider} này đang dùng cho một tài khoản khác.',
+  PROVIDER_ACCOUNT_CONFLICT:
+    'Email này đã liên kết với một tài khoản {provider} khác. Hãy đăng nhập bằng cách bạn vẫn dùng.',
+  LOGIN_METHOD_EXISTS: 'Bạn đã liên kết cách đăng nhập này rồi.',
+  LAST_LOGIN_METHOD: 'Hãy thêm cách đăng nhập khác trước khi gỡ.',
+  REAUTH_REQUIRED: 'Hãy xác nhận lại đây là bạn để tiếp tục.',
+  REAUTH_MISMATCH: 'Tài khoản {provider} vừa chọn không phải cách đăng nhập của bạn.',
+  INVITE_INVALID: 'Lời mời không còn hiệu lực. Hãy nhờ chủ tài khoản gửi lại lời mời.',
+  INVITE_EMAIL_MISMATCH:
+    'Hãy dùng tài khoản có email {email} hoặc nhờ chủ tài khoản mời lại bằng email này.',
+  INVITE_EMAIL_IN_USE: 'Email này đang dùng cho một tài khoản khác nên chưa tham gia được.',
+  INVITE_SELF: 'Bạn đang là chủ tài khoản này.',
+  ALREADY_IN_ACCOUNT: 'Bạn đang thuộc một tài khoản khác.',
+  NO_ACCOUNT: 'Bạn không còn là thành viên của tài khoản nào.',
+  SIGNED_REQUEST_INVALID: 'Yêu cầu không hợp lệ.',
 } as const;
 export type AuthErrorCode = keyof typeof AUTH_ERROR_MESSAGES;
 
@@ -118,6 +138,25 @@ export type AuthErrorCode = keyof typeof AUTH_ERROR_MESSAGES;
 export function loginThrottledMessage(retryAfterSeconds: number): string {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
   return AUTH_ERROR_MESSAGES.LOGIN_THROTTLED.replace('{n}', String(minutes));
+}
+
+/** Tên hiển thị của nhà cung cấp đăng nhập trong thông điệp (009). */
+export const LOGIN_PROVIDER_LABELS = { google: 'Google', facebook: 'Facebook' } as const;
+export type LoginProvider = keyof typeof LOGIN_PROVIDER_LABELS;
+
+/**
+ * Thông điệp có chỗ trống `{provider}` / `{email}` (009). Thiếu giá trị → dùng cách nói chung để câu
+ * vẫn đọc được.
+ */
+export function authErrorMessage(
+  code: AuthErrorCode,
+  vars: { provider?: LoginProvider | undefined; email?: string | undefined } = {},
+): string {
+  const provider =
+    vars.provider === undefined ? 'nhà cung cấp' : LOGIN_PROVIDER_LABELS[vars.provider];
+  return AUTH_ERROR_MESSAGES[code]
+    .replace('{provider}', provider)
+    .replace('{email}', vars.email ?? 'được mời');
 }
 
 /**

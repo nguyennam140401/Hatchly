@@ -8,6 +8,7 @@ import { DiagnosticsController } from '../core/diagnostics/diagnostics.controlle
 import { HealthController } from '../core/health/health.controller';
 import type { LogDestination } from '../core/logging/logging.module';
 import { DevFakesController } from '../dev/fakes.controller';
+import { FakeAuthorizeController } from '../modules/account';
 import { FakeOauthController } from '../modules/platform_gateway';
 import { buildModules } from './module-registry';
 
@@ -45,6 +46,12 @@ export class ApiAppModule {
         // 005: quản trị bản giả lập + trang ủy quyền giả – không có route ở staging/production (→ 404).
         ...(shouldRegisterDevRoutes(config.APP_ENV)
           ? [DevFakesController, FakeOauthController]
+          : []),
+        // 009: trang đăng nhập Google/Facebook giả lập – chỉ khi OAUTH_DRIVER=fake (staging/production
+        // từ chối khởi động với giá trị này nên route không bao giờ có ở đó → 404).
+        // Hai lớp chặn: giá trị cấu hình VÀ môi trường – không dựa riêng vào bước kiểm tra cấu hình.
+        ...(config.OAUTH_DRIVER === 'fake' && shouldRegisterDevRoutes(config.APP_ENV)
+          ? [FakeAuthorizeController]
           : []),
       ],
     };
