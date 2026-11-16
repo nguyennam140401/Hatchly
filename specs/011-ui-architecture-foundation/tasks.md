@@ -214,7 +214,7 @@ Quy tắc chung mỗi thành phần (contracts/ui-components.md mục 1): thư m
 - [X] T082 [P] Quét an toàn: không `localStorage`/`sessionStorage`/IndexedDB chứa dữ liệu tài khoản (E2E quét ở `apps/web/e2e/two-tabs.spec.ts`); không số tiền AI ở khu vực khách hàng (`check-web-rules`); không ghi mã/bí mật vào `console`; chạy bước quét bí mật sẵn có của repo.
 - [X] T083 [P] Cập nhật tài liệu dự án: UI/UX mục 4 (điều hướng 7/5 mục, TikTok, "Đăng tay", "Gợi ý hôm nay", "Đã hủy" cần bổ sung vào Figma) và ghi sự lệch Figma ↔ UI/UX cho PO vào `docs/` hoặc `specs/011-ui-architecture-foundation/figma-extract.md`; đối chiếu `CLAUDE.md` nếu quy ước thêm mới (chạy `pnpm wiki:check`).
 - [X] T084 Chạy toàn bộ `specs/011-ui-architecture-foundation/quickstart.md` (mục 1–4 và 13 kịch bản thủ công) và ghi kết quả; sửa lỗi phát hiện.
-- [ ] T085 Rà hiến pháp bằng skill `constitution-review` (đặc biệt nguyên tắc I, III, VI, VII) và cập nhật mục "Kiểm tra hiến pháp" của `plan.md` nếu có đổi; xác nhận không tạo ADR mới là đúng.
+- [X] T085 Rà hiến pháp bằng skill `constitution-review` (đặc biệt nguyên tắc I, III, VI, VII) và cập nhật mục "Kiểm tra hiến pháp" của `plan.md` nếu có đổi; xác nhận không tạo ADR mới là đúng.
 
 ---
 
