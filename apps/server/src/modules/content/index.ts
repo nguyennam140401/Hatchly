@@ -1,3 +1,26 @@
 // Giao diện công khai DUY NHẤT của module Nội dung.
 export { ContentModule } from './content.module';
-export type { ContentPublicApi } from './public-api';
+export {
+  CONTENT_PUBLIC_API,
+  MEDIA_DESCRIBER,
+  type CalendarRecord,
+  type ChannelRule,
+  type ContentPublicApi,
+  type CreateDraftResult,
+  type DeleteResult,
+  type MediaDescriber,
+  type Page,
+  type Paged,
+  type PendingRecord,
+  type PostEventInput,
+  type PostEventRecord,
+  type PostRecord,
+  type SaveContentInput,
+  type SaveContentResult,
+  type SaveFields,
+  type TransitionInput,
+  type TransitionResult,
+  type TransitionSet,
+  type ValidationResult,
+  type VariantRecord,
+} from './public-api';

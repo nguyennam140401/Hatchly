@@ -173,6 +173,8 @@ export interface PlatformGatewayPublicApi {
   capabilities(channelType: ChannelType): ChannelCapabilities;
   contentHash(channelType: ChannelType, text: string): string;
   getConnection(connectionId: string): Promise<ChannelConnection | null>;
+  /** 012: mọi kết nối của tài khoản trong ngữ cảnh (kể cả đã ngắt) – không mã quyền. */
+  listConnections(): Promise<ChannelConnection[]>;
 }
 
 /** Token NestJS của PlatformGatewayPublicApi. */

@@ -120,6 +120,20 @@
       "when": 1794669713848,
       "tag": "0016_account_social_members_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794805045070,
+      "tag": "0017_content_posts",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794805053709,
+      "tag": "0018_content_publishing_grants_seed",
+      "breakpoints": true
     }
   ]
 }

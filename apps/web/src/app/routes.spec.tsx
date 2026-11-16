@@ -26,8 +26,9 @@ describe('routes', () => {
 
   it('trang giữ chỗ trong khung: "Sắp có" + điều hướng còn nguyên', async () => {
     fakeApi({ 'GET /api/v1/auth/me': () => ({ status: 200, body: me() }) });
-    renderAt('/calendar');
-    expect(await screen.findByRole('heading', { name: 'Lịch đăng' })).toBeInTheDocument();
+    // 012 đã làm màn hình Lịch → dùng một tuyến còn giữ chỗ (Thư viện media chưa có).
+    renderAt('/media');
+    expect(await screen.findByRole('heading', { name: 'Thư viện' })).toBeInTheDocument();
     expect(screen.getByText('Sắp có')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
   });

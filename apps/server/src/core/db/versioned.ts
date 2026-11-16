@@ -17,12 +17,14 @@ export type VersionedTable = PgTable & { id: AnyPgColumn; version: AnyPgColumn }
 export function versionConflict(
   message = 'Bài vừa được người khác sửa. Tải lại để xem bản mới nhất.',
   actionLabel = 'Tải lại',
+  extra?: Record<string, unknown>,
 ): AppError {
   return new AppError({
     code: ERROR_CODES.VERSION_CONFLICT,
     httpStatus: 409,
     message,
     actions: [{ kind: 'retry', label: actionLabel }],
+    ...(extra !== undefined ? { extra } : {}),
   });
 }
 

@@ -125,6 +125,7 @@ async function execute<T>(
       fieldErrors: Object.fromEntries(
         (e.fieldErrors ?? []).map((f) => [f.path.join('.'), f.message]),
       ),
+      ...(e.extra !== undefined ? { extra: e.extra } : {}),
       ...(e.retryAfterSeconds !== undefined ? { retryAfterSeconds: e.retryAfterSeconds } : {}),
       support: e.support,
       ...(e.reason !== undefined ? { reason: e.reason } : {}),
