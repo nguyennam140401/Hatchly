@@ -43,7 +43,8 @@
     "test:queue-soak": "pnpm --filter @app/server test:queue-soak",
     "test:e2e": "pnpm --filter @app/e2e test:e2e",
     "queue:sql": "pnpm --filter @app/server queue:sql",
-    "check:web-rules": "node tooling/check-web-rules.mjs"
+    "check:web-rules": "node tooling/check-web-rules.mjs",
+    "test:web-e2e": "node tooling/run-web-e2e.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

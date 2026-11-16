@@ -60,6 +60,11 @@ Khi Figma đổi một giá trị: cập nhật `src/styles/figma-tokens.json` (
 `node tooling/sync-design-tokens.mjs` → chạy bước 2; mọi màn hình đổi theo mà **không sửa tệp thành phần nào** (mục tiêu ≤ 30
 phút). Hướng dẫn đầy đủ: `apps/web/docs/ui-guide.md`.
 
+**Kết quả đo (T080, SC-012, 2026-11-16):** đổi `colors.brand` từ `#0E6F60` sang `#7A2FA0` trong `figma-tokens.json` → chạy
+`node tooling/sync-design-tokens.mjs` → `git diff --stat` chỉ gồm **2 tệp**: `figma-tokens.json` (1 dòng) và `tokens.css` (1 dòng
+`--color-brand` trong khối `@theme`); **0 tệp thành phần** đổi. Chạy đồng bộ lần hai báo "đã khớp", không đổi gì. Kiểm thử
+tương phản (27 ca) vẫn qua với màu thử. Đã hoàn lại về `#0E6F60` sau khi đo. Thời gian thao tác thực tế vài phút (mục tiêu ≤ 30).
+
 ## 5. Kết quả mong đợi khi hoàn tất
 
 Danh mục đủ biến thể (SC-001) · 0 vi phạm quy tắc viết cứng (SC-002) · 0 vi phạm axe nghiêm trọng (SC-003) · kiểm thử cũ vẫn qua và

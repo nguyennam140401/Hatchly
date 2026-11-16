@@ -202,9 +202,9 @@ Quy tắc chung mỗi thành phần (contracts/ui-components.md mục 1): thư m
 
 ### CI, tài liệu, hoàn thiện
 
-- [ ] T078 [P] [US6] Nối CI (workflow hiện có trong `.github/workflows/` hoặc script gốc): `pnpm typecheck`, `pnpm lint` (kể cả `jsx-a11y`), `node tooling/check-web-rules.mjs`, `node tooling/check-web-bundle.mjs`, `node tooling/check-boundaries.mjs` (web chỉ nhập `@app/shared`), `pnpm --filter @app/web test`, `pnpm --filter @app/web test:e2e`.
-- [ ] T079 [P] [US6] `apps/web/docs/ui-guide.md` (FR-037): thêm thành phần (thêm hàng `figma-variants.ts` → thành phần → catalog → spec), thêm mục điều hướng (một phần tử `NAV_ITEMS` + một tuyến + một hàng kiểm thử ma trận quyền), dựng biểu mẫu, khai báo dữ liệu máy chủ + lớp làm mới + hàng `MUTATIONS`, khóa theo quyền/giới hạn, danh sách thư viện bên thứ ba (phiên bản, giấy phép, lớp bọc), quy trình đồng bộ Figma (`figma-tokens.json` → `sync-design-tokens.mjs` → kiểm thử; mục tiêu ≤ 30 phút), quyết định "không bóng đổ" và điểm ngắt `lg` 1024 px.
-- [ ] T080 [P] [US6] Kiểm thử hồi quy giá trị thiết kế (SC-012): đổi `--color-brand` trong `figma-tokens.json` → chạy đồng bộ → không tệp thành phần nào đổi (`git diff` chỉ `figma-tokens.json` và khối `@theme`); ghi kết quả vào `quickstart.md` mục 4.
+- [X] T078 [P] [US6] Nối CI (workflow hiện có trong `.github/workflows/` hoặc script gốc): `pnpm typecheck`, `pnpm lint` (kể cả `jsx-a11y`), `node tooling/check-web-rules.mjs`, `node tooling/check-web-bundle.mjs`, `node tooling/check-boundaries.mjs` (web chỉ nhập `@app/shared`), `pnpm --filter @app/web test`, `pnpm --filter @app/web test:e2e`.
+- [X] T079 [P] [US6] `apps/web/docs/ui-guide.md` (FR-037): thêm thành phần (thêm hàng `figma-variants.ts` → thành phần → catalog → spec), thêm mục điều hướng (một phần tử `NAV_ITEMS` + một tuyến + một hàng kiểm thử ma trận quyền), dựng biểu mẫu, khai báo dữ liệu máy chủ + lớp làm mới + hàng `MUTATIONS`, khóa theo quyền/giới hạn, danh sách thư viện bên thứ ba (phiên bản, giấy phép, lớp bọc), quy trình đồng bộ Figma (`figma-tokens.json` → `sync-design-tokens.mjs` → kiểm thử; mục tiêu ≤ 30 phút), quyết định "không bóng đổ" và điểm ngắt `lg` 1024 px.
+- [X] T080 [P] [US6] Kiểm thử hồi quy giá trị thiết kế (SC-012): đổi `--color-brand` trong `figma-tokens.json` → chạy đồng bộ → không tệp thành phần nào đổi (`git diff` chỉ `figma-tokens.json` và khối `@theme`); ghi kết quả vào `quickstart.md` mục 4.
 
 ---
 

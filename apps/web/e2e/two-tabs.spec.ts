@@ -23,13 +23,14 @@ test('bộ lưu của trình duyệt không chứa dữ liệu tài khoản', as
   await mockSession(page, 'owner');
   await page.goto('/');
   await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
-  const dump = await page.evaluate(() => ({
+  const dump = await page.evaluate(async () => ({
     local: Object.entries(window.localStorage),
     session: Object.entries(window.sessionStorage),
-    databases: 'databases' in indexedDB ? indexedDB.databases().then((d) => d.map((x) => x.name)) : [],
+    // Phải chờ ngay trong `evaluate`: Promise lồng trong đối tượng trả về không được tuần tự hóa.
+    databases: 'databases' in indexedDB ? (await indexedDB.databases()).map((x) => x.name) : [],
   }));
   const text = JSON.stringify({ local: dump.local, session: dump.session });
   expect(text).not.toMatch(/chu@example\.test|u-1|a-1|Chủ Tiệm|token|password/i);
   expect(Object.keys(Object.fromEntries(dump.local)).every((k) => k.startsWith('app:ui.'))).toBe(true);
-  expect(await dump.databases).toEqual([]);
+  expect(dump.databases).toEqual([]);
 });
