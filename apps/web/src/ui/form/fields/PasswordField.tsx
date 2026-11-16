@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { Button } from '../../ui/button/Button';
-import { Field } from '../../ui/field/Field';
-import { useFieldMeta } from '../../ui/form/fields/use-field';
+import { Button } from '../../button/Button';
+import { Field } from '../../field/Field';
+import { useFieldMeta } from './use-field';
 
 /** Ô mật khẩu có nút hiện/ẩn (aria-pressed); `autoComplete` do trang truyền (current/new-password). */
 export function PasswordField({
@@ -33,6 +33,8 @@ export function PasswordField({
             {...c}
             type={visible ? 'text' : 'password'}
             autoComplete={autoComplete}
+            readOnly={readOnly}
+            aria-readonly={readOnly || undefined}
             className={`${c.className} flex-1`}
           />
           <Button

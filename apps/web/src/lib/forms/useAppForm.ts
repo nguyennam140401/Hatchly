@@ -38,6 +38,14 @@ export interface UseAppFormOptions<T extends FieldValues> {
   loadLatest?: (() => Promise<{ values: T; version: number }>) | undefined;
 }
 
+/** Giao diện chung của một biểu mẫu tách rời (vd `LoginForm`): trang truyền cách gửi; bộ kiểm thử hợp đồng truyền bản giả. */
+export interface FormComponentProps<T extends FieldValues> {
+  onSubmit: UseAppFormOptions<T>['onSubmit'];
+  loadLatest?: UseAppFormOptions<T>['loadLatest'];
+  readOnly?: boolean;
+  draftKey?: string;
+}
+
 export interface AppForm<T extends FieldValues> {
   methods: UseFormReturn<T>;
   readOnly: boolean;
@@ -163,7 +171,7 @@ export function useAppForm<T extends FieldValues>(options: UseAppFormOptions<T>)
           await onSubmit(values, { version });
           if (draftKey !== undefined) draftStore.clear(subject, draftKey);
           setStale(false);
-          reset(clearOnSuccess ? (defaultValues as T) : values);
+          reset(clearOnSuccess ? defaultValues : values);
         } catch (error) {
           if (error instanceof AppError) handleServerError(error);
           else throw error;

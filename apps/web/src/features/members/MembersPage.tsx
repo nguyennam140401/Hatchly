@@ -4,25 +4,18 @@ import { membersApi } from '../../lib/api/endpoints/members';
 import { AppError } from '../../lib/api/errors';
 import { ErrorNotice } from '../../lib/api/ErrorNotice';
 import { formatDate } from '../../lib/format/datetime';
-import { objectSchema, required } from '../../lib/forms/rules';
-import { useAppForm } from '../../lib/forms/useAppForm';
 import { useSession } from '../../lib/session/context';
 import { ConfirmDialog } from '../../ui/alert/ConfirmDialog';
 import { InlineAlert } from '../../ui/alert/InlineAlert';
 import { Button } from '../../ui/button/Button';
-import { Form } from '../../ui/form/Form';
-import { TextField } from '../../ui/form/fields/inputs';
 import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from '../auth/AuthLayout';
+import { InviteForm, type InviteValues } from './InviteForm';
 
 // Cài đặt → Thành viên (009 – US3, US4). Chỉ chủ tài khoản (`members.manage`); API vẫn tự chặn. Tối đa
 // 2 cộng tác viên, tính cả lời mời đang chờ. Trạng thái bằng chữ + biểu tượng.
 
 type Collaborator = MembersResponse['collaborators'][number];
-
-interface InviteValues extends Record<string, unknown> {
-  email: string;
-}
 
 export function MembersPage() {
   const { me } = useSession();
@@ -49,36 +42,29 @@ export function MembersPage() {
 
   const free = data === null ? 0 : data.seats.total - data.seats.used;
 
-  const invite = useAppForm<InviteValues>({
-    schema: objectSchema<InviteValues>({
-      email: required('Vui lòng nhập email của người bạn muốn mời.'),
-    }),
-    defaultValues: { email: '' },
-    clearOnSuccess: true,
-    onSubmit: async (values) => {
-      setError(null);
-      setNotice(null);
-      try {
-        await membersApi.invite(values.email);
-      } catch (err) {
-        // Mời chính mình: báo cạnh ô email như lỗi theo ô.
-        if (err instanceof AppError && err.code === 'INVITE_SELF') {
-          throw new AppError({
-            kind: 'validation',
-            status: err.status,
-            code: err.code,
-            message: err.message,
-            actions: err.actions,
-            fieldErrors: { email: err.message },
-            support: err.support,
-          });
-        }
-        throw err;
+  const inviteOnSubmit = async (values: InviteValues) => {
+    setError(null);
+    setNotice(null);
+    try {
+      await membersApi.invite(values.email);
+    } catch (err) {
+      // Mời chính mình: báo cạnh ô email như lỗi theo ô.
+      if (err instanceof AppError && err.code === 'INVITE_SELF') {
+        throw new AppError({
+          kind: 'validation',
+          status: err.status,
+          code: err.code,
+          message: err.message,
+          actions: err.actions,
+          fieldErrors: { email: err.message },
+          support: err.support,
+        });
       }
-      setNotice(`Đã gửi lời mời tới ${values.email.trim()}.`);
-      await load();
-    },
-  });
+      throw err;
+    }
+    setNotice(`Đã gửi lời mời tới ${values.email.trim()}.`);
+    await load();
+  };
 
   if (!allowed) {
     return (
@@ -210,24 +196,15 @@ export function MembersPage() {
             }}
           />
 
-          <Form
-            form={invite}
-            title="Mời cộng tác viên"
-            submitLabel="Mời"
+          <InviteForm
+            onSubmit={inviteOnSubmit}
             {...(free <= 0
               ? {
-                  submitLocked:
+                  lockedReason:
                     'Đã đủ 2 cộng tác viên. Gỡ một người hoặc hủy một lời mời để mời người khác.',
                 }
               : {})}
-          >
-            <TextField
-              name="email"
-              label="Email của người được mời"
-              type="email"
-              autoComplete="off"
-            />
-          </Form>
+          />
         </>
       )}
 

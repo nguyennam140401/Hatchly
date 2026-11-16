@@ -1,5 +1,5 @@
 import type { SessionEndReason } from '@app/shared/core';
-import { explain, FALLBACK_ACTIONS, type ErrorActionView } from '../catalogs/error-explanations';
+import { FALLBACK_ACTIONS, type ErrorActionView } from '../catalogs/error-explanations';
 
 // Lỗi thống nhất của lớp gọi API (data-model mục 7). Màn hình chỉ làm việc với AppError, không với lỗi thô.
 
@@ -77,57 +77,6 @@ export function classify(status: number, code: string): AppErrorKind {
   if (code.startsWith('LIMIT_')) return 'limit_reached';
   if (status >= 500) return 'server';
   return 'business';
-}
-
-/** Hình tối thiểu của `ApiError` cũ (lib/api-client) để chuyển đổi mà không nhập vòng. */
-export interface LegacyApiErrorLike {
-  status: number;
-  code: string;
-  reason: 'network' | 'invalid_response' | 'api_error';
-  message: string;
-  body: {
-    message: string;
-    actions: ErrorActionView[];
-    fieldErrors?: { path: string[]; message: string }[] | undefined;
-    retryAfterSeconds?: number | undefined;
-    reason?: SessionEndReason | undefined;
-    support: { traceId: string; detail?: string | undefined };
-  } | null;
-}
-
-export function toAppError(err: LegacyApiErrorLike): AppError {
-  if (err.reason === 'network') {
-    return new AppError({
-      kind: 'network',
-      status: 0,
-      code: 'NETWORK',
-      message: 'Không kết nối được máy chủ. Hãy kiểm tra mạng rồi thử lại.',
-      actions: [{ kind: 'retry', label: 'Thử lại' }],
-    });
-  }
-  if (err.body === null) {
-    return new AppError({
-      kind: 'invalid_response',
-      status: err.status,
-      code: 'INVALID_RESPONSE',
-      message: 'Máy chủ trả về dữ liệu không đọc được. Vui lòng thử lại sau.',
-      actions: [{ kind: 'retry', label: 'Thử lại' }],
-    });
-  }
-  const body = err.body;
-  return new AppError({
-    kind: classify(err.status, err.code),
-    status: err.status,
-    code: err.code,
-    message: body.message,
-    actions: body.actions.length > 0 ? body.actions : (explain(err.code)?.actions ?? []),
-    fieldErrors: Object.fromEntries(
-      (body.fieldErrors ?? []).map((f) => [f.path.join('.'), f.message]),
-    ),
-    ...(body.retryAfterSeconds !== undefined ? { retryAfterSeconds: body.retryAfterSeconds } : {}),
-    support: body.support,
-    ...(body.reason !== undefined ? { reason: body.reason } : {}),
-  });
 }
 
 export function isAppError(value: unknown): value is AppError {

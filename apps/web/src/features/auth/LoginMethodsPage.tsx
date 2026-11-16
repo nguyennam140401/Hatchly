@@ -12,7 +12,7 @@ import { Button } from '../../ui/button/Button';
 import { Form } from '../../ui/form/Form';
 import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { PasswordField } from './PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 import { ProviderButtons } from './ProviderButtons';
 
 // Cài đặt → Cách đăng nhập (009 – US5). Luôn ba dòng: mật khẩu, Google, Facebook. Liên kết, gỡ, tạo

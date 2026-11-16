@@ -7,7 +7,7 @@ import { InlineAlert } from '../../ui/alert/InlineAlert';
 import { Form } from '../../ui/form/Form';
 import { TextField } from '../../ui/form/fields/inputs';
 import { AuthLayout } from './AuthLayout';
-import { PasswordField } from './PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 
 const STAFF_ROLE_LABEL: Record<StaffMeResponse['role'], string> = {
   admin: 'Quản trị',

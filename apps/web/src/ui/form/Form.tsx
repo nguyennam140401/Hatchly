@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { FormProvider, type FieldValues } from 'react-hook-form';
-import { useNavigate } from 'react-router';
 import type { AppError } from '../../lib/api/errors';
 import type { ErrorActionView } from '../../lib/catalogs/error-explanations';
 import type { AppForm } from '../../lib/forms/useAppForm';
@@ -8,6 +7,7 @@ import { t } from '../../lib/i18n/t';
 import { ConfirmDialog } from '../alert/ConfirmDialog';
 import { InlineAlert } from '../alert/InlineAlert';
 import { Button } from '../button/Button';
+import { useNavigateTo } from '../nav/useNavigateTo';
 import { ConflictNotice } from './ConflictNotice';
 import { FormUiContext } from './form-context';
 
@@ -58,7 +58,7 @@ export function Form<T extends FieldValues>({
   children,
 }: FormProps<T>) {
   const { blocker } = form;
-  const navigate = useNavigate();
+  const navigateTo = useNavigateTo();
   return (
     <FormProvider {...form.methods}>
       <FormUiContext.Provider value={{ readOnly: form.readOnly }}>
@@ -84,7 +84,7 @@ export function Form<T extends FieldValues>({
               }
               onAction={(action) => {
                 if (action.kind === 'navigate' && action.href !== undefined)
-                  void navigate(action.href);
+                  navigateTo(action.href);
                 else void form.retry();
               }}
               support={{ traceId: form.submitError.support.traceId, code: form.submitError.code }}

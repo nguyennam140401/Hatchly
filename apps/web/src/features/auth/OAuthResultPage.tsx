@@ -14,7 +14,7 @@ import { TextField } from '../../ui/form/fields/inputs';
 import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
 import { TermsField } from './ConsentNotice';
-import { PasswordField } from './PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 import { ProviderButtons } from './ProviderButtons';
 
 // Trang kết quả sau khi quay về từ Google/Facebook (009 – US1, US2, US5). Đường quay về của máy chủ

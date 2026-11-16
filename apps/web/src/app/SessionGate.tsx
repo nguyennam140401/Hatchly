@@ -1,12 +1,11 @@
 import type { MeResponse } from '@app/shared/auth';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router';
-import { ApiError, onAuthError } from '../lib/api-client';
 import { createAuthGate, installAuthGate } from '../lib/api/auth-gate';
 import { AuthGateContext } from '../lib/api/auth-gate-context';
 import { setAuthGate } from '../lib/api/client';
 import { sessionApi } from '../lib/api/endpoints/session';
-import { AppError, toAppError } from '../lib/api/errors';
+import { AppError } from '../lib/api/errors';
 import { SessionProvider } from '../lib/session/SessionProvider';
 import { InlineAlert } from '../ui/alert/InlineAlert';
 import { Skeleton } from '../ui/feedback/Skeleton';
@@ -70,16 +69,11 @@ export function SessionGate() {
     void load();
   }, [load]);
 
-  // Cài cổng cho lớp gọi API mới; lớp cũ (`apiRequest`, các trang 004/006/009 chưa chuyển) đi cùng một cổng.
+  // Cài cổng cho lớp gọi API duy nhất (`lib/api/client`).
   useEffect(() => {
     setAuthGate(gate);
     installAuthGate(gate);
-    const off = onAuthError((err: ApiError) => {
-      if (err.code === 'EMAIL_NOT_VERIFIED') gate.onEmailNotVerified(toAppError(err));
-      else void gate.onUnauthenticated(toAppError(err));
-    });
     return () => {
-      off();
       setAuthGate(null);
       installAuthGate(null);
     };

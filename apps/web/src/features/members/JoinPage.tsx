@@ -13,7 +13,7 @@ import { TextField } from '../../ui/form/fields/inputs';
 import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from '../auth/AuthLayout';
 import { TermsField } from '../auth/ConsentNotice';
-import { PasswordField } from '../auth/PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 import { ProviderButtons } from '../auth/ProviderButtons';
 
 // Trang mở từ liên kết trong thư mời (009 – US3, US4). Mã nằm sau `#token=`, được xóa khỏi thanh địa

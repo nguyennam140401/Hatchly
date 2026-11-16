@@ -36,7 +36,7 @@ async function smallTargets(page: Page) {
       if (el.closest('[data-catalog-skip-target]') !== null) continue;
       if (r.height < min || r.width < min) {
         out.push(
-          `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 30)}" ${String(Math.round(r.width))}×${String(Math.round(r.height))}`,
+          `${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}" ${String(Math.round(r.width))}×${String(Math.round(r.height))}`,
         );
       }
     }
@@ -75,7 +75,7 @@ test('cỡ chữ 200% không cắt nút và không cuộn ngang trang', async ({
   const clipped = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('button')]
       .filter((b) => b.getBoundingClientRect().width > 0 && b.scrollWidth > b.clientWidth + 1)
-      .map((b) => (b.textContent ?? '').trim().slice(0, 30)),
+      .map((b) => b.textContent.trim().slice(0, 30)),
   );
   expect(clipped).toEqual([]);
   expect(await seriousViolations(page)).toEqual([]);

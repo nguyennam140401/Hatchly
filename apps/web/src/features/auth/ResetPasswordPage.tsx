@@ -7,7 +7,7 @@ import { useAppForm } from '../../lib/forms/useAppForm';
 import { Form } from '../../ui/form/Form';
 import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { PasswordField } from './PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 
 // Đặt lại mật khẩu (US5, FR-009): mã `#token=` được đọc và XÓA khỏi thanh địa chỉ ngay khi mở trang
 // (trước mọi lời gọi API); mã chỉ nằm trong bộ nhớ của trang.

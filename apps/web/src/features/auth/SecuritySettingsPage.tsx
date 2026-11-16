@@ -10,7 +10,7 @@ import { Button } from '../../ui/button/Button';
 import { Form } from '../../ui/form/Form';
 import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { PasswordField } from './PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 
 // Bảo mật (US2, US5): đăng xuất, đăng xuất mọi thiết bị (có hộp xác nhận), đổi mật khẩu.
 

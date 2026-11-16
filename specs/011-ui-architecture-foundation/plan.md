@@ -185,9 +185,10 @@ Mỗi pha kết thúc bằng bản chạy được và kiểm thử xanh; pha sa
 
 ## Complexity Tracking
 
-Không có vi phạm hiến pháp. Hai quyết định phức tạp đáng theo dõi (không phải vi phạm):
+Không có vi phạm hiến pháp. Ba quyết định phức tạp đáng theo dõi (không phải vi phạm):
 
 | Quyết định | Vì sao cần | Phương án đơn giản hơn đã cân nhắc |
 |---|---|---|
 | Bọc TanStack Query/RHF/Radix sau `lib/api`, `ui/form`, `ui/*` (thêm một lớp) | FR-038 + hiến pháp IX: thư viện chi phối hành vi quan trọng phải bọc để thay một nơi và để ép quy tắc (khóa, vô hiệu hóa, cấm lạc quan thao tác đắt) | Dùng thư viện trực tiếp ở màn hình: nhanh hơn lúc đầu nhưng lặp lại đúng vấn đề hiện tại (mỗi màn tự gọi mạng/biểu mẫu) |
 | Danh mục trong ứng dụng thay vì Storybook; không tách gói `packages/ui` | Người làm một mình, nhạy chi phí; dùng chính bộ công cụ sẵn có | Storybook / gói riêng: thêm công cụ và bảo trì khi chỉ có một ứng dụng dùng; sẽ xem lại khi có ứng dụng thứ hai hoặc cần xuất bản danh mục cho người thiết kế |
+| `ProfileForm`/`KeywordsInput` (006) giữ giá trị điều khiển + `useReducer` của trang, chưa chuyển sang `useAppForm` | Hợp đồng 006 gắn chặt với máy trạng thái của `BusinessProfilePage`: so sánh "bản đang sửa" với "bản gốc", xung đột phiên bản giữ nguyên nội dung đang gõ, hộp xác nhận tải lại, bộ đếm ký tự `aria-live` ≥ 90%. Đã chuyển toàn bộ lớp giao diện sang `Field`/`Button`/`InlineAlert`/`ConfirmDialog`/`ErrorNotice`, dùng chung `useUnsavedChangesGuard`, endpoints `AppError`; 21 kiểm thử 006 xanh. **Chưa** thử phương án RHF – đây là lựa chọn ngay từ đầu để giữ rủi ro thấp, không phải kết quả sau khi RHF làm hỏng kiểm thử | Chuyển hẳn sang `useAppForm` + `ConflictNotice` + `TagListField`: đồng nhất hơn, nhưng phải viết lại ~700 dòng và kiểm thử 006 để lấy lại đúng các hành vi trên. Nên làm ở tính năng sửa hồ sơ kế tiếp (khi đã có `loadLatest`/`version` thật từ máy chủ) |

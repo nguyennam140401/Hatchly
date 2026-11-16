@@ -52,6 +52,7 @@ export {
 } from './form/fields/inputs';
 export { SwitchField } from './form/fields/SwitchField';
 export { CheckboxField, type CheckboxFieldProps } from './form/fields/CheckboxField';
+export { PasswordField } from './form/fields/PasswordField';
 export { TagListField } from './form/fields/TagListField';
 export { IdeaListField, type IdeaListFieldProps } from './form/fields/IdeaListField';
 export { StaleNotice, type StaleNoticeProps } from './alert/StaleNotice';
