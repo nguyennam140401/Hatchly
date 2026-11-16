@@ -19,6 +19,16 @@ export const ErrorAction = z.object({
 });
 export type ErrorAction = z.infer<typeof ErrorAction>;
 
+/** 011: lý do phiên kết thúc – để giao diện chọn thông điệp đúng (hộp đăng nhập lại hay màn kết thúc). */
+export const SESSION_END_REASONS = [
+  'expired',
+  'revoked',
+  'password_changed',
+  'removed',
+  'locked',
+] as const;
+export type SessionEndReason = (typeof SESSION_END_REASONS)[number];
+
 export const FieldErrorItem = z.object({
   path: z.array(z.string()),
   message: z.string(),
@@ -33,6 +43,8 @@ export const ErrorResponse = z.object({
     /** Mỗi lỗi có ít nhất một hành động khắc phục. */
     actions: z.array(ErrorAction).min(1),
     fieldErrors: z.array(FieldErrorItem).optional(),
+    /** 011: chỉ có ở 401 UNAUTHENTICATED khi biết lý do phiên kết thúc; thiếu = coi như `expired`. */
+    reason: z.enum(SESSION_END_REASONS).optional(),
     /** Số giây cần chờ trước khi thử lại (429 LOGIN_THROTTLED – 004); trùng tiêu đề `Retry-After`. */
     retryAfterSeconds: z.number().int().positive().optional(),
     /** "Chi tiết cho hỗ trợ": mã theo dõi + mã lỗi gốc (không bao giờ chứa bí mật). */

@@ -1,13 +1,21 @@
 import type { OAuthPendingResponse } from '@app/shared/auth';
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { PROVIDER_LABELS, socialApi } from '../../lib/api/endpoints/auth';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import type { ErrorActionView } from '../../lib/catalogs/error-explanations';
+import { objectSchema, required } from '../../lib/forms/rules';
+import { useAppForm } from '../../lib/forms/useAppForm';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Button } from '../../ui/button/Button';
+import { Form } from '../../ui/form/Form';
+import { TextField } from '../../ui/form/fields/inputs';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { TermsCheckbox } from './ConsentNotice';
-import { PasswordField } from './PasswordField';
+import { TermsField } from './ConsentNotice';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 import { ProviderButtons } from './ProviderButtons';
-import { PROVIDER_LABELS, socialApi } from './social-api';
-import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 
 // Trang kết quả sau khi quay về từ Google/Facebook (009 – US1, US2, US5). Đường quay về của máy chủ
 // luôn chuyển tới đây KHÔNG kèm tham số; trang đọc trạng thái lượt bằng `GET /auth/oauth/pending`
@@ -15,11 +23,14 @@ import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'invalid'; error: ApiError }
+  | { kind: 'invalid'; error: AppError }
   | { kind: 'pending'; pending: OAuthPendingResponse }
   | { kind: 'check_email'; email: string | null };
 
 const METHODS_PATH = '/settings/login-methods';
+const BACK_TO_LOGIN: [ErrorActionView, ...ErrorActionView[]] = [
+  { kind: 'navigate', label: 'Về đăng nhập', href: '/login' },
+];
 
 export function OAuthResultPage() {
   const navigate = useNavigate();
@@ -56,7 +67,7 @@ export function OAuthResultPage() {
         );
       },
       (err: unknown) => {
-        if (err instanceof ApiError) setState({ kind: 'invalid', error: err });
+        if (err instanceof AppError) setState({ kind: 'invalid', error: err });
       },
     );
   }, [navigate]);
@@ -71,11 +82,7 @@ export function OAuthResultPage() {
     case 'invalid':
       return (
         <AuthLayout title="Chưa đăng nhập được">
-          <ErrorNotice error={state.error}>
-            <Link to="/login" style={styles.link}>
-              Về đăng nhập
-            </Link>
-          </ErrorNotice>
+          <ErrorNotice error={state.error} actions={BACK_TO_LOGIN} />
         </AuthLayout>
       );
     case 'check_email':
@@ -105,24 +112,14 @@ function Failed({ pending }: { pending: OAuthPendingResponse }) {
   const provider = PROVIDER_LABELS[pending.provider];
   return (
     <AuthLayout title="Chưa đăng nhập được">
-      <div
-        role="alert"
-        style={{ border: '1px solid #b91c1c', borderRadius: 8, padding: 12, marginBottom: 16 }}
+      {/* Mỗi lỗi có ít nhất một hành động: thử lại bằng chính nhà cung cấp đó, hoặc dùng email. */}
+      <InlineAlert
+        tone="error"
+        actions={[{ kind: 'navigate', label: 'Đăng nhập bằng email', href: '/login' }]}
       >
-        <p style={{ margin: 0 }}>
-          <span role="img" aria-label="Lỗi">
-            ⚠
-          </span>{' '}
-          {pending.error?.message ?? `Chưa đăng nhập được bằng ${provider}.`}
-        </p>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* Mỗi lỗi có ít nhất một hành động: thử lại bằng chính nhà cung cấp đó, hoặc dùng email. */}
-        <ProviderButtons only={[pending.provider]} label={(name) => `Thử lại với ${name}`} />
-        <Link to="/login" style={styles.link}>
-          Đăng nhập bằng email
-        </Link>
-      </div>
+        {pending.error?.message ?? `Chưa đăng nhập được bằng ${provider}.`}
+      </InlineAlert>
+      <ProviderButtons only={[pending.provider]} label={(name) => `Thử lại với ${name}`} />
     </AuthLayout>
   );
 }
@@ -131,7 +128,7 @@ function CheckEmail({ email }: { email: string | null }) {
   const [resent, setResent] = useState(false);
   return (
     <AuthLayout title="Hãy kiểm tra email">
-      <InfoNotice>
+      <InlineAlert tone="info">
         {email !== null ? (
           <>
             Chúng tôi đã gửi thư tới <strong>{email}</strong>.
@@ -140,31 +137,34 @@ function CheckEmail({ email }: { email: string | null }) {
           'Chúng tôi đã gửi thư cho bạn.'
         )}{' '}
         Mở thư và bấm liên kết để tiếp tục. Nếu chưa thấy, hãy xem cả mục Thư rác.
-      </InfoNotice>
+      </InlineAlert>
       {resent && <p role="status">Đã gửi lại thư.</p>}
-      <button
-        type="button"
-        style={styles.secondary}
-        onClick={() => {
-          void socialApi.oauthLinkSendEmail().then(
-            () => {
-              setResent(true);
-            },
-            () => {
-              setResent(true);
-            },
-          );
-        }}
-      >
-        Gửi lại
-      </button>
-      <p>
-        <Link to="/login" style={styles.link}>
-          Về đăng nhập
-        </Link>
-      </p>
+      <div>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            void socialApi.oauthLinkSendEmail().then(
+              () => {
+                setResent(true);
+              },
+              () => {
+                setResent(true);
+              },
+            );
+          }}
+        >
+          Gửi lại
+        </Button>
+      </div>
+      <TextLink to="/login">Về đăng nhập</TextLink>
     </AuthLayout>
   );
+}
+
+interface SignupValues extends Record<string, unknown> {
+  displayName: string;
+  email: string;
+  acceptTerms: boolean;
 }
 
 /** `needs_signup` (email do nhà cung cấp xác minh) và `needs_email` (tự nhập email). */
@@ -178,37 +178,33 @@ function Signup({
   const navigate = useNavigate();
   const provider = PROVIDER_LABELS[pending.provider];
   const needsEmail = pending.emailRequired;
-  const [displayName, setDisplayName] = useState(pending.suggestedDisplayName ?? '');
-  const [email, setEmail] = useState(needsEmail ? (pending.suggestedEmail ?? '') : '');
-  const [accepted, setAccepted] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<ApiError | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: SyntheticEvent) {
-    e.preventDefault();
-    const local: Record<string, string> = {};
-    if (displayName.trim() === '') local.displayName = 'Vui lòng nhập tên hiển thị.';
-    if (needsEmail && email.trim() === '') local.email = 'Vui lòng nhập email.';
-    setFieldErrors(local);
-    setError(null);
-    if (Object.keys(local).length > 0 || !accepted) return;
-    setBusy(true);
-    try {
+  const schema = useMemo(
+    () =>
+      objectSchema<SignupValues>({
+        displayName: required('Vui lòng nhập tên hiển thị.'),
+        ...(needsEmail ? { email: required('Vui lòng nhập email.') } : {}),
+      }),
+    [needsEmail],
+  );
+  const form = useAppForm<SignupValues>({
+    schema,
+    defaultValues: {
+      displayName: pending.suggestedDisplayName ?? '',
+      email: needsEmail ? (pending.suggestedEmail ?? '') : '',
+      acceptTerms: false,
+    },
+    fieldOrder: ['displayName', 'email'],
+    onSubmit: async (values) => {
       const result = await socialApi.oauthSignup({
-        displayName,
-        ...(needsEmail ? { email } : {}),
+        displayName: values.displayName,
+        ...(needsEmail ? { email: values.email } : {}),
       });
-      if ('status' in result) onCheckEmail(email.trim());
+      if ('status' in result) onCheckEmail(values.email.trim());
       else void navigate('/', { replace: true });
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setFieldErrors(err.fieldErrors());
-      setError(err);
-    } finally {
-      setBusy(false);
-    }
-  }
+    },
+  });
+  // Khóa tới khi tích ô đồng ý – ô không bao giờ được đặt sẵn.
+  const accepted = form.methods.watch('acceptTerms');
 
   return (
     <AuthLayout title="Tạo tài khoản">
@@ -217,48 +213,22 @@ function Signup({
           ? `${provider} không cho chúng tôi biết email của bạn. Hãy nhập email để nhận liên kết hoàn tất đăng ký.`
           : `Bạn đang tạo tài khoản bằng ${provider} với email ${pending.suggestedEmail ?? ''}.`}
       </p>
-      {error !== null && Object.keys(fieldErrors).length === 0 && <ErrorNotice error={error} />}
-      <form onSubmit={(e) => void submit(e)} noValidate>
-        <TextField
-          label="Tên hiển thị"
-          value={displayName}
-          onChange={setDisplayName}
-          autoComplete="name"
-          error={fieldErrors.displayName}
-        />
-        {needsEmail && (
-          <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            autoComplete="email"
-            error={fieldErrors.email}
-          />
-        )}
-        <TermsCheckbox checked={accepted} onChange={setAccepted} />
-        {/* Khóa tới khi tích ô đồng ý – ô không bao giờ được đặt sẵn. */}
-        <button
-          type="submit"
-          style={{
-            ...styles.primary,
-            ...(accepted ? {} : { opacity: 0.6, cursor: 'not-allowed' }),
-          }}
-          disabled={!accepted || busy}
-        >
-          {busy ? 'Đang tạo…' : needsEmail ? 'Gửi liên kết hoàn tất' : 'Tạo tài khoản'}
-        </button>
-        {!accepted && (
-          <p style={{ fontSize: 14, color: '#4b5563' }}>Hãy tích ô đồng ý ở trên để tiếp tục.</p>
-        )}
-      </form>
-      <p>
-        <Link to="/login" style={styles.link}>
-          Đã có tài khoản? Đăng nhập
-        </Link>
-      </p>
+      <Form
+        form={form}
+        submitLabel={needsEmail ? 'Gửi liên kết hoàn tất' : 'Tạo tài khoản'}
+        {...(!accepted ? { submitLocked: 'Hãy tích ô đồng ý ở trên để tiếp tục.' } : {})}
+      >
+        <TextField name="displayName" label="Tên hiển thị" autoComplete="name" />
+        {needsEmail && <TextField name="email" label="Email" type="email" autoComplete="email" />}
+        <TermsField />
+      </Form>
+      <TextLink to="/login">Đã có tài khoản? Đăng nhập</TextLink>
     </AuthLayout>
   );
+}
+
+interface LinkValues extends Record<string, unknown> {
+  password: string;
 }
 
 /** Email này đã có tài khoản: xác nhận bằng mật khẩu hoặc liên kết gửi qua email (US2). */
@@ -272,10 +242,7 @@ function LinkConfirm({
   const navigate = useNavigate();
   const provider = PROVIDER_LABELS[pending.provider];
   const canUsePassword = pending.methods.includes('password');
-  const [password, setPassword] = useState('');
-  const [passwordError, setPasswordError] = useState<string | undefined>(undefined);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [mailError, setMailError] = useState<AppError | null>(null);
   const hint =
     pending.hint === 'login_with_google'
       ? 'Google'
@@ -283,33 +250,42 @@ function LinkConfirm({
         ? 'Facebook'
         : null;
 
-  async function confirmWithPassword(e: SyntheticEvent) {
-    e.preventDefault();
-    setPasswordError(undefined);
-    setError(null);
-    setBusy(true);
-    try {
-      await socialApi.oauthLinkPassword(password);
-      void navigate('/', { replace: true });
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setPassword('');
-      // Sai mật khẩu: báo ngay cạnh ô nhập; lỗi khác (bị chặn, lượt hết hạn) hiện ở hộp lỗi.
-      if (err.code === 'INVALID_CREDENTIALS') setPasswordError(err.message);
-      else setError(err);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const form = useAppForm<LinkValues>({
+    schema: objectSchema<LinkValues>({}),
+    defaultValues: { password: '' },
+    onSubmit: async (values) => {
+      try {
+        await socialApi.oauthLinkPassword(values.password);
+        void navigate('/', { replace: true });
+      } catch (err) {
+        if (!(err instanceof AppError)) throw err;
+        form.methods.setValue('password', '');
+        // Sai mật khẩu: báo ngay cạnh ô nhập; lỗi khác (bị chặn, lượt hết hạn) hiện ở hộp lỗi.
+        if (err.code === 'INVALID_CREDENTIALS') {
+          throw new AppError({
+            kind: 'validation',
+            status: err.status,
+            code: err.code,
+            message: err.message,
+            actions: err.actions,
+            fieldErrors: { password: err.message },
+            support: err.support,
+          });
+        }
+        throw err;
+      }
+    },
+  });
+  const password = form.methods.watch('password');
 
   async function sendEmail() {
-    setError(null);
+    setMailError(null);
     try {
       await socialApi.oauthLinkSendEmail();
       onEmailSent();
     } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setError(err);
+      if (!(err instanceof AppError)) throw err;
+      setMailError(err);
     }
   }
 
@@ -319,41 +295,37 @@ function LinkConfirm({
         Email {pending.suggestedEmail ?? 'này'} đã có tài khoản. Hãy xác nhận đây là bạn để liên kết{' '}
         {provider} với tài khoản đó.
       </p>
-      {error !== null && (
-        <ErrorNotice error={error}>
-          <Link to="/login" style={styles.link}>
-            Về đăng nhập
-          </Link>
-        </ErrorNotice>
-      )}
+      {mailError !== null && <ErrorNotice error={mailError} actions={BACK_TO_LOGIN} />}
       {canUsePassword && (
-        <form onSubmit={(e) => void confirmWithPassword(e)} noValidate>
-          <PasswordField
-            label="Mật khẩu của tài khoản"
-            value={password}
-            onChange={setPassword}
-            autoComplete="current-password"
-            error={passwordError}
-          />
-          <button type="submit" style={styles.primary} disabled={busy || password === ''}>
-            {busy ? 'Đang xác nhận…' : `Xác nhận và liên kết ${provider}`}
-          </button>
-          <p style={{ textAlign: 'center', color: '#4b5563' }}>hoặc</p>
-        </form>
+        <>
+          <Form
+            form={form}
+            submitLabel={`Xác nhận và liên kết ${provider}`}
+            {...(password === ''
+              ? { submitLocked: 'Nhập mật khẩu của tài khoản để xác nhận.' }
+              : {})}
+            errorActions={() => BACK_TO_LOGIN}
+          >
+            <PasswordField
+              name="password"
+              label="Mật khẩu của tài khoản"
+              autoComplete="current-password"
+            />
+          </Form>
+          <p className="text-center text-ink-muted">hoặc</p>
+        </>
       )}
-      <button type="button" style={styles.secondary} onClick={() => void sendEmail()}>
-        Gửi liên kết qua email
-      </button>
+      <div>
+        <Button variant="secondary" onClick={() => void sendEmail()}>
+          Gửi liên kết qua email
+        </Button>
+      </div>
       {hint !== null && (
-        <p style={{ color: '#4b5563' }}>
+        <p className="text-ink-muted">
           Hoặc đăng nhập bằng {hint} rồi thêm {provider} trong Cài đặt → Cách đăng nhập.
         </p>
       )}
-      <p>
-        <Link to="/login" style={styles.link}>
-          Về đăng nhập
-        </Link>
-      </p>
+      <TextLink to="/login">Về đăng nhập</TextLink>
     </AuthLayout>
   );
 }

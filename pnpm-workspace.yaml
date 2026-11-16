@@ -7,3 +7,8 @@ packages:
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
+
+# Một phiên bản Playwright cho cả `e2e` (006) và `apps/web` (011): `@axe-core/playwright` chỉ đòi playwright-core >= 1.0.0 nên
+# pnpm có thể kéo bản cao hơn và làm kiểu của hai gói lệch nhau (typecheck đỏ). Đổi phiên bản ở đây, không ở từng gói.
+overrides:
+  playwright-core: 1.64.1

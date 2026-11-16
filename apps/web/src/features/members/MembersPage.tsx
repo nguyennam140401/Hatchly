@@ -1,34 +1,28 @@
 import type { MembersResponse } from '@app/shared/auth';
-import { useCallback, useEffect, useState, type SyntheticEvent } from 'react';
-import { Link } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { useCallback, useEffect, useState } from 'react';
+import { membersApi } from '../../lib/api/endpoints/members';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import { formatDate } from '../../lib/format/datetime';
+import { useSession } from '../../lib/session/context';
+import { ConfirmDialog } from '../../ui/alert/ConfirmDialog';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Button } from '../../ui/button/Button';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from '../auth/AuthLayout';
-import { useSession } from '../auth/session';
-import { ErrorNotice, InfoNotice, styles, TextField } from '../auth/ui';
-import { membersApi } from './members-api';
+import { InviteForm, type InviteValues } from './InviteForm';
 
 // Cài đặt → Thành viên (009 – US3, US4). Chỉ chủ tài khoản (`members.manage`); API vẫn tự chặn. Tối đa
 // 2 cộng tác viên, tính cả lời mời đang chờ. Trạng thái bằng chữ + biểu tượng.
 
 type Collaborator = MembersResponse['collaborators'][number];
 
-function dateVi(iso: string): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(iso));
-}
-
 export function MembersPage() {
   const { me } = useSession();
   const allowed = me.permissions.includes('members.manage');
   const [data, setData] = useState<MembersResponse | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState<string | undefined>(undefined);
   const [confirmRemove, setConfirmRemove] = useState<Collaborator | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -36,7 +30,7 @@ export function MembersPage() {
     try {
       setData(await membersApi.list());
     } catch (err) {
-      if (err instanceof ApiError) setError(err);
+      if (err instanceof AppError) setError(err);
       else throw err;
     }
   }, []);
@@ -46,18 +40,41 @@ export function MembersPage() {
     if (allowed) void load();
   }, [allowed, load]);
 
+  const free = data === null ? 0 : data.seats.total - data.seats.used;
+
+  const inviteOnSubmit = async (values: InviteValues) => {
+    setError(null);
+    setNotice(null);
+    try {
+      await membersApi.invite(values.email);
+    } catch (err) {
+      // Mời chính mình: báo cạnh ô email như lỗi theo ô.
+      if (err instanceof AppError && err.code === 'INVITE_SELF') {
+        throw new AppError({
+          kind: 'validation',
+          status: err.status,
+          code: err.code,
+          message: err.message,
+          actions: err.actions,
+          fieldErrors: { email: err.message },
+          support: err.support,
+        });
+      }
+      throw err;
+    }
+    setNotice(`Đã gửi lời mời tới ${values.email.trim()}.`);
+    await load();
+  };
+
   if (!allowed) {
     return (
       <AuthLayout title="Thành viên">
-        <p role="alert">
-          <span role="img" aria-label="Cảnh báo">
-            ⚠
-          </span>{' '}
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về trang chính', href: '/' }]}
+        >
           Chỉ chủ tài khoản mới mời hoặc gỡ được cộng tác viên.
-        </p>
-        <Link to="/" style={styles.link}>
-          Về trang chính
-        </Link>
+        </InlineAlert>
       </AuthLayout>
     );
   }
@@ -71,50 +88,24 @@ export function MembersPage() {
       setNotice(done);
       await load();
     } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
+      if (!(err instanceof AppError)) throw err;
       setError(err);
     } finally {
       setBusy(false);
     }
   }
 
-  async function invite(e: SyntheticEvent) {
-    e.preventDefault();
-    setEmailError(undefined);
-    if (email.trim() === '') {
-      setEmailError('Vui lòng nhập email của người bạn muốn mời.');
-      return;
-    }
-    setError(null);
-    setNotice(null);
-    setBusy(true);
-    try {
-      await membersApi.invite(email);
-      setNotice(`Đã gửi lời mời tới ${email.trim()}.`);
-      setEmail('');
-      await load();
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      const fields = err.fieldErrors();
-      if (fields.email !== undefined || err.code === 'INVITE_SELF') {
-        setEmailError(fields.email ?? err.message);
-      } else setError(err);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const free = data === null ? 0 : data.seats.total - data.seats.used;
-
   return (
     <AuthLayout title="Thành viên">
-      {notice !== null && <InfoNotice>{notice}</InfoNotice>}
+      {notice !== null && <InlineAlert tone="info">{notice}</InlineAlert>}
       {error !== null && (
-        <ErrorNotice error={error}>
-          <button type="button" style={styles.secondary} onClick={() => void load()}>
-            Tải lại
-          </button>
-        </ErrorNotice>
+        <ErrorNotice
+          error={error}
+          actions={[{ kind: 'retry', label: 'Tải lại' }]}
+          onRetry={() => {
+            void load();
+          }}
+        />
       )}
       {data === null && error === null && <p aria-busy="true">Đang tải…</p>}
 
@@ -123,42 +114,42 @@ export function MembersPage() {
           <p>
             Còn {free}/{data.seats.total} chỗ cho cộng tác viên.
           </p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            <li style={{ borderTop: '1px solid #d1d5db', padding: '12px 0' }}>
-              <p style={{ margin: 0, fontWeight: 600 }}>{data.owner.displayName}</p>
-              <p style={{ margin: '4px 0 0' }}>
+          <ul className="flex flex-col">
+            <li className="flex flex-col gap-1 border-t border-line py-3">
+              <p className="text-label">{data.owner.displayName}</p>
+              <p>
                 <span aria-hidden="true">★ </span>Chủ tài khoản · {data.owner.email}
               </p>
             </li>
             {data.collaborators.map((c) => (
-              <li key={c.userId} style={{ borderTop: '1px solid #d1d5db', padding: '12px 0' }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>{c.displayName}</p>
-                <p style={{ margin: '4px 0 8px' }}>
+              <li key={c.userId} className="flex flex-col gap-2 border-t border-line py-3">
+                <p className="text-label">{c.displayName}</p>
+                <p>
                   <span aria-hidden="true">✓ </span>Cộng tác viên · {c.email} · tham gia{' '}
-                  {dateVi(c.joinedAt)}
+                  {formatDate(c.joinedAt)}
                 </p>
-                <button
-                  type="button"
-                  style={styles.secondary}
-                  onClick={() => {
-                    setConfirmRemove(c);
-                  }}
-                >
-                  Gỡ {c.displayName}
-                </button>
+                <div>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setConfirmRemove(c);
+                    }}
+                  >
+                    Gỡ {c.displayName}
+                  </Button>
+                </div>
               </li>
             ))}
             {data.invitations.map((inv) => (
-              <li key={inv.id} style={{ borderTop: '1px solid #d1d5db', padding: '12px 0' }}>
-                <p style={{ margin: 0, fontWeight: 600 }}>{inv.email}</p>
-                <p style={{ margin: '4px 0 8px' }}>
-                  <span aria-hidden="true">⏳ </span>Đang chờ · hết hạn {dateVi(inv.expiresAt)}
+              <li key={inv.id} className="flex flex-col gap-2 border-t border-line py-3">
+                <p className="text-label">{inv.email}</p>
+                <p>
+                  <span aria-hidden="true">⏳ </span>Đang chờ · hết hạn {formatDate(inv.expiresAt)}
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  <button
-                    type="button"
-                    style={styles.secondary}
-                    disabled={busy}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    loading={busy}
                     onClick={() =>
                       void act(
                         () => membersApi.resend(inv.id),
@@ -167,100 +158,57 @@ export function MembersPage() {
                     }
                   >
                     Gửi lại
-                  </button>
-                  <button
-                    type="button"
-                    style={styles.secondary}
-                    disabled={busy}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    loading={busy}
                     onClick={() =>
                       void act(() => membersApi.cancel(inv.id), `Đã hủy lời mời tới ${inv.email}.`)
                     }
                   >
                     Hủy lời mời
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
           </ul>
 
-          {confirmRemove !== null && (
-            <div
-              role="alertdialog"
-              aria-modal="false"
-              aria-labelledby="remove-title"
-              style={{ border: '1px solid #b45309', borderRadius: 8, padding: 12, marginTop: 16 }}
-            >
-              <p id="remove-title" style={{ marginTop: 0 }}>
-                Gỡ {confirmRemove.displayName}? {confirmRemove.displayName} sẽ không vào được tài
-                khoản này nữa. Bài và media họ đã tạo vẫn được giữ lại.
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <button
-                  type="button"
-                  style={styles.primary}
-                  disabled={busy}
-                  onClick={() => {
-                    const target = confirmRemove;
-                    setConfirmRemove(null);
-                    void act(
-                      () => membersApi.remove(target.userId),
-                      `Đã gỡ ${target.displayName} khỏi tài khoản.`,
-                    );
-                  }}
-                >
-                  Gỡ khỏi tài khoản
-                </button>
-                <button
-                  type="button"
-                  style={styles.secondary}
-                  onClick={() => {
-                    setConfirmRemove(null);
-                  }}
-                >
-                  Hủy
-                </button>
-              </div>
-            </div>
-          )}
+          <ConfirmDialog
+            open={confirmRemove !== null}
+            role="alertdialog"
+            onOpenChange={(open) => {
+              if (!open) setConfirmRemove(null);
+            }}
+            tone="danger"
+            title={`Gỡ ${confirmRemove?.displayName ?? ''}?`}
+            body={`${confirmRemove?.displayName ?? ''} sẽ không vào được tài khoản này nữa. Bài và media họ đã tạo vẫn được giữ lại.`}
+            confirmLabel="Gỡ khỏi tài khoản"
+            cancelLabel="Hủy"
+            loading={busy}
+            onConfirm={() => {
+              const target = confirmRemove;
+              setConfirmRemove(null);
+              if (target === null) return;
+              void act(
+                () => membersApi.remove(target.userId),
+                `Đã gỡ ${target.displayName} khỏi tài khoản.`,
+              );
+            }}
+          />
 
-          <section aria-labelledby="invite-title" style={{ marginTop: 32 }}>
-            <h2 id="invite-title" style={{ fontSize: 18 }}>
-              Mời cộng tác viên
-            </h2>
-            <form onSubmit={(e) => void invite(e)} noValidate>
-              <TextField
-                label="Email của người được mời"
-                type="email"
-                value={email}
-                onChange={setEmail}
-                autoComplete="off"
-                error={emailError}
-              />
-              <button
-                type="submit"
-                style={{
-                  ...styles.primary,
-                  ...(free > 0 ? {} : { opacity: 0.6, cursor: 'not-allowed' }),
-                }}
-                disabled={free <= 0 || busy}
-              >
-                Mời
-              </button>
-              {free <= 0 && (
-                <p style={{ fontSize: 14, color: '#4b5563' }}>
-                  Đã đủ 2 cộng tác viên. Gỡ một người hoặc hủy một lời mời để mời người khác.
-                </p>
-              )}
-            </form>
-          </section>
+          <InviteForm
+            onSubmit={inviteOnSubmit}
+            {...(free <= 0
+              ? {
+                  lockedReason:
+                    'Đã đủ 2 cộng tác viên. Gỡ một người hoặc hủy một lời mời để mời người khác.',
+                }
+              : {})}
+          />
         </>
       )}
 
-      <p style={{ marginTop: 32 }}>
-        <Link to="/" style={styles.link}>
-          Về trang chính
-        </Link>
-      </p>
+      <TextLink to="/">Về trang chính</TextLink>
     </AuthLayout>
   );
 }

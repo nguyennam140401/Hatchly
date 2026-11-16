@@ -213,6 +213,9 @@ describe('AccessGuard', () => {
     expect((none.body as { error: { code: string } }).error.code).toBe('UNAUTHENTICATED');
     const bad = await http().get('/t/me').set('cookie', sid('tok-nope')).expect(401);
     expect(String(bad.headers['set-cookie'])).toMatch(/__Host-sid=; .*Max-Age=0/);
+    // 011: phiên có cookie nhưng không còn hiệu lực → kèm `reason`; không cookie → không có `reason`.
+    expect((bad.body as { error: { reason?: string } }).error.reason).toBe('expired');
+    expect((none.body as { error: { reason?: string } }).error.reason).toBeUndefined();
   });
 
   it('@CustomerAccess chỉ đọc __Host-sid – cookie nhân viên → 401', async () => {

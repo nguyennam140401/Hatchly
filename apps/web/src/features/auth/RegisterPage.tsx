@@ -1,70 +1,79 @@
-import { useState, type SyntheticEvent } from 'react';
-import { Link } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { useState } from 'react';
+import { authApi, TERMS_VERSION } from '../../lib/api/endpoints/auth';
+import { isChecked, minChars, objectSchema, required } from '../../lib/forms/rules';
+import { useAppForm, type FormComponentProps } from '../../lib/forms/useAppForm';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Button } from '../../ui/button/Button';
+import { Form } from '../../ui/form/Form';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
+import { TextField } from '../../ui/form/fields/inputs';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { authApi } from './auth-api';
-import { TermsCheckbox } from './ConsentNotice';
-import { PasswordField } from './PasswordField';
+import { TermsField } from './ConsentNotice';
 import { ProviderButtons } from './ProviderButtons';
-import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 
 // Đăng ký (US1, FR-001…FR-005): ô đồng ý điều khoản KHÔNG đặt sẵn (nguyên tắc VII). Phản hồi luôn là
 // "Hãy kiểm tra email" – kể cả khi email đã có tài khoản (không lộ email nào đã đăng ký).
 
-/** Phiên bản điều khoản người dùng đang xem (máy chủ ghi phiên bản hiện hành của nó). */
-export const TERMS_VERSION = '2026-11';
+export interface RegisterValues extends Record<string, unknown> {
+  displayName: string;
+  email: string;
+  password: string;
+  acceptTerms: boolean;
+}
+
+export const registerSchema = objectSchema<RegisterValues>({
+  displayName: required('Vui lòng nhập tên hiển thị.'),
+  email: required('Vui lòng nhập email.'),
+  password: minChars(8, 'Mật khẩu cần ít nhất 8 ký tự.'),
+  acceptTerms: isChecked('Bạn cần đồng ý điều khoản để tạo tài khoản.'),
+});
+
+/** Biểu mẫu đăng ký (tách riêng để dùng lại và kiểm thử theo hợp đồng biểu mẫu – SC-007). */
+export function RegisterForm({
+  onSubmit,
+  loadLatest,
+  readOnly,
+  draftKey,
+}: FormComponentProps<RegisterValues>) {
+  const form = useAppForm<RegisterValues>({
+    schema: registerSchema,
+    defaultValues: { displayName: '', email: '', password: '', acceptTerms: false },
+    fieldOrder: ['displayName', 'email', 'password', 'acceptTerms'],
+    readOnly: readOnly ?? false,
+    draftKey,
+    loadLatest,
+    onSubmit,
+  });
+  return (
+    <Form form={form} submitLabel="Tạo tài khoản">
+      <TextField name="displayName" label="Tên hiển thị" autoComplete="name" />
+      <TextField name="email" label="Email" type="email" autoComplete="email" />
+      <PasswordField
+        name="password"
+        label="Mật khẩu"
+        autoComplete="new-password"
+        help="Ít nhất 8 ký tự. Tránh mật khẩu dễ đoán như 12345678."
+      />
+      <TermsField />
+    </Form>
+  );
+}
 
 export function RegisterPage() {
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [accepted, setAccepted] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<ApiError | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: SyntheticEvent) {
-    e.preventDefault();
-    const local: Record<string, string> = {};
-    if (displayName.trim() === '') local.displayName = 'Vui lòng nhập tên hiển thị.';
-    if (email.trim() === '') local.email = 'Vui lòng nhập email.';
-    if (password.length < 8) local.password = 'Mật khẩu cần ít nhất 8 ký tự.';
-    if (!accepted) local.acceptTerms = 'Bạn cần đồng ý điều khoản để tạo tài khoản.';
-    setFieldErrors(local);
-    setError(null);
-    if (Object.keys(local).length > 0) return;
-    setBusy(true);
-    try {
-      await authApi.register({
-        displayName,
-        email,
-        password,
-        acceptTerms: true,
-        termsVersion: TERMS_VERSION,
-      });
-      setSentTo(email.trim());
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setFieldErrors(err.fieldErrors());
-      setError(err);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (sentTo !== null) {
     return (
       <AuthLayout title="Hãy kiểm tra email">
-        <InfoNotice>
+        <InlineAlert tone="info">
           Chúng tôi đã gửi thư tới <strong>{sentTo}</strong>. Mở thư và bấm liên kết để xác nhận
           email rồi bắt đầu dùng ứng dụng. Liên kết có hiệu lực 24 giờ.
-        </InfoNotice>
+        </InlineAlert>
         {resent && <p role="status">Đã gửi lại thư (nếu chưa thấy, hãy xem cả mục Thư rác).</p>}
-        <button
-          type="button"
-          style={styles.secondary}
+        <Button
+          variant="secondary"
           onClick={() => {
             void authApi.resend(sentTo).then(() => {
               setResent(true);
@@ -72,56 +81,30 @@ export function RegisterPage() {
           }}
         >
           Gửi lại thư
-        </button>
-        <p>
-          <Link to="/login" style={styles.link}>
-            Đã xác nhận? Đăng nhập
-          </Link>
-        </p>
+        </Button>
+        <TextLink to="/login">Đã xác nhận? Đăng nhập</TextLink>
       </AuthLayout>
     );
   }
 
   return (
     <AuthLayout title="Tạo tài khoản">
-      {error !== null && Object.keys(fieldErrors).length === 0 && <ErrorNotice error={error} />}
-      <form onSubmit={(e) => void submit(e)} noValidate>
-        <TextField
-          label="Tên hiển thị"
-          value={displayName}
-          onChange={setDisplayName}
-          autoComplete="name"
-          error={fieldErrors.displayName}
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          autoComplete="email"
-          error={fieldErrors.email}
-        />
-        <PasswordField
-          label="Mật khẩu"
-          value={password}
-          onChange={setPassword}
-          autoComplete="new-password"
-          hint="Ít nhất 8 ký tự. Tránh mật khẩu dễ đoán như 12345678."
-          error={fieldErrors.password}
-        />
-        <TermsCheckbox checked={accepted} onChange={setAccepted} error={fieldErrors.acceptTerms} />
-        <button type="submit" style={styles.primary} disabled={busy}>
-          {busy ? 'Đang tạo…' : 'Tạo tài khoản'}
-        </button>
-      </form>
+      <RegisterForm
+        onSubmit={async (values) => {
+          await authApi.register({
+            displayName: values.displayName,
+            email: values.email,
+            password: values.password,
+            acceptTerms: true,
+            termsVersion: TERMS_VERSION,
+          });
+          setSentTo(values.email.trim());
+        }}
+      />
       {/* 009: đăng ký bằng Google/Facebook – điều khoản được hỏi lại ở bước hoàn tất sau khi quay về. */}
-      <p style={{ textAlign: 'center', color: '#4b5563' }}>hoặc</p>
+      <p className="text-center text-ink-muted">hoặc</p>
       <ProviderButtons />
-      <p>
-        <Link to="/login" style={styles.link}>
-          Đã có tài khoản? Đăng nhập
-        </Link>
-      </p>
+      <TextLink to="/login">Đã có tài khoản? Đăng nhập</TextLink>
     </AuthLayout>
   );
 }

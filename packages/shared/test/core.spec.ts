@@ -66,6 +66,17 @@ describe('ErrorResponse', () => {
     });
     expect(parsed.success).toBe(true);
   });
+  it('nhận `reason` hợp lệ và vẫn nhận phản hồi cũ không có `reason`', () => {
+    const actions = [{ kind: 'navigate', label: 'Đăng nhập', href: '/login' }];
+    const old = ErrorResponse.safeParse({ error: { ...base, actions } });
+    const withReason = ErrorResponse.safeParse({
+      error: { ...base, actions, reason: 'password_changed' },
+    });
+    const bad = ErrorResponse.safeParse({ error: { ...base, actions, reason: 'unknown_reason' } });
+    expect(old.success).toBe(true);
+    expect(withReason.success).toBe(true);
+    expect(bad.success).toBe(false);
+  });
   it('từ chối actions rỗng', () => {
     expect(ErrorResponse.safeParse({ error: { ...base, actions: [] } }).success).toBe(false);
   });

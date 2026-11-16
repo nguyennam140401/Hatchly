@@ -36,6 +36,16 @@ sửa ở nhiều nơi. Tính năng này dựng **một nền duy nhất**: bộ
 Figma, khung ứng dụng có điều hướng theo quyền, nền tảng biểu mẫu, và quy tắc quản lý dữ liệu dùng chung; đồng
 thời chuyển các trang hiện có sang nền này để chứng minh nền dùng được.
 
+## Clarifications
+
+### Session 2026-11-15
+
+- Q: Cấu trúc điều hướng chính theo Figma hay theo UI/UX v1.3? → A: Theo Figma — thanh bên 7 mục (Tổng quan, Lịch, Bài viết, Thư viện ảnh & video, Hồ sơ kinh doanh, Kênh & gói, Cài đặt); thanh dưới 5 mục (Tổng quan, Lịch, Bài viết, Thêm, Tạo bài); cập nhật UI/UX mục 4 cho khớp.
+- Q: "Đăng tay" trên thẻ kênh/dòng kênh nghĩa là gì? → A: Khả năng của kênh do máy chủ báo: kênh chưa có hoặc chưa bật cổng đăng tự động thì bài chuyển "chờ đăng tay"; người dùng tự đăng rồi bấm "Đã đăng". Giao diện chỉ hiển thị, không tự quyết.
+- Q: Bản nháp chưa gửi giữ ở đâu khi phiên hết hạn? → A: Chỉ trong bộ nhớ của tab đang mở; mất khi đóng tab; xóa khi đăng xuất hoặc đổi tài khoản; không ghi ra bộ lưu lâu dài. Kèm yêu cầu bổ sung: hết phiên giữa lúc đang làm việc KHÔNG được đẩy người dùng ra đột ngột (xem FR-011a). Cơ chế phiên hiện có (tính năng 004) là cookie phiên có hạn không hoạt động trượt + hạn tuyệt đối, không có refresh token; giao diện không tự gia hạn mà chỉ xử lý phản hồi "chưa đăng nhập".
+- Q: "Gợi ý hôm nay" có là trạng thái bài không; "Đã hủy" hiển thị thế nào? → A: "Gợi ý hôm nay" là nhãn riêng cho chủ đề/thẻ gợi ý, không thuộc bảng trạng thái bài. Bảng trạng thái bài có 7 trạng thái theo UI/UX mục 7 (Nháp, Chờ duyệt, Đã lên lịch, Đang đăng, Đã đăng, Cần bạn xử lý, Đã hủy); cần người thiết kế thêm biến thể "Đã hủy" vào Figma.
+- Q: Thay đổi do người khác gây ra hiện cho người đang mở ứng dụng thế nào? → A: Chỉ làm mới khi mở màn hình hoặc quay lại tab, không làm mới định kỳ, không kênh đẩy. Bù lại, mọi thao tác ghi trên một bản ghi dùng chung (sửa, duyệt, trả lại, đổi giờ, đăng lại…) phải kiểm tra phiên bản: nếu bài đã bị người khác thay đổi thì hiện cảnh báo "Bài viết đã được thay đổi" để người dùng xem lại trước khi tiếp tục (FR-018).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Người phát triển dựng màn hình mới hoàn toàn từ bộ thành phần dùng chung (Priority: P1)
@@ -91,8 +101,9 @@ từ thanh bên sang thanh dưới, không có cuộn ngang, mọi vùng chạm 
 3. **Given** phiên của cộng tác viên, **When** xem điều hướng và màn hình, **Then** nút "Duyệt", "Trả lại", mục
    Thành viên, nút "Yêu cầu xóa tài khoản" không hiển thị; tuy vậy gọi thẳng bằng đường dẫn vẫn bị API từ chối và
    giao diện hiện thông báo "bạn không có quyền" kèm lối quay lại (quyền được chặn ở API, giao diện chỉ ẩn).
-4. **Given** phiên hết hạn trong khi đang dùng, **When** thao tác tiếp theo gặp lỗi chưa đăng nhập, **Then** giao
-   diện đưa về đăng nhập, giữ đường dẫn cũ để quay lại, không mất bản nháp đang soạn trong biểu mẫu.
+4. **Given** phiên hết hạn trong khi đang dùng (chạm hạn tuyệt đối hoặc bị thu hồi), **When** thao tác tiếp theo gặp
+   lỗi chưa đăng nhập, **Then** giao diện giữ nguyên màn hình và bản nháp đang soạn, hiện hộp thoại đăng nhập lại
+   tại chỗ; đăng nhập đúng tài khoản xong thì tiếp tục thao tác dở (FR-011a); không bị chuyển trang đột ngột.
 5. **Given** một đường dẫn không tồn tại hoặc một màn hình bị lỗi hiển thị, **When** người dùng truy cập, **Then**
    thấy trang "Không tìm thấy" / "Có lỗi xảy ra" bằng tiếng Việt đời thường kèm nút quay về Tổng quan; lỗi không
    làm sập cả khung điều hướng.
@@ -155,15 +166,19 @@ nhật; kiểm tra khi mất mạng vẫn thấy dữ liệu đã tải kèm nh�
 2. **Given** thao tác đổi giờ bài trên lịch, **When** người dùng kéo thả, **Then** giao diện hiện giờ mới ngay;
    nếu máy chủ từ chối (đã qua giờ, hạn mức kênh) thì tự hoàn lại giờ cũ kèm thông báo lý do và cách khắc phục.
 3. **Given** việc nền chạy lâu (tạo 10 bài, gán nhãn media), **When** người dùng ở lại hoặc rời màn, **Then** thấy
-   tiến độ x/N khi ở lại, và nhận thông báo trong ứng dụng khi xong dù đang ở màn khác; số thông báo chưa đọc ở
-   thanh điều hướng luôn đúng.
+   tiến độ x/N khi ở lại màn đó (làm mới ngắn hạn chỉ cho việc đang hiển thị), và thấy thông báo hoàn tất trong
+   trung tâm thông báo ở lần làm mới kế tiếp (chuyển màn hình hoặc quay lại tab); số thông báo chưa đọc ở thanh
+   điều hướng đúng sau mỗi lần làm mới.
 4. **Given** mức sử dụng (bài x/100, AI %, dung lượng x/5 GB) được lấy một lần, **When** nhiều thành phần cần
    (Tổng quan, Gói & mức sử dụng, nút AI bị khóa), **Then** dùng chung một nguồn; khi AI chạm ngưỡng 80% hoặc 100%,
    mọi nút AI chuyển trạng thái khóa cùng lúc kèm ngày mở lại, và **không nơi nào hiện số tiền** chi phí AI.
 5. **Given** người dùng đăng xuất hoặc đổi tài khoản trên cùng trình duyệt, **When** phiên mới bắt đầu, **Then**
    toàn bộ dữ liệu của tài khoản trước bị xóa khỏi bộ nhớ giao diện và bộ lưu cục bộ; không bao giờ thấy dữ liệu
    của tài khoản khác.
-6. **Given** danh mục dùng chung không đổi theo người dùng (nhãn trạng thái bài, danh mục kênh và điều kiện,
+6. **Given** chủ tài khoản đang xem một bài mà cộng tác viên vừa sửa, **When** chủ bấm "Duyệt" (hoặc sửa, đổi giờ, đăng
+   lại), **Then** giao diện hiện cảnh báo "Bài viết đã được thay đổi" kèm nút "Xem bản mới", không duyệt/đăng bản cũ;
+   sau khi xem bản mới chủ chọn làm tiếp hoặc dừng.
+7. **Given** danh mục dùng chung không đổi theo người dùng (nhãn trạng thái bài, danh mục kênh và điều kiện,
    thông điệp lỗi chuẩn, bảng quy đổi mã lỗi → lời giải thích + hành động), **When** nhiều màn hình cần, **Then**
    cùng đọc từ một nơi duy nhất, không sao chép nhãn ở từng màn.
 
@@ -230,8 +245,9 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
 - Thanh điều hướng dưới trên iPhone có vùng an toàn dưới màn hình: nút không bị che.
 - Máy chủ trả về trạng thái bài chưa biết (thêm trạng thái mới ở bản sau): giao diện hiện nhãn trung tính "Đang
   cập nhật" thay vì lỗi trắng trang.
-- Kênh "Đăng tay" (xem Giả định): thẻ kênh hiển thị biến thể đặc biệt; giao diện không giả định kênh nào cũng đăng
-  tự động.
+- Kênh "Đăng tay" (kênh chưa có/chưa bật cổng đăng tự động, theo khả năng do máy chủ báo): thẻ kênh hiển thị biến
+  thể đặc biệt, bài của kênh đó hiện "chờ đăng tay" kèm nút "Đã đăng"; giao diện không giả định kênh nào cũng đăng
+  tự động và không có công tắc để người dùng tự chuyển chế độ.
 - Mất mạng giữa lúc gửi biểu mẫu: giữ nguyên dữ liệu đã nhập, báo "Chưa gửi được" kèm nút gửi lại; tuyệt đối
   không báo thành công khi chưa có xác nhận từ máy chủ.
 - Gửi biểu mẫu trả lời chậm hoặc đến sau khi người dùng đã rời màn: kết quả không làm đổi màn hình khác; nếu thành
@@ -253,7 +269,7 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
   thành phần và màn hình MUST dùng bộ này, không viết cứng giá trị.
 - **FR-002**: Hệ thống MUST cung cấp các thành phần dùng chung tương ứng thiết kế Figma, mỗi thành phần đủ biến
   thể và trạng thái đã thiết kế: **Nút** (Chính, Thường, Nhẹ, Nguy hiểm × Mặc định, Khóa), **Huy hiệu trạng thái bài**
-  (Nháp, Chờ duyệt, Đã lên lịch, Đang đăng, Đã đăng, Cần bạn xử lý, Gợi ý hôm nay), **Thẻ kênh** (Facebook, Instagram,
+  (Nháp, Chờ duyệt, Đã lên lịch, Đang đăng, Đã đăng, Cần bạn xử lý, **Đã hủy** – biến thể Đã hủy cần bổ sung vào Figma), **Nhãn "Gợi ý hôm nay"** (nhãn riêng của chủ đề/thẻ gợi ý, không phải trạng thái bài), **Thẻ kênh** (Facebook, Instagram,
   TikTok, Zalo OA × có/không "Đăng tay"), **Thanh mức sử dụng** (Bình thường, Cảnh báo, Hết), **Thẻ chủ đề đề xuất** (nổi
   bật/không), **Thẻ bài**, **Thanh điều hướng dưới**, **Thanh bên**, **Thanh trên** (kiểu logo/quay lại), **Cảnh báo nội dòng**
   (Thông tin, Cảnh báo, Lỗi), **Chip**, **Tab kênh**, **Dòng bước tiến trình** (Xong, Lỗi, Chờ), **Dòng kênh** (Đã kết nối,
@@ -273,8 +289,10 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
 
 **Khung ứng dụng và điều hướng**
 
-- **FR-007**: Hệ thống MUST có **khung ứng dụng** dùng chung: thanh bên trên màn rộng; thanh điều hướng dưới + thanh
-  trên trên điện thoại (mục dùng nhiều nhất hiển thị trực tiếp, nút "Tạo bài" nổi bật, các mục còn lại trong "Thêm");
+- **FR-007**: Hệ thống MUST có **khung ứng dụng** dùng chung: thanh bên 7 mục trên màn rộng (Tổng quan, Lịch, Bài
+  viết, Thư viện ảnh & video, Hồ sơ kinh doanh, Kênh & gói, Cài đặt); thanh điều hướng dưới 5 mục + thanh trên trên
+  điện thoại (Tổng quan, Lịch, Bài viết, Thêm, Tạo bài – nút "Tạo bài" nổi bật, các mục còn lại như Thư viện, Hồ sơ
+  kinh doanh, Kênh & gói, Cài đặt nằm trong "Thêm");
   vùng nội dung có tiêu đề màn hình, thông báo và vùng hành động thống nhất.
 - **FR-008**: Cây điều hướng MUST được khai báo ở một nơi duy nhất (mục, biểu tượng, đường dẫn, quyền cần có,
   hiển thị trên điện thoại hay trong "Thêm") và cả thanh bên lẫn thanh dưới MUST sinh từ đó.
@@ -286,6 +304,14 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
 - **FR-011**: Khung MUST xử lý tập trung: chưa đăng nhập/hết phiên (về đăng nhập, giữ đường dẫn cũ), không đủ
   quyền, không tìm thấy, lỗi bất ngờ ở một màn (cô lập, không sập cả khung), và khu vực nội bộ (hỗ trợ, quản trị)
   tách biệt khỏi khu vực khách hàng.
+- **FR-011a**: Khi một lời gọi API trả về "chưa đăng nhập / hết phiên" giữa lúc người dùng đang làm việc, giao diện
+  MUST NOT chuyển trang đột ngột và MUST NOT làm mất nội dung đang soạn: giữ nguyên màn hình hiện tại, hiện hộp
+  thoại "Phiên đã hết hạn – đăng nhập lại để tiếp tục" ngay tại chỗ; đăng nhập đúng **cùng tài khoản** xong thì tự
+  gửi lại thao tác vừa thất bại (nếu an toàn gửi lại, ví dụ lưu nháp) hoặc báo "bạn bấm lại để gửi". Nếu đăng nhập
+  sang tài khoản khác, MUST xóa toàn bộ dữ liệu và bản nháp của tài khoản trước rồi về Tổng quan. Nếu máy chủ cho biết
+  phiên bị thu hồi vì lý do khác (đổi/đặt lại mật khẩu, bị gỡ khỏi tài khoản, bị khóa), MUST hiện thông điệp tương ứng
+  đời thường và đưa về đăng nhập, không đề nghị "tiếp tục". Giao diện MUST NOT tự đọc hay giữ mã phiên (cookie
+  HttpOnly); nhiều lời gọi cùng thất bại một lúc MUST chỉ hiện một hộp thoại.
 - **FR-012**: Giao diện MUST tách việc nạp mã theo màn hình để tải trang đầu ≤ 3 giây trên 4G và chuyển màn hình
   ≤ 1 giây; khu vực nội bộ MUST NOT được tải cho người dùng khách hàng.
 
@@ -302,9 +328,14 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
 - **FR-016**: Nền tảng MUST chống gửi trùng (khóa nút/Enter khi đang gửi), hiển thị trạng thái đang xử lý, và MUST
   NOT báo thành công trước khi có xác nhận của máy chủ.
 - **FR-017**: Nền tảng MUST có cơ chế **chặn mất dữ liệu**: hỏi xác nhận khi rời biểu mẫu chưa lưu (đóng tab, chuyển
-  trang trong ứng dụng), và giữ bản nháp khi hết phiên rồi đăng nhập lại (không lưu dữ liệu nhạy cảm).
+  trang trong ứng dụng), và giữ bản nháp khi hết phiên rồi đăng nhập lại **chỉ trong bộ nhớ của tab đang mở** (mất
+  khi đóng tab, xóa khi đăng xuất/đổi tài khoản; không ghi ra bộ lưu lâu dài, không lưu dữ liệu nhạy cảm).
 - **FR-018**: Nền tảng MUST hỗ trợ **ghi đè an toàn nhiều người sửa**: gửi kèm số phiên bản của bản ghi; khi máy chủ
   báo xung đột, hiển thị lựa chọn tải bản mới nhất hoặc giữ bản của mình để đối chiếu (hiến pháp: cột phiên bản).
+  Quy tắc này áp dụng cho **mọi thao tác ghi trên bản ghi dùng chung**, không chỉ biểu mẫu sửa: sửa nội dung, duyệt,
+  trả lại, đổi giờ, đăng lại, hủy. Khi bài đã bị người khác thay đổi, giao diện MUST hiện cảnh báo nội dòng "Bài viết
+  đã được thay đổi" kèm nút "Xem bản mới" và chưa thực hiện thao tác cho đến khi người dùng xem lại và xác nhận làm tiếp
+  (đặc biệt với duyệt và đăng: chủ không duyệt nhầm bản cũ).
 - **FR-019**: Nền tảng MUST hỗ trợ **chế độ chỉ xem theo quyền**: cùng một biểu mẫu hiển thị ở chế độ sửa hoặc chỉ
   xem, trường khóa có dòng giải thích.
 - **FR-020**: Nền tảng MUST hỗ trợ biểu mẫu nhiều bước (ví dụ hành trình "Bắt đầu" 5 bước, mỗi bước bỏ qua được và
@@ -324,8 +355,9 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
   nhận dạng nhất quán để sau mỗi thao tác thay đổi, các nơi liên quan được làm mới đúng phạm vi (danh sách, chi tiết,
   số đếm trên điều hướng, tổng quan).
 - **FR-024**: Giao diện MUST hiển thị dữ liệu đã có ngay khi quay lại một màn rồi làm mới ngầm; MUST có quy tắc làm
-  mới theo loại dữ liệu (ví dụ mức sử dụng và số thông báo làm mới thường xuyên hơn danh mục tĩnh) và làm mới khi
-  người dùng quay lại tab.
+  mới theo loại dữ liệu (ví dụ danh mục tĩnh ít làm mới hơn bài, mức sử dụng và số thông báo) và làm mới khi mở màn
+  hình hoặc khi người dùng quay lại tab. Giai đoạn 1 MUST NOT làm mới định kỳ nền (ngoại lệ duy nhất: tiến độ việc nền đang hiển thị, FR-030) và MUST NOT dùng kênh đẩy; độ tươi
+  của thay đổi do người khác được bảo đảm bằng kiểm tra phiên bản lúc thao tác (FR-018).
 - **FR-025**: Các thao tác chắc chắn thành công trong đa số trường hợp (đổi giờ, đánh dấu đã đọc, sắp xếp lại) MAY
   cập nhật lạc quan nhưng MUST hoàn lại và giải thích khi máy chủ từ chối. Các thao tác đắt/không đảo ngược (duyệt,
   đăng lại, xóa, ngắt kết nối) MUST chờ xác nhận của máy chủ và (với thao tác nguy hiểm) hỏi xác nhận trước.
@@ -344,7 +376,9 @@ truy cập tự động trên mọi thành phần trong danh mục: không có v
   tự gọi mạng trực tiếp.
 - **FR-030**: Việc nền (tạo bài hàng loạt, gán nhãn, đăng bài) MUST có cơ chế **theo dõi tiến độ dùng chung**: một
   thành phần cung cấp trạng thái x/N, đang chạy/xong/lỗi cho mọi màn cần; thông báo hoàn tất MUST xuất hiện trong
-  trung tâm thông báo dù người dùng đang ở màn nào, và số chưa đọc ở điều hướng luôn đúng.
+  trung tâm thông báo dù người dùng đang ở màn nào (ở lần làm mới kế tiếp), và số chưa đọc ở điều hướng đúng sau mỗi
+  lần làm mới. Làm mới nhanh (vài giây, dừng khi việc xong hoặc khi rời màn) chỉ được dùng cho tiến độ của việc nền
+  đang hiển thị trên màn hình.
 - **FR-031**: Mức sử dụng (bài, AI %, dung lượng) MUST đến giao diện dưới dạng **tỷ lệ/phần trăm và số đếm**; giao
   diện MUST NOT hiển thị, tính toán hay lưu số tiền chi phí AI ở bất kỳ màn hình nào của khách hàng (hiến pháp III,
   FR-12); chỉ khu vực nội bộ hỗ trợ mới được hiển thị số tiền.
@@ -422,6 +456,9 @@ Tính năng không tạo bảng dữ liệu máy chủ. Các thực thể là kh
   gốc chỉ xuất hiện trong phần "Chi tiết cho hỗ trợ".
 - **SC-011**: Sau khi chuyển, bộ kiểm thử web của tính năng 004, 006 và 009 vẫn qua 100%, và không còn khối kiểu dáng
   riêng theo từng thư mục tính năng.
+- **SC-013**: Trong kiểm thử hai người dùng, khi người này sửa bài thì người kia bấm duyệt/đăng/đổi giờ trên bản cũ
+  100% lần nhận cảnh báo "Bài viết đã được thay đổi" và 0 lần duyệt hay đăng nhầm bản cũ; khi phiên hết hạn giữa
+  lúc soạn, 100% lần giữ nguyên nội dung đang soạn và tiếp tục được sau khi đăng nhập lại cùng tài khoản.
 - **SC-012**: Khi thiết kế đổi một giá trị (ví dụ màu chủ đạo), việc cập nhật tới toàn bộ giao diện chỉ cần sửa ở một
   nơi trong ≤ 30 phút, không phải sửa từng màn hình.
 
@@ -430,12 +467,10 @@ Tính năng không tạo bảng dữ liệu máy chủ. Các thực thể là kh
 - Thiết kế Figma trang "Thành phần" là **nguồn chuẩn cho hình thức** (thành phần, biến thể, trạng thái); UI/UX
   v1.3 là nguồn chuẩn cho **luồng, nội dung màn hình và phân quyền**. Khi hai nơi lệch, hình thức theo Figma, quyền và
   luồng theo UI/UX, và ghi sự lệch vào tài liệu để PO xác nhận.
-- Sự lệch đã thấy giữa Figma và UI/UX, cần PO xác nhận khi lập kế hoạch: (1) thanh bên Figma có 7 mục (Tổng quan, Lịch,
-  Bài viết, Thư viện ảnh & video, Hồ sơ kinh doanh, **Kênh & gói**, Cài đặt) còn UI/UX gom Kênh kết nối và Gói vào
-  Cài đặt; (2) thanh điều hướng dưới Figma có 5 mục (Tổng quan, Lịch, Bài viết, **Thêm**, **Tạo bài**) còn UI/UX nêu 4 mục
-  (Tổng quan, Lịch, Bài viết, Thư viện); (3) Figma có kênh **TikTok** và biến thể **"Đăng tay"** cùng huy hiệu "Gợi ý hôm
-  nay" mà UI/UX v1.3 chưa mô tả. Giả định tạm: theo Figma cho cấu trúc điều hướng; "Đăng tay" là biến thể hiển thị
-  của thẻ kênh cho kênh chưa có cổng đăng tự động (liên quan tính năng 010, TikTok mặc định tắt) và sẽ được chốt ở 010.
+- Sự lệch giữa Figma và UI/UX: (1) và (2) về cấu trúc điều hướng **đã chốt theo Figma** (xem Clarifications); UI/UX
+  mục 4 cần được cập nhật cho khớp ở bước hoàn tất. (3) "Đăng tay" **đã chốt**: là khả năng của kênh do máy chủ báo (xem Clarifications), không phải lựa chọn của người dùng. (4) "Gợi ý hôm nay" **đã chốt** là nhãn riêng, không phải trạng thái bài; "Đã hủy" cần bổ sung vào Figma. Kênh
+  **TikTok** có trong Figma mặc định tắt theo khách hàng (tính năng 010); UI/UX v1.3 cần được cập nhật để mô tả TikTok,
+  "Đăng tay" và "Gợi ý hôm nay".
 - Giá trị cụ thể của bộ giá trị thiết kế (mã màu, cỡ chữ…) được **trích từ Figma ở bước lập kế hoạch**; đặc tả này
   chỉ yêu cầu có một bộ duy nhất và quy trình đồng bộ.
 - Giai đoạn 1 chỉ có ứng dụng web chạy tốt trên điện thoại (đã chốt U1); không có ứng dụng di động riêng; không làm
@@ -445,8 +480,9 @@ Tính năng không tạo bảng dữ liệu máy chủ. Các thực thể là kh
 - Trình duyệt mục tiêu: 2 phiên bản mới nhất của Chrome, Safari (kể cả iOS), Edge, Cốc Cốc (theo UI/UX mục 10).
 - Không dùng máy chủ trung gian riêng cho giao diện: ứng dụng web một trang phục vụ tĩnh, nói chuyện trực tiếp với API
   hiện có (hiến pháp IV, IX); không thêm bộ nhớ đệm phân tán hay dịch vụ mới.
-- Cập nhật gần thời gian thực ở giai đoạn 1 đạt bằng làm mới định kỳ/khi quay lại tab, không bắt buộc kênh đẩy
-  (push) từ máy chủ; nếu cần kênh đẩy sau này phải có ADR.
+- Giai đoạn 1 không có cập nhật gần thời gian thực: dữ liệu làm mới khi mở màn hình hoặc quay lại tab, không làm
+  mới định kỳ và không có kênh đẩy (push) từ máy chủ; thay đổi của người khác được chặn ghi đè bằng kiểm tra phiên
+  bản và cảnh báo "Bài viết đã được thay đổi" (FR-018). Nếu cần làm mới định kỳ hay kênh đẩy sau này phải có ADR.
 - Các màn hình nghiệp vụ cụ thể (Tổng quan, Lịch, Soạn bài, Chờ duyệt, Thư viện, Kênh kết nối…) **không** thuộc tính
   năng này; chúng dùng nền này ở các tính năng sau. Riêng một "màn hình mẫu" trong danh mục thành phần được dựng để
   chứng minh nền.
