@@ -71,7 +71,7 @@ describe('NoAccountPage', () => {
     const join = await screen.findByRole('button', { name: 'Tham gia tài khoản của Chị Lan' });
     const claim = screen.getByRole('button', { name: 'Tạo tài khoản kinh doanh của riêng tôi' });
     expect(screen.getByRole('checkbox')).not.toBeChecked();
-    expect(claim).toBeDisabled();
+    expect(claim).toHaveAttribute('aria-disabled', 'true'); // khóa kèm lý do (chuẩn 011)
     expect(screen.getByText(/Google và Meta sẽ gửi cho chúng tôi/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cách đăng nhập' })).toHaveAttribute(
       'href',

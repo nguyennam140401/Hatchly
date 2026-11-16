@@ -268,6 +268,12 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
     return getAdapter(channelType).contentHash(text);
   }
 
+  listConnections(): Promise<ChannelConnection[]> {
+    return withGatewayOp('platform_gateway', 'listConnections', {}, async () =>
+      (await this.opts.store.listConnections()).map(toChannelConnection),
+    );
+  }
+
   getConnection(connectionId: string): Promise<ChannelConnection | null> {
     return withGatewayOp(
       'platform_gateway',

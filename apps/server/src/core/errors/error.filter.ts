@@ -86,6 +86,8 @@ export class ErrorFilter implements ExceptionFilter {
           ? { retryAfterSeconds: exception.retryAfterSeconds }
           : {}),
         ...(exception.detail !== undefined ? { detail: exception.detail } : {}),
+        ...(exception.reason !== undefined ? { reason: exception.reason } : {}),
+        ...(exception.extra !== undefined ? { extra: exception.extra } : {}),
       };
     } else if (
       exception instanceof TenantContextError ||

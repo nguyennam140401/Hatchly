@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
-import { styles } from './ui';
+import { Page } from '../../ui/layout/Page';
+import { PageHeader } from '../../ui/layout/PageHeader';
 
-// Bố cục chung của các trang xác thực – một cột, chạy từ 360 px.
+// Bố cục chung của các trang xác thực – một cột, chạy từ 360 px (dựng từ thành phần dùng chung).
 export function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <main style={styles.page}>
-      <p style={{ margin: '0 0 8px', color: '#4b5563' }}>Trợ lý đăng bài</p>
-      <h1 style={{ fontSize: 24, margin: '0 0 16px' }}>{title}</h1>
-      {children}
-    </main>
+    <div className="mx-auto w-full max-w-md px-gutter py-6">
+      <Page>
+        <p className="text-body-sm text-ink-muted">Trợ lý đăng bài</p>
+        <PageHeader title={title} />
+        {children}
+      </Page>
+    </div>
   );
 }

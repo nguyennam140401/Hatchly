@@ -19,6 +19,16 @@ export const ErrorAction = z.object({
 });
 export type ErrorAction = z.infer<typeof ErrorAction>;
 
+/** 011: lý do phiên kết thúc – để giao diện chọn thông điệp đúng (hộp đăng nhập lại hay màn kết thúc). */
+export const SESSION_END_REASONS = [
+  'expired',
+  'revoked',
+  'password_changed',
+  'removed',
+  'locked',
+] as const;
+export type SessionEndReason = (typeof SESSION_END_REASONS)[number];
+
 export const FieldErrorItem = z.object({
   path: z.array(z.string()),
   message: z.string(),
@@ -33,8 +43,15 @@ export const ErrorResponse = z.object({
     /** Mỗi lỗi có ít nhất một hành động khắc phục. */
     actions: z.array(ErrorAction).min(1),
     fieldErrors: z.array(FieldErrorItem).optional(),
+    /** 011: chỉ có ở 401 UNAUTHENTICATED khi biết lý do phiên kết thúc; thiếu = coi như `expired`. */
+    reason: z.enum(SESSION_END_REASONS).optional(),
     /** Số giây cần chờ trước khi thử lại (429 LOGIN_THROTTLED – 004); trùng tiêu đề `Retry-After`. */
     retryAfterSeconds: z.number().int().positive().optional(),
+    /**
+     * 012: dữ liệu kèm theo lỗi nghiệp vụ để giao diện hiện đủ hướng xử lý (vd `channelIssues` mọi
+     * kênh vướng cùng lúc, `suggestedAt`, bài mới nhất khi `VERSION_CONFLICT`). Không bí mật, không số tiền.
+     */
+    extra: z.record(z.string(), z.unknown()).optional(),
     /** "Chi tiết cho hỗ trợ": mã theo dõi + mã lỗi gốc (không bao giờ chứa bí mật). */
     support: z.object({
       traceId: z.string().min(1),
@@ -115,5 +132,28 @@ export const ERROR_CODES = {
   NO_ACCOUNT: 'NO_ACCOUNT',
   /** 400 – `signed_request` của Meta sai chữ ký hoặc sai định dạng (máy gọi máy). */
   SIGNED_REQUEST_INVALID: 'SIGNED_REQUEST_INVALID',
+  // ----- Bài viết, duyệt, lịch (012, contracts/http-api.md mục 4) -----
+  /** 409 – tài khoản chưa có kênh hoạt động. */
+  NO_ACTIVE_CHANNEL: 'NO_ACTIVE_CHANNEL',
+  /** 409 – bài không sửa/xóa được ở trạng thái hiện tại. */
+  POST_NOT_EDITABLE: 'POST_NOT_EDITABLE',
+  /** 409 – bài đã được duyệt / đã ở trạng thái đích (gọi lặp). */
+  POST_ALREADY_APPROVED: 'POST_ALREADY_APPROVED',
+  /** 422 – nội dung vượt giới hạn kênh, thiếu media hoặc bài rỗng. */
+  POST_CONTENT_INVALID: 'POST_CONTENT_INVALID',
+  /** 422 – giờ đăng quá gần hoặc đã qua. */
+  TIME_IN_PAST: 'TIME_IN_PAST',
+  /** 409 – kênh đã ngắt hoặc hết hạn quyền. */
+  CHANNEL_INACTIVE: 'CHANNEL_INACTIVE',
+  /** 409 – kênh hết hạn mức đăng ở giờ đã chọn. */
+  CHANNEL_QUOTA_EXCEEDED: 'CHANNEL_QUOTA_EXCEEDED',
+  /** 409 – có kênh đã/đang đăng nên không hủy, đổi giờ, sửa được. */
+  CHANNEL_ALREADY_PUBLISHING: 'CHANNEL_ALREADY_PUBLISHING',
+  /** 403 – gói dịch vụ đã hết hạn. */
+  PLAN_EXPIRED: 'PLAN_EXPIRED',
+  /** 422 – ghi chú trả lại rỗng hoặc quá 500 ký tự. */
+  RETURN_NOTE_REQUIRED: 'RETURN_NOTE_REQUIRED',
+  /** 422 – chọn quá số bài cho phép mỗi lần. */
+  BULK_LIMIT_EXCEEDED: 'BULK_LIMIT_EXCEEDED',
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

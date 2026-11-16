@@ -1,11 +1,18 @@
 import { toFieldErrors } from '@app/shared/core';
 import { ProfileFields, type OptionalProfileField, type ProfileView } from '@app/shared/context';
-import { useCallback, useEffect, useReducer, useRef, type CSSProperties } from 'react';
-import { Link } from 'react-router';
-import { ApiError } from '../../lib/api-client';
-import { useSession } from '../auth/session';
-import { ErrorNotice, styles } from '../auth/ui';
-import { contextApi, formatVnTime, savedByLabel } from './context-api';
+import { useCallback, useEffect, useReducer, useRef, type ReactNode } from 'react';
+import { contextApi } from '../../lib/api/endpoints/context';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import { useUnsavedChangesGuard } from '../../lib/forms/useUnsavedChangesGuard';
+import { useSession } from '../../lib/session/context';
+import { ConfirmDialog } from '../../ui/alert/ConfirmDialog';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Button } from '../../ui/button/Button';
+import { Page } from '../../ui/layout/Page';
+import { PageHeader } from '../../ui/layout/PageHeader';
+import { TextLink } from '../../ui/nav/TextLink';
+import { formatVnTime, savedByLabel } from './labels';
 import {
   EMPTY_FORM,
   FIELD_IDS,
@@ -15,7 +22,6 @@ import {
   ProfileForm,
   type ProfileFormValue,
 } from './ProfileForm';
-import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
 import { VersionHistory } from './VersionHistory';
 
 // Màn hình "Hồ sơ kinh doanh" (006 contracts/business-profile-ui.md) – MẪU cho màn hình nghiệp vụ:
@@ -23,7 +29,14 @@ import { VersionHistory } from './VersionHistory';
 // ẩn/hiện (API vẫn tự chặn), kiểm hợp lệ bằng lược đồ dùng chung, thông điệp lỗi + hành động từ máy
 // chủ, không thư viện trạng thái (useReducer). Thời gian hiển thị UTC+7.
 
-const page: CSSProperties = { ...styles.page, maxWidth: 720 };
+/** Khung trang: cột đọc ≤ 720 px, đúng một `<main>` (qua `Page`). */
+function Wrap({ children, busy }: { children: ReactNode; busy?: boolean }) {
+  return (
+    <div className="mx-auto w-full max-w-3xl px-gutter py-6">
+      <Page busy={busy === true}>{children}</Page>
+    </div>
+  );
+}
 
 const OPTIONAL_LABELS: Record<OptionalProfileField, string> = {
   products: 'Sản phẩm/dịch vụ',
@@ -36,7 +49,7 @@ type Notice = { kind: 'saved'; version: number } | { kind: 'unchanged' } | null;
 
 interface State {
   phase: 'loading' | 'ready' | 'load_error' | 'forbidden';
-  loadError: ApiError | null;
+  loadError: AppError | null;
   profile: ProfileView | null;
   missingOptional: OptionalProfileField[];
   form: ProfileFormValue;
@@ -44,8 +57,8 @@ interface State {
   saving: boolean;
   notice: Notice;
   errors: Record<string, string>;
-  saveError: ApiError | null;
-  conflict: ApiError | null;
+  saveError: AppError | null;
+  conflict: AppError | null;
   confirmReload: boolean;
   historyKey: number;
 }
@@ -53,14 +66,14 @@ interface State {
 type Action =
   | { type: 'loading' }
   | { type: 'loaded'; profile: ProfileView | null; missingOptional: OptionalProfileField[] }
-  | { type: 'load_failed'; error: ApiError }
+  | { type: 'load_failed'; error: AppError }
   | { type: 'forbidden' }
   | { type: 'edit'; form: ProfileFormValue }
   | { type: 'invalid'; errors: Record<string, string> }
   | { type: 'saving' }
   | { type: 'saved'; changed: boolean; profile: ProfileView }
-  | { type: 'save_failed'; error: ApiError }
-  | { type: 'conflict'; error: ApiError }
+  | { type: 'save_failed'; error: AppError }
+  | { type: 'conflict'; error: AppError }
   | { type: 'confirm_reload'; open: boolean };
 
 const initial: State = {
@@ -145,9 +158,9 @@ const sameForm = (a: ProfileFormValue, b: ProfileFormValue) =>
   JSON.stringify(a) === JSON.stringify(b);
 
 /** Lỗi theo ô từ máy chủ: bỏ tiền tố `fields.` (đường dẫn của SaveProfileRequest). */
-function serverFieldErrors(error: ApiError): Record<string, string> {
+function serverFieldErrors(error: AppError): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(error.fieldErrors()).map(([k, v]) => [k.replace(/^fields\./, ''), v]),
+    Object.entries(error.fieldErrors).map(([k, v]) => [k.replace(/^fields\./, ''), v]),
   );
 }
 
@@ -173,7 +186,7 @@ export function BusinessProfilePage() {
       const res = await contextApi.getProfile();
       dispatch({ type: 'loaded', profile: res.profile, missingOptional: res.missingOptional });
     } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
+      if (!(err instanceof AppError)) throw err;
       dispatch(
         err.code === 'FORBIDDEN' ? { type: 'forbidden' } : { type: 'load_failed', error: err },
       );
@@ -206,8 +219,8 @@ export function BusinessProfilePage() {
       });
       dispatch({ type: 'saved', changed: res.changed, profile: res.profile });
     } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      if (err.code === 'VALIDATION_FAILED' && err.body?.fieldErrors !== undefined) {
+      if (!(err instanceof AppError)) throw err;
+      if (err.code === 'VALIDATION_FAILED' && Object.keys(err.fieldErrors).length > 0) {
         const errors = serverFieldErrors(err);
         dispatch({ type: 'invalid', errors });
         focusFirstError(errors);
@@ -231,44 +244,41 @@ export function BusinessProfilePage() {
 
   if (!canView || state.phase === 'forbidden') {
     return (
-      <main style={page}>
-        <h1 style={{ fontSize: 24 }}>Hồ sơ kinh doanh</h1>
-        <div role="alert" style={{ border: '1px solid #b91c1c', borderRadius: 8, padding: 12 }}>
-          <p style={{ marginTop: 0 }}>
-            <span role="img" aria-label="Không có quyền">
-              ⛔
-            </span>{' '}
-            Bạn không có quyền xem hồ sơ kinh doanh.
-          </p>
-          <Link to="/" style={styles.link}>
-            Về Tổng quan
-          </Link>
-        </div>
-      </main>
+      <Wrap>
+        <PageHeader title="Hồ sơ kinh doanh" />
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về Tổng quan', href: '/' }]}
+        >
+          Bạn không có quyền xem hồ sơ kinh doanh.
+        </InlineAlert>
+      </Wrap>
     );
   }
 
   if (state.phase === 'loading' && state.profile === null) {
     return (
-      <main style={page} aria-busy="true">
-        <h1 style={{ fontSize: 24 }}>Hồ sơ kinh doanh</h1>
+      <Wrap busy>
+        <PageHeader title="Hồ sơ kinh doanh" />
         <p>
           <span aria-hidden="true">⏳ </span>Đang tải hồ sơ…
         </p>
-      </main>
+      </Wrap>
     );
   }
 
   if (state.phase === 'load_error' && state.loadError !== null) {
     return (
-      <main style={page}>
-        <h1 style={{ fontSize: 24 }}>Hồ sơ kinh doanh</h1>
-        <ErrorNotice error={state.loadError}>
-          <button type="button" style={styles.secondary} onClick={() => void load()}>
-            Thử lại
-          </button>
-        </ErrorNotice>
-      </main>
+      <Wrap>
+        <PageHeader title="Hồ sơ kinh doanh" />
+        <ErrorNotice
+          error={state.loadError}
+          actions={[{ kind: 'retry', label: 'Thử lại' }]}
+          onRetry={() => {
+            void load();
+          }}
+        />
+      </Wrap>
     );
   }
 
@@ -276,166 +286,100 @@ export function BusinessProfilePage() {
   const profile = state.profile;
 
   return (
-    <main style={page} aria-busy={state.phase === 'loading'}>
-      <p style={{ margin: '0 0 8px' }}>
-        <Link to="/" style={styles.link}>
-          ← Tổng quan
-        </Link>
-      </p>
-      <h1 style={{ fontSize: 24, margin: '0 0 8px' }}>Hồ sơ kinh doanh</h1>
-      {profile === null ? (
-        <p style={{ marginTop: 0, color: '#4b5563' }}>
-          Chưa có hồ sơ. Điền vài dòng để AI viết bài đúng với cửa hàng của bạn.
-        </p>
-      ) : (
-        <p style={{ marginTop: 0, color: '#4b5563' }}>
-          Phiên bản {profile.version} · lưu lúc {formatVnTime(profile.savedAt)} (giờ Việt Nam) · bởi{' '}
-          {savedByLabel(profile.savedBy)}
-        </p>
-      )}
+    <Wrap busy={state.phase === 'loading'}>
+      <TextLink to="/">← Tổng quan</TextLink>
+      <PageHeader
+        title="Hồ sơ kinh doanh"
+        description={
+          profile === null
+            ? 'Chưa có hồ sơ. Điền vài dòng để AI viết bài đúng với cửa hàng của bạn.'
+            : `Phiên bản ${String(profile.version)} · lưu lúc ${formatVnTime(profile.savedAt)} (giờ Việt Nam) · bởi ${savedByLabel(profile.savedBy)}`
+        }
+      />
 
       {!canEdit && (
-        <p role="note" style={{ border: '1px solid #6b7280', borderRadius: 8, padding: 12 }}>
-          <span role="img" aria-label="Chỉ xem">
-            👁
-          </span>{' '}
-          Bạn đang xem. Chỉ chủ tài khoản mới sửa được hồ sơ.
-        </p>
+        <InlineAlert tone="info">Bạn đang xem. Chỉ chủ tài khoản mới sửa được hồ sơ.</InlineAlert>
       )}
 
       {canEdit && state.missingOptional.length > 0 && (
         <aside
           aria-label="Gợi ý"
-          style={{ border: '1px solid #1d4ed8', borderRadius: 8, padding: 12, marginBottom: 16 }}
+          className="rounded-md border border-brand bg-brand-soft p-4 text-body-sm"
         >
-          <span role="img" aria-label="Gợi ý">
-            💡
-          </span>{' '}
+          <span aria-hidden="true">💡 </span>
           AI sẽ viết tốt hơn nếu bạn bổ sung:{' '}
           {state.missingOptional.map((k) => OPTIONAL_LABELS[k]).join(', ')}.
         </aside>
       )}
 
       {state.notice?.kind === 'saved' && (
-        <p role="status" style={{ border: '1px solid #15803d', borderRadius: 8, padding: 12 }}>
-          <span role="img" aria-label="Thành công">
-            ✓
-          </span>{' '}
-          Đã lưu phiên bản {state.notice.version}
-        </p>
+        <InlineAlert tone="info">{`Đã lưu phiên bản ${String(state.notice.version)}`}</InlineAlert>
       )}
       {state.notice?.kind === 'unchanged' && (
-        <p role="status" style={{ border: '1px solid #6b7280', borderRadius: 8, padding: 12 }}>
-          <span role="img" aria-label="Thông tin">
-            ℹ
-          </span>{' '}
-          Không có thay đổi để lưu
-        </p>
+        <InlineAlert tone="info">Không có thay đổi để lưu</InlineAlert>
       )}
 
       {state.conflict !== null && (
-        <div
-          role="alert"
-          style={{ border: '1px solid #b45309', borderRadius: 8, padding: 12, marginBottom: 16 }}
+        <InlineAlert
+          tone="error"
+          actions={[
+            { kind: 'retry', label: state.conflict.actions[0].label || 'Tải bản mới nhất' },
+          ]}
+          onAction={reloadLatest}
         >
-          <p style={{ marginTop: 0 }}>
-            <span role="img" aria-label="Cảnh báo">
-              ⚠
-            </span>{' '}
-            {state.conflict.message}
-          </p>
-          <button type="button" style={styles.secondary} onClick={reloadLatest}>
-            {state.conflict.body?.actions[0]?.label ?? 'Tải bản mới nhất'}
-          </button>
-        </div>
+          {state.conflict.message}
+        </InlineAlert>
       )}
 
-      {state.confirmReload && (
-        <div
-          role="alertdialog"
-          aria-modal="false"
-          aria-labelledby="bp-confirm-reload"
-          style={{ border: '1px solid #b45309', borderRadius: 8, padding: 12, marginBottom: 16 }}
-        >
-          <p id="bp-confirm-reload" style={{ marginTop: 0 }}>
-            Thay nội dung đang sửa bằng bản mới nhất? Thay đổi chưa lưu sẽ mất.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button type="button" style={styles.secondary} onClick={() => void load()}>
-              Thay bằng bản mới nhất
-            </button>
-            <button
-              type="button"
-              style={styles.secondary}
-              onClick={() => {
-                dispatch({ type: 'confirm_reload', open: false });
-              }}
-            >
-              Giữ nội dung đang sửa
-            </button>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={state.confirmReload}
+        role="alertdialog"
+        onOpenChange={(open) => {
+          if (!open) dispatch({ type: 'confirm_reload', open: false });
+        }}
+        title="Thay nội dung đang sửa bằng bản mới nhất?"
+        body="Thay đổi chưa lưu sẽ mất."
+        confirmLabel="Thay bằng bản mới nhất"
+        cancelLabel="Giữ nội dung đang sửa"
+        onConfirm={() => void load()}
+      />
 
       {state.saveError !== null && (
-        <ErrorNotice error={state.saveError}>
-          <button type="button" style={styles.secondary} onClick={() => void save()}>
-            Thử lại
-          </button>
-        </ErrorNotice>
+        <ErrorNotice
+          error={state.saveError}
+          actions={[{ kind: 'retry', label: 'Thử lại' }]}
+          onRetry={() => void save()}
+        />
       )}
 
-      {blocker.state === 'blocked' && (
-        <div
-          role="alertdialog"
-          aria-modal="false"
-          aria-labelledby="bp-confirm-leave"
-          style={{ border: '1px solid #b45309', borderRadius: 8, padding: 12, marginBottom: 16 }}
-        >
-          <p id="bp-confirm-leave" style={{ marginTop: 0 }}>
-            Bỏ các thay đổi chưa lưu?
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button
-              type="button"
-              style={styles.secondary}
-              onClick={() => {
-                blocker.reset();
-              }}
-            >
-              Ở lại
-            </button>
-            <button
-              type="button"
-              style={styles.secondary}
-              onClick={() => {
-                blocker.proceed();
-              }}
-            >
-              Bỏ thay đổi
-            </button>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={blocker.state === 'blocked'}
+        role="alertdialog"
+        onOpenChange={(open) => {
+          if (!open && blocker.state === 'blocked') blocker.reset();
+        }}
+        tone="danger"
+        title="Bỏ các thay đổi chưa lưu?"
+        confirmLabel="Bỏ thay đổi"
+        cancelLabel="Ở lại"
+        onConfirm={() => {
+          if (blocker.state === 'blocked') blocker.proceed();
+        }}
+      />
 
       <form
         noValidate
         aria-label="Hồ sơ kinh doanh"
+        className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           void save();
         }}
       >
         {errorCount > 0 && (
-          <div
-            role="alert"
-            style={{ border: '1px solid #b91c1c', borderRadius: 8, padding: 12, marginBottom: 16 }}
-          >
-            <span role="img" aria-label="Lỗi">
-              ⚠
-            </span>{' '}
+          <InlineAlert tone="error" actions={[{ kind: 'fix_input', label: 'Sửa thông tin' }]}>
             Hãy sửa {errorCount} ô được đánh dấu bên dưới.
-          </div>
+          </InlineAlert>
         )}
         <ProfileForm
           value={state.form}
@@ -446,13 +390,15 @@ export function BusinessProfilePage() {
           }}
         />
         {canEdit && (
-          <button type="submit" style={styles.primary} disabled={state.saving}>
-            {state.saving ? 'Đang lưu…' : 'Lưu'}
-          </button>
+          <div>
+            <Button type="submit" loading={state.saving}>
+              Lưu
+            </Button>
+          </div>
         )}
       </form>
 
       <VersionHistory reloadKey={state.historyKey} />
-    </main>
+    </Wrap>
   );
 }

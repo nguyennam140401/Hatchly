@@ -6,6 +6,7 @@
       { "step": "typecheck", "order": 20 },
       { "step": "lint", "order": 30 },
       { "step": "check:boundaries", "order": 40 },
+      { "step": "check:web-rules", "order": 45 },
       { "step": "check:secrets", "order": 50 },
       { "step": "check:pipeline", "order": 60 },
       { "step": "check:release-source", "order": 70 },
@@ -21,7 +22,10 @@
       { "step": "db:compat", "order": 30 },
       { "step": "check:secrets:test-logs", "order": 90 }
     ],
-    "e2e": [{ "step": "test:e2e", "order": 10 }],
+    "e2e": [
+      { "step": "test:e2e", "order": 10 },
+      { "step": "test:web-e2e", "order": 20 }
+    ],
     "image": [{ "step": "check:image", "order": 10 }]
   }
 }

@@ -7,13 +7,17 @@ import {
   type ProfileFieldsData,
   type ProfileFieldsInput,
 } from '@app/shared/context';
-import type { CSSProperties } from 'react';
-import { styles } from '../auth/ui';
+import { Field } from '../../ui/field/Field';
+import { cn } from '../../ui/util/cn';
 import { KeywordsInput } from './KeywordsInput';
 
-// Biểu mẫu hồ sơ kinh doanh (006 contracts/business-profile-ui.md "Thành phần biểu mẫu"). Không thêm thư
-// viện biểu mẫu (R11): giá trị là chuỗi thô, kiểm hợp lệ bằng CHÍNH lược đồ `ProfileFields` của máy chủ.
-// `readOnly`: cộng tác viên và bản cũ – mọi ô chỉ đọc, không có nút.
+// Biểu mẫu hồ sơ kinh doanh (006 contracts/business-profile-ui.md "Thành phần biểu mẫu"). Giá trị là chuỗi thô, kiểm
+// hợp lệ bằng CHÍNH lược đồ `ProfileFields` của máy chủ. Các ô dựng trên `Field` dùng chung (nhãn `for`, lỗi
+// `aria-describedby`, dấu `*`). `readOnly`: cộng tác viên và bản cũ – mọi ô chỉ đọc, không có nút.
+//
+// Ghi chú kiến trúc (011 T074): trạng thái ô vẫn là giá trị điều khiển + `useReducer` của trang (hợp đồng 006: bộ đếm
+// ký tự, so sánh "bản đang sửa" với "bản gốc", xung đột phiên bản giữ nguyên nội dung đang gõ). Chưa chuyển sang
+// `useAppForm`; xem Complexity Tracking trong plan.md.
 
 /** Giá trị ô nhập (chuỗi thô, chưa chuẩn hóa). */
 export interface ProfileFormValue {
@@ -72,8 +76,6 @@ export interface ProfileFormProps {
   readOnly?: boolean;
 }
 
-const textarea: CSSProperties = { ...styles.input, minHeight: 96, resize: 'vertical' };
-
 function TextArea(props: {
   id: string;
   label: string;
@@ -88,42 +90,39 @@ function TextArea(props: {
 }) {
   const n = charCount(props.value);
   const near = n >= props.max * 0.9;
-  const describedBy = [`${props.id}-count`, props.error !== undefined ? `${props.id}-err` : '']
-    .filter(Boolean)
-    .join(' ');
+  const countId = `${props.id}-count`;
   return (
-    <div style={styles.field}>
-      <label htmlFor={props.id}>
-        {props.label}
-        {props.required === true && <span aria-hidden="true"> *</span>}
-      </label>
-      <textarea
+    <div className="flex flex-col gap-1">
+      <Field
         id={props.id}
-        style={{ ...textarea, ...(props.readOnly ? { background: '#f3f4f6' } : {}) }}
-        value={props.value}
-        rows={props.rows ?? 4}
-        readOnly={props.readOnly}
-        required={props.required}
-        placeholder={props.placeholder}
-        aria-invalid={props.error !== undefined}
-        aria-describedby={describedBy}
-        onChange={(e) => {
-          props.onChange(e.target.value);
-        }}
-      />
+        label={props.label}
+        required={props.required === true}
+        error={props.error !== undefined ? { message: props.error } : undefined}
+        state={props.readOnly ? 'readOnly' : 'default'}
+      >
+        {(c) => (
+          <textarea
+            {...c}
+            aria-describedby={[c['aria-describedby'], countId].filter(Boolean).join(' ')}
+            className={cn(c.className, 'resize-y')}
+            value={props.value}
+            rows={props.rows ?? 4}
+            readOnly={props.readOnly}
+            required={props.required}
+            {...(props.placeholder !== undefined ? { placeholder: props.placeholder } : {})}
+            onChange={(e) => {
+              props.onChange(e.target.value);
+            }}
+          />
+        )}
+      </Field>
       <p
-        id={`${props.id}-count`}
+        id={countId}
         aria-live={near ? 'polite' : 'off'}
-        style={{ margin: 0, fontSize: 14, color: n > props.max ? '#b91c1c' : '#4b5563' }}
+        className={cn('text-caption', n > props.max ? 'text-danger' : 'text-ink-muted')}
       >
         {formatCount(n)}/{formatCount(props.max)}
       </p>
-      {props.error !== undefined && (
-        <p id={`${props.id}-err`} style={styles.error}>
-          <span aria-hidden="true">⚠ </span>
-          {props.error}
-        </p>
-      )}
     </div>
   );
 }
@@ -138,71 +137,59 @@ export function ProfileForm({ value, onChange, errors, readOnly = false }: Profi
 
   return (
     <>
-      <div style={styles.field}>
-        <label htmlFor={FIELD_IDS.industryCode}>
-          Ngành kinh doanh<span aria-hidden="true"> *</span>
-        </label>
-        <select
-          id={FIELD_IDS.industryCode}
-          style={{ ...styles.input, ...(readOnly ? { background: '#f3f4f6' } : {}) }}
-          value={value.industryCode}
-          disabled={readOnly}
-          required
-          aria-invalid={industryError !== undefined}
-          aria-describedby={
-            industryError !== undefined ? `${FIELD_IDS.industryCode}-err` : undefined
-          }
-          onChange={(e) => {
-            set('industryCode', e.target.value);
-          }}
-        >
-          <option value="">– Chọn ngành –</option>
-          {INDUSTRIES.map((i) => (
-            <option key={i.code} value={i.code}>
-              {i.label}
-            </option>
-          ))}
-          {/* Mã cũ không còn trong danh mục vẫn hiển thị được (R5). */}
-          {!knownIndustry && value.industryCode !== '' && (
-            <option value={value.industryCode}>{industryLabel(value.industryCode)}</option>
-          )}
-        </select>
-        {industryError !== undefined && (
-          <p id={`${FIELD_IDS.industryCode}-err`} style={styles.error}>
-            <span aria-hidden="true">⚠ </span>
-            {industryError}
-          </p>
+      <Field
+        id={FIELD_IDS.industryCode}
+        label="Ngành kinh doanh"
+        required
+        error={industryError !== undefined ? { message: industryError } : undefined}
+        state={readOnly ? 'readOnly' : 'default'}
+      >
+        {(c) => (
+          <select
+            {...c}
+            value={value.industryCode}
+            disabled={readOnly}
+            required
+            onChange={(e) => {
+              set('industryCode', e.target.value);
+            }}
+          >
+            <option value="">– Chọn ngành –</option>
+            {INDUSTRIES.map((i) => (
+              <option key={i.code} value={i.code}>
+                {i.label}
+              </option>
+            ))}
+            {/* Mã cũ không còn trong danh mục vẫn hiển thị được (R5). */}
+            {!knownIndustry && value.industryCode !== '' && (
+              <option value={value.industryCode}>{industryLabel(value.industryCode)}</option>
+            )}
+          </select>
         )}
-      </div>
+      </Field>
 
       {value.industryCode === 'other' && (
-        <div style={styles.field}>
-          <label htmlFor={FIELD_IDS.industryOther}>
-            Tên ngành<span aria-hidden="true"> *</span>
-          </label>
-          <input
-            id={FIELD_IDS.industryOther}
-            type="text"
-            style={styles.input}
-            value={value.industryOther}
-            readOnly={readOnly}
-            required
-            maxLength={PROFILE_LIMITS.industryOther * 2}
-            aria-invalid={otherError !== undefined}
-            aria-describedby={
-              otherError !== undefined ? `${FIELD_IDS.industryOther}-err` : undefined
-            }
-            onChange={(e) => {
-              set('industryOther', e.target.value);
-            }}
-          />
-          {otherError !== undefined && (
-            <p id={`${FIELD_IDS.industryOther}-err`} style={styles.error}>
-              <span aria-hidden="true">⚠ </span>
-              {otherError}
-            </p>
+        <Field
+          id={FIELD_IDS.industryOther}
+          label="Tên ngành"
+          required
+          error={otherError !== undefined ? { message: otherError } : undefined}
+          state={readOnly ? 'readOnly' : 'default'}
+        >
+          {(c) => (
+            <input
+              {...c}
+              type="text"
+              value={value.industryOther}
+              readOnly={readOnly}
+              required
+              maxLength={PROFILE_LIMITS.industryOther * 2}
+              onChange={(e) => {
+                set('industryOther', e.target.value);
+              }}
+            />
           )}
-        </div>
+        </Field>
       )}
 
       <TextArea

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { safeNext } from '../../src/features/auth/auth-api';
+import { safeNext } from '../../src/lib/api/endpoints/auth';
 import { apiError, fakeApi, healthy, me, renderAt } from './helpers';
 
 // T040: cổng phiên – chuyển tới đăng nhập/xác nhận email; `next` chỉ nhận đường dẫn nội bộ.

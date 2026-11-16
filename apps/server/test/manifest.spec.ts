@@ -71,11 +71,11 @@ describe('modules.manifest.json', () => {
     }).not.toThrow();
   });
 
-  it('4. chỉ publishing được phụ thuộc platform_gateway', () => {
+  it('4. chỉ publishing và content (012: chọn kênh, quy tắc media lúc soạn) phụ thuộc platform_gateway', () => {
     const dependents = manifest.modules
       .filter((m) => m.allowedDeps.includes('platform_gateway'))
       .map((m) => m.name);
-    expect(dependents).toEqual(['publishing']);
+    expect(dependents).toEqual(['content', 'publishing']);
   });
 
   it('5. registry khớp tệp kê khai và runsIn của API/Worker', () => {

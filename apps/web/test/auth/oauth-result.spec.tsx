@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { browser } from '../../src/features/auth/social-api';
+import { browser } from '../../src/lib/api/endpoints/auth';
 import { apiError, fakeApi, healthy, keyboardReachable, me, renderAt } from './helpers';
 
 // T032 + T040 (009 – US1, US2): nút nhà cung cấp, trang kết quả theo từng `stage`, trang xác nhận thư.
@@ -93,13 +93,13 @@ describe('OAuthResultPage', () => {
     const checkbox = screen.getByRole('checkbox');
     const submit = screen.getByRole('button', { name: 'Tạo tài khoản' });
     expect(checkbox).not.toBeChecked();
-    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute('aria-disabled', 'true'); // khóa kèm lý do (chuẩn 011)
     expect(screen.getByText(/Google và Meta sẽ gửi cho chúng tôi/)).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
     expect(keyboardReachable(container)).toBe(true);
 
     fireEvent.click(checkbox);
-    expect(submit).toBeEnabled();
+    expect(submit).not.toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(submit);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/');

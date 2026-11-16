@@ -48,6 +48,7 @@
         "trends",
         "ai_gateway",
         "notifications",
+        "platform_gateway",
         "queue"
       ]
     },

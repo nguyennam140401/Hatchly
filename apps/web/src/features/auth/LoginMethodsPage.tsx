@@ -1,12 +1,19 @@
 import type { LoginMethod, LoginMethodsResponse } from '@app/shared/auth';
-import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react';
-import { Link, useLocation } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router';
+import { browser, PROVIDER_LABELS, socialApi, type Provider } from '../../lib/api/endpoints/auth';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import { objectSchema } from '../../lib/forms/rules';
+import { useAppForm } from '../../lib/forms/useAppForm';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Modal } from '../../ui/alert/Modal';
+import { Button } from '../../ui/button/Button';
+import { Form } from '../../ui/form/Form';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { PasswordField } from './PasswordField';
+import { PasswordField } from '../../ui/form/fields/PasswordField';
 import { ProviderButtons } from './ProviderButtons';
-import { browser, PROVIDER_LABELS, socialApi, type Provider } from './social-api';
-import { ErrorNotice, InfoNotice, styles } from './ui';
 
 // Cài đặt → Cách đăng nhập (009 – US5). Luôn ba dòng: mật khẩu, Google, Facebook. Liên kết, gỡ, tạo
 // mật khẩu đòi "mới xác nhận lại đây là bạn" trong 10 phút: máy chủ trả REAUTH_REQUIRED → trang mở hộp
@@ -32,7 +39,7 @@ interface Pending {
 export function LoginMethodsPage() {
   const location = useLocation();
   const [data, setData] = useState<LoginMethodsResponse | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [reauthFor, setReauthFor] = useState<Pending | null>(null);
   const shown = useRef(false);
@@ -41,7 +48,7 @@ export function LoginMethodsPage() {
     try {
       setData(await socialApi.loginMethods());
     } catch (err) {
-      if (err instanceof ApiError) setError(err);
+      if (err instanceof AppError) setError(err);
       else throw err;
     }
   }, []);
@@ -72,7 +79,7 @@ export function LoginMethodsPage() {
     try {
       await action.run();
     } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
+      if (!(err instanceof AppError)) throw err;
       if (err.code === 'REAUTH_REQUIRED') setReauthFor(action);
       else setError(err);
     }
@@ -106,27 +113,29 @@ export function LoginMethodsPage() {
   return (
     <AuthLayout title="Cách đăng nhập">
       <p>Bạn có thể đăng nhập bằng bất kỳ cách nào đã liên kết dưới đây.</p>
-      {notice !== null && <InfoNotice>{notice}</InfoNotice>}
+      {notice !== null && <InlineAlert tone="info">{notice}</InlineAlert>}
       {error !== null && (
-        <ErrorNotice error={error}>
-          <button type="button" style={styles.secondary} onClick={() => void load()}>
-            Tải lại
-          </button>
-        </ErrorNotice>
+        <ErrorNotice
+          error={error}
+          actions={[{ kind: 'retry', label: 'Tải lại' }]}
+          onRetry={() => {
+            void load();
+          }}
+        />
       )}
       {data === null && error === null && <p aria-busy="true">Đang tải…</p>}
 
       {data !== null && (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <ul className="flex flex-col">
           {data.methods.map((method) => (
             <li
               key={method.kind}
-              style={{ borderTop: '1px solid #d1d5db', padding: '12px 0' }}
               aria-label={LABELS[method.kind]}
+              className="flex flex-col gap-2 border-t border-line py-3"
             >
-              <p style={{ margin: 0, fontWeight: 600 }}>{LABELS[method.kind]}</p>
+              <p className="text-label">{LABELS[method.kind]}</p>
               {/* Trạng thái bằng chữ + biểu tượng – không chỉ dựa vào màu. */}
-              <p style={{ margin: '4px 0 8px' }}>
+              <p>
                 <span aria-hidden="true">{method.linked ? '✓ ' : '○ '}</span>
                 {method.linked ? 'Đã liên kết' : 'Chưa liên kết'}
                 {method.linked && method.kind !== 'password' && (
@@ -138,31 +147,24 @@ export function LoginMethodsPage() {
                   </>
                 )}
               </p>
-              {method.linked ? (
-                <button
-                  type="button"
-                  style={styles.secondary}
-                  onClick={() => void attempt(remove(method.kind))}
-                >
-                  Gỡ {LABELS[method.kind]}
-                </button>
-              ) : method.kind === 'password' ? (
-                <button
-                  type="button"
-                  style={styles.secondary}
-                  onClick={() => void attempt(createPassword)}
-                >
-                  Tạo mật khẩu
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  style={styles.secondary}
-                  onClick={() => void attempt(link(method.kind as Provider))}
-                >
-                  Liên kết {LABELS[method.kind]}
-                </button>
-              )}
+              <div>
+                {method.linked ? (
+                  <Button variant="secondary" onClick={() => void attempt(remove(method.kind))}>
+                    Gỡ {LABELS[method.kind]}
+                  </Button>
+                ) : method.kind === 'password' ? (
+                  <Button variant="secondary" onClick={() => void attempt(createPassword)}>
+                    Tạo mật khẩu
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={() => void attempt(link(method.kind as Provider))}
+                  >
+                    Liên kết {LABELS[method.kind]}
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -183,16 +185,16 @@ export function LoginMethodsPage() {
         />
       )}
 
-      <p style={{ marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-        <Link to="/settings/security" style={styles.link}>
-          Bảo mật
-        </Link>
-        <Link to="/" style={styles.link}>
-          Về trang chính
-        </Link>
+      <p className="flex flex-wrap gap-4">
+        <TextLink to="/settings/security">Bảo mật</TextLink>
+        <TextLink to="/">Về trang chính</TextLink>
       </p>
     </AuthLayout>
   );
+}
+
+interface ReauthValues extends Record<string, unknown> {
+  password: string;
 }
 
 /** Hộp "Hãy xác nhận lại đây là bạn": ô mật khẩu nếu có mật khẩu, nút nhà cung cấp đã liên kết. */
@@ -207,64 +209,66 @@ function ReauthDialog({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [password, setPassword] = useState('');
-  const [fieldError, setFieldError] = useState<string | undefined>(undefined);
-  const [error, setError] = useState<ApiError | null>(null);
   const providers = linked.filter((k): k is Provider => k !== 'password');
-
-  async function submit(e: SyntheticEvent) {
-    e.preventDefault();
-    setFieldError(undefined);
-    setError(null);
-    try {
-      await socialApi.reauth(password);
-      onDone();
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setPassword('');
-      if (err.code === 'INVALID_CREDENTIALS') setFieldError(err.message);
-      else setError(err);
-    }
-  }
+  const form = useAppForm<ReauthValues>({
+    schema: objectSchema<ReauthValues>({}),
+    defaultValues: { password: '' },
+    onSubmit: async (values) => {
+      try {
+        await socialApi.reauth(values.password);
+        onDone();
+      } catch (err) {
+        if (!(err instanceof AppError)) throw err;
+        form.methods.setValue('password', '');
+        if (err.code === 'INVALID_CREDENTIALS') {
+          throw new AppError({
+            kind: 'validation',
+            status: err.status,
+            code: err.code,
+            message: err.message,
+            actions: err.actions,
+            fieldErrors: { password: err.message },
+            support: err.support,
+          });
+        }
+        throw err;
+      }
+    },
+  });
+  const password = form.methods.watch('password');
 
   return (
-    <div
+    <Modal
+      open
       role="alertdialog"
-      aria-modal="false"
-      aria-labelledby="reauth-title"
-      style={{ border: '1px solid #b45309', borderRadius: 8, padding: 12, marginTop: 16 }}
+      title="Hãy xác nhận lại đây là bạn"
+      description={`Để ${action.label}, bạn cần xác nhận lại danh tính. Sau đó thao tác sẽ tự tiếp tục.`}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
     >
-      <h2 id="reauth-title" style={{ fontSize: 18, marginTop: 0 }}>
-        Hãy xác nhận lại đây là bạn
-      </h2>
-      <p>Để {action.label}, bạn cần xác nhận lại danh tính. Sau đó thao tác sẽ tự tiếp tục.</p>
-      {error !== null && <ErrorNotice error={error} />}
       {linked.includes('password') && (
-        <form onSubmit={(e) => void submit(e)} noValidate>
-          <PasswordField
-            label="Mật khẩu"
-            value={password}
-            onChange={setPassword}
-            autoComplete="current-password"
-            error={fieldError}
-          />
-          <button type="submit" style={styles.primary} disabled={password === ''}>
-            Xác nhận
-          </button>
-        </form>
+        <Form
+          form={form}
+          submitLabel="Xác nhận"
+          {...(password === '' ? { submitLocked: 'Nhập mật khẩu để xác nhận.' } : {})}
+          errorActions={(e) => e.actions}
+        >
+          <PasswordField name="password" label="Mật khẩu" autoComplete="current-password" />
+        </Form>
       )}
       {providers.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <ProviderButtons
-            only={providers}
-            label={(name) => `Xác nhận bằng ${name}`}
-            start={(provider) => socialApi.loginMethodStart(provider, 'reauth')}
-          />
-        </div>
+        <ProviderButtons
+          only={providers}
+          label={(name) => `Xác nhận bằng ${name}`}
+          start={(provider) => socialApi.loginMethodStart(provider, 'reauth')}
+        />
       )}
-      <button type="button" style={{ ...styles.secondary, marginTop: 12 }} onClick={onCancel}>
-        Hủy
-      </button>
-    </div>
+      <div>
+        <Button variant="secondary" onClick={onCancel}>
+          Hủy
+        </Button>
+      </div>
+    </Modal>
   );
 }

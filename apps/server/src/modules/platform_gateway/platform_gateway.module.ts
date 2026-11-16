@@ -71,10 +71,17 @@ const providers = [
 export class PlatformGatewayModule {
   static forUnit(unit: 'api' | 'worker'): DynamicModule {
     if (unit === 'worker') {
-      return { module: PlatformGatewayModule, providers, exports: [PLATFORM_GATEWAY] };
+      return {
+        module: PlatformGatewayModule,
+        global: true,
+        providers,
+        exports: [PLATFORM_GATEWAY],
+      };
     }
     return {
       module: PlatformGatewayModule,
+      // 012: `content` và `publishing` tiêm PLATFORM_GATEWAY (ranh giới do manifest + check:boundaries kiểm).
+      global: true,
       controllers: [ConnectionsController],
       providers: [
         ...providers,
