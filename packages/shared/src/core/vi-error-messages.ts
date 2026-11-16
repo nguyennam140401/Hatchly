@@ -151,6 +151,12 @@ export const POST_ERROR_MESSAGES = {
   RETURN_NOTE_REQUIRED:
     'Hãy nhập ghi chú trả lại (tối đa 500 ký tự) để người soạn biết cần sửa gì.',
   BULK_LIMIT_EXCEEDED: 'Bạn đã chọn quá nhiều bài cho một lần. Hãy chia nhỏ lựa chọn.',
+  PUBLISH_NOT_REPUBLISHABLE:
+    'Lượt đăng này không đăng lại được ở trạng thái hiện tại. Hãy tải lại trang.',
+  PUBLISH_NOT_CHECKABLE:
+    'Chỉ xác nhận "Đã đăng" được khi bài đang ở trạng thái "Cần kiểm tra". Hãy tải lại trang.',
+  PUBLISH_VERSION_CONFLICT: 'Lượt đăng vừa có thay đổi. Hãy tải lại trang rồi thử lại.',
+  PUBLISH_ATTEMPT_NOT_FOUND: 'Không tìm thấy lượt đăng này.',
 } as const;
 export type PostErrorCode = keyof typeof POST_ERROR_MESSAGES;
 

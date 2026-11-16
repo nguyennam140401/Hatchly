@@ -1,0 +1,72 @@
+# Quy tắc cảnh báo của Đăng bài (013 T052/T080, contracts/observability.md mục 2, hiến pháp VIII).
+# Nạp vào Prometheus cùng queue.rules.yml. Ngưỡng nằm trong tệp này – đổi không cần sửa mã.
+#
+# Tên chỉ số Prometheus suy từ chỉ số OpenTelemetry (meter `app.publishing`, xem modules/publishing/internal/metrics.ts).
+# Nhãn chỉ có `channel`/`from`/`to`/`result`/`guard` – KHÔNG có account_id, post_id, attempt_id (tránh bùng kích thước
+# chuỗi thời gian; tra theo nhật ký). Cảnh báo "việc publish chết ngay" đã có ở queue.rules.yml (QueuePublishDeadJob).
+groups:
+  - name: publishing
+    rules:
+      - alert: PublishChannelErrorRatioHigh
+        expr: >-
+          sum by (channel) (increase(publish_attempt_transitions_total{to=~"needs_user|needs_check|unknown"}[15m]))
+          / clamp_min(sum by (channel) (increase(publish_attempt_transitions_total{from="processing"}[15m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Hơn 5% lượt đăng của một kênh lỗi hoặc không rõ kết quả trong 15 phút'
+          description: >-
+            Hiến pháp VIII: tỷ lệ lỗi đăng một kênh > 5%/15 phút. Xem trang trạng thái của nền tảng, nhật ký
+            publish_steps (bước nào lỗi, mã gốc nào), bảng publishing.error_mappings (mã mới chưa có dòng ánh xạ sẽ
+            thành "không xác định"). Người dùng được báo trong ứng dụng và email kèm cách khắc phục.
+
+      - alert: PublishOverdueAttempts
+        expr: max(publish_overdue_attempts) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Có lượt đăng quá giờ hẹn hơn 5 phút mà chưa được Worker lấy'
+          description: >-
+            Hiến pháp VIII: việc đăng quá hạn > 5 phút. Kiểm tra số bản Worker sống, /readyz của Worker, giới hạn
+            đồng thời hàng chờ publish (infra.queue_settings), cảnh báo QueuePublishOldestWaitHigh. Bộ quét chỉ
+            cảnh báo, KHÔNG tự gửi bài.
+
+      - alert: PublishNeedsCheckRatioHigh
+        expr: >-
+          sum by (channel) (increase(publish_needs_check_total[1d]))
+          / clamp_min(sum by (channel) (increase(publish_attempt_transitions_total{to="processing"}[1d])), 1) > 0.01
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hơn 1% lượt đăng của một kênh phải chuyển "Cần kiểm tra" trong một ngày'
+          description: >-
+            Điều kiện xem lại ADR-04. Kiểm tra năng lực đối soát của kênh (META_*_RECONCILE, kết quả POC-2) và các
+            mã lỗi "không xác định" hay gặp để thêm dòng ánh xạ có kiểm thử.
+
+      - alert: PublishDuplicateGuardSpike
+        expr: increase(publish_duplicate_guard_total{guard="conditional_update_lost"}[10m]) > 50
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Chốt chặn chống đăng trùng bị kích hoạt bất thường'
+          description: >-
+            Nhiều lượt mất cuộc đua cập nhật có điều kiện: có thể việc bị giao lại liên tục (khóa hàng chờ quá
+            ngắn, Worker chậm). Không có bài trùng – đây chỉ là tín hiệu chốt chặn đang làm việc; kiểm tra
+            lock_seconds/heartbeat của hàng chờ publish.
+
+      - alert: PublishReconcileUnsupportedHigh
+        expr: >-
+          sum(increase(publish_reconcile_total{result="unsupported"}[1d]))
+          / clamp_min(sum(increase(publish_reconcile_total[1d])), 1) > 0.2
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hơn 20% lần đối soát không thực hiện được'
+          description: >-
+            Điều kiện xem lại ADR-04: nhiều bài mơ hồ sẽ rơi vào "Cần kiểm tra" thay vì được xác nhận tự động.
+            Xem năng lực đối soát và quyền đọc bài của Page/tài khoản Instagram.

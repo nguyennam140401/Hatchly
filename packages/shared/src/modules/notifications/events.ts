@@ -69,6 +69,21 @@ export const NOTIFICATION_REFS = {
     postId: id,
     authorUserId: id,
     state: z.enum(['needs_user', 'needs_check']),
+    // 013: hai trường TÙY CHỌN (sự kiện cũ vẫn hợp lệ).
+    channelType: z.enum(['facebook_page', 'instagram', 'zalo_oa', 'test_channel']).optional(),
+    reason: z
+      .enum([
+        'token_expired',
+        'not_professional_account',
+        'media_invalid',
+        'rate_limited_daily',
+        'plan_expired',
+        'overdue',
+        'retries_exhausted',
+        'uncertain_result',
+        'other',
+      ])
+      .optional(),
   }),
   channel_token_expiring: z.strictObject({ connectionId: id, expiresOn: day }),
   ai_usage_80: z.strictObject({ cycleStart: day }),

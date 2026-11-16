@@ -1,6 +1,7 @@
 // Hiện thực `PublishingPublicApi` (012 contracts/module-api.md mục 2). Mọi thao tác ghi chạy TRONG giao
 // dịch của người gọi (`approval`): duyệt + mục lịch đăng + việc là MỘT giao dịch (Hiến pháp II).
 import { Inject, Injectable } from '@nestjs/common';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { ChannelType, Remedy } from '@app/shared/content';
 import { worstAttemptStatus } from '@app/shared/publishing';
 import { tenantTx, type Db } from '../../../core';
@@ -27,6 +28,8 @@ import {
   moveScheduled,
   wouldExceedQuota,
 } from './attempts.repository';
+import { publishAttempts } from './db/schema';
+import { transitionMany } from './state-machine';
 
 const RECONNECT: Remedy = { action: 'reconnect', labelVi: 'Kết nối lại' };
 const REMOVE: Remedy = { action: 'remove_channel', labelVi: 'Bỏ kênh này khỏi bài' };
@@ -66,6 +69,7 @@ export class PublishingService implements PublishingPublicApi {
         channelType: c.channelType,
         scheduledAt: input.scheduledAt,
         contentVersion: input.contentVersion,
+        traceId: input.traceId,
       });
       if (attemptId === null) continue; // đã có mục hiệu lực – idempotent
       created++;
@@ -138,6 +142,30 @@ export class PublishingService implements PublishingPublicApi {
     return { kind: 'rescheduled', count: moved.length };
   }
 
+  async cancelAllForConnection(tx: Db, connectionId: string): Promise<{ cancelled: number }> {
+    const rows = await tx
+      .select({ id: publishAttempts.id })
+      .from(publishAttempts)
+      .where(
+        and(
+          eq(publishAttempts.channel_connection_id, connectionId),
+          inArray(publishAttempts.status, ['scheduled', 'retry_wait']),
+        ),
+      )
+      .for('update');
+    const cancelled = await transitionMany(
+      tx,
+      rows.map((r) => r.id),
+      ['scheduled', 'retry_wait'],
+      'cancelled',
+      { phase: 'finished' },
+    );
+    for (const id of cancelled) {
+      await cancelJob({ queue: 'publish', dedupeKey: runAttemptDedupeKey(id) });
+    }
+    return { cancelled: cancelled.length };
+  }
+
   async statusesByPosts(postIds: readonly string[]): Promise<Map<string, PostPublishState>> {
     const rows = await tenantTx((db) => attemptsByPosts(db, postIds));
     const out = new Map<string, PostPublishState>();
@@ -147,7 +175,7 @@ export class PublishingService implements PublishingPublicApi {
         attemptId: row.id,
         connectionId: row.channel_connection_id,
         channelType: row.channel_type as ChannelType,
-        status: row.status as PostPublishState['attempts'][number]['status'],
+        status: row.status,
         scheduledAt: row.scheduled_at,
       });
       out.set(row.post_id, state);

@@ -136,6 +136,7 @@ export const MUTATIONS = {
     operation: 'republishPost',
     changes: ['usage', 'unread'],
     invalidates: ({ id }) => [
+      queryKeys.publishing.progress(id),
       queryKeys.posts.detail(id),
       queryKeys.posts.lists(),
       queryKeys.usage.current(),
@@ -146,6 +147,7 @@ export const MUTATIONS = {
     operation: 'markPostPublished',
     changes: ['usage', 'unread'],
     invalidates: ({ id }) => [
+      queryKeys.publishing.progress(id),
       queryKeys.posts.detail(id),
       queryKeys.posts.lists(),
       queryKeys.usage.current(),

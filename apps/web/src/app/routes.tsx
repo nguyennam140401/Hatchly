@@ -98,6 +98,14 @@ export const appRoutes: RouteObject[] = [
                   Component: (await import('../features/approvals/PendingPage')).PendingPage,
                 }),
               },
+              // 013: Tiến trình đăng của một bài (5 bước theo kênh).
+              {
+                path: '/posts/:id/progress',
+                lazy: async () => ({
+                  Component: (await import('../features/publish-progress/PublishProgressPage'))
+                    .PublishProgressPage,
+                }),
+              },
               {
                 path: '/posts/:id',
                 lazy: async () => ({

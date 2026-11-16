@@ -134,6 +134,27 @@
       "when": 1794805053709,
       "tag": "0018_content_publishing_grants_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794823357478,
+      "tag": "0019_publishing_013_attempts_error_mappings",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794823364174,
+      "tag": "0020_publishing_013_steps_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794824501533,
+      "tag": "0021_publishing_013_sweep_stats",
+      "breakpoints": true
     }
   ]
 }

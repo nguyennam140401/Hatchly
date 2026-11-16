@@ -234,9 +234,10 @@ describeDb('PublishingPublicApi – hợp đồng (012, dùng lại ở 013)', (
     );
     const first = s.kind === 'scheduled' ? s.attempts[0] : undefined;
     await asOwner((c) =>
-      c.query("UPDATE publishing.publish_attempts SET status = 'needs_user' WHERE id = $1", [
-        first?.attemptId,
-      ]),
+      c.query(
+        "UPDATE publishing.publish_attempts SET status = 'needs_user', needs_reason = 'other' WHERE id = $1",
+        [first?.attemptId],
+      ),
     );
     const states = await withAccount(a, () => api.statusesByPosts([postId, uuidV7()]));
     expect(states.get(postId)?.worst).toBe('needs_user');

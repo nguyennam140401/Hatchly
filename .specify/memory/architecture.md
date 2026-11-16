@@ -500,6 +500,19 @@ Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đ�
   và cổng mô tả media (`MEDIA_DESCRIBER`, chưa có thư viện media) – thiếu cổng thì kênh bắt buộc media
   báo "chưa thể lên lịch".
 
+### 11.y Bổ sung v1.7 – tính năng 013 (đăng bài 5 bước)
+
+- lượt đăng → `publish_attempt`; bước đăng → `publish_step` (bảng nhật ký `publish_steps`); ánh xạ lỗi →
+  `error_mapping`; giai đoạn lượt đăng → `phase` (`none` | `submitted_awaiting_response` |
+  `awaiting_processing` | `finished`); lần chạy → `run_no`; lý do cần xử lý → `needs_reason`; đối soát thử
+  lại một lần → `reconcile_retry_used`; ngưỡng quá giờ hẹn → `publish.max_late_sec`.
+- 8 trạng thái: chờ đến giờ / đang xử lý / chờ thử lại / không xác định / cần người dùng / cần kiểm tra /
+  thành công / đã hủy → `scheduled` / `processing` / `retry_wait` / `unknown` / `needs_user` / `needs_check` /
+  `succeeded` / `cancelled`.
+- 5 bước: kiểm tra trước / chuẩn bị media / gửi / chờ xử lý / xác nhận → `precheck` / `prepare_media` /
+  `submit` / `await_processing` / `confirm`.
+- Giữ nguyên tên của 012: loại việc `publishing.run_attempt`, cột `channel_connection_id`, `content_version`.
+
 ## 12. Việc còn mở ảnh hưởng triển khai
 
 | Mã | Nội dung | Ảnh hưởng tới mã nguồn | Mốc |

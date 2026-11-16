@@ -69,6 +69,12 @@ export interface PublishingPublicApi {
   cancelByPost(tx: Db, postId: string): Promise<CancelResult>;
   /** Đổi giờ mọi mục `scheduled` + việc; kiểm lại hạn mức cục bộ ở giờ mới. */
   reschedule(tx: Db, postId: string, scheduledAt: Date): Promise<RescheduleResult>;
+  /**
+   * 013 – Ngắt kênh / yêu cầu xóa tài khoản (FR-033): hủy mọi lượt CHƯA gửi (`scheduled`, `retry_wait`) của kênh và việc
+   * tương ứng; lượt đang `processing`/`unknown` được để chạy xong theo luồng đối soát (không hủy giữa chừng để không
+   * mất dấu bài đã gửi). Trả số lượt đã hủy. Chạy trong giao dịch của người gọi.
+   */
+  cancelAllForConnection(tx: Db, connectionId: string): Promise<{ cancelled: number }>;
   /** Đọc: trạng thái đăng theo bài (xấu nhất + từng kênh). Không cache. */
   statusesByPosts(postIds: readonly string[]): Promise<Map<string, PostPublishState>>;
   /**

@@ -164,10 +164,11 @@ export const AppConfigSchema = z.object({
   /** Tối đa số bài mỗi lần gửi duyệt (khớp `postIds ≤ 50` của thông báo). */
   POST_BULK_SUBMIT_LIMIT: z.coerce.number().int().min(1).max(50).default(50),
   /**
-   * Bộ thực thi tạm của `publishing.run_attempt` (012 R10): `fake` chỉ ở dev/test/thử nghiệm;
-   * `none` (mặc định) hoãn việc 15 phút và không đổi trạng thái cho đến khi 013 thay thân hàm.
+   * Bộ thực thi 5 bước của `publishing.run_attempt` (013): `run` chạy đăng thật qua Cổng nền tảng (bộ chuyển đổi
+   * thật hay giả do cấu hình cổng quyết định); `none` (mặc định) hoãn việc 15 phút và không đổi trạng thái;
+   * `fake` = bí danh cũ của 012 (chạy như `run`, vẫn bị từ chối ở production).
    */
-  PUBLISH_EXECUTOR: z.enum(['none', 'fake']).default('none'),
+  PUBLISH_EXECUTOR: z.enum(['none', 'run', 'fake']).default('none'),
   /** Bắt buộc khi `STORAGE_DRIVER=s3`. */
   S3_ENDPOINT: z.url().optional(),
   /** Địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = S3_ENDPOINT. */
@@ -207,6 +208,24 @@ export const AppConfigSchema = z.object({
   /** Trần chi phí AI việc hệ thống (xu hướng) mỗi tuần, micro-USD. */
   AI_SYSTEM_WEEKLY_CAP_MICRO_USD: z.coerce.number().int().min(0).default(2_000_000),
   /** Hết thời gian chờ phản hồi `submit` → kết quả `unknown` (không bao giờ `transient`). */
+  /**
+   * 013: `real` đăng ký bộ chuyển đổi THẬT của Facebook Page/Instagram (thay bản giả cùng loại kênh); bỏ trống =
+   * theo `PLATFORM_GATEWAY_DRIVER`. Production KHÔNG được dùng bản giả (xem assert-no-fakes).
+   */
+  PLATFORM_ADAPTER_MODE: z.enum(['real', 'fake']).optional(),
+  /** Phiên bản Graph API cố định của Meta. */
+  META_GRAPH_VERSION: z
+    .string()
+    .regex(/^v\d+\.\d+$/)
+    .default('v21.0'),
+  META_GRAPH_BASE_URL: z.url().default('https://graph.facebook.com'),
+  /** Hết thời gian chờ một lời gọi Graph (ms) – PHẢI nhỏ hơn `PLATFORM_SUBMIT_TIMEOUT_MS`. */
+  META_GRAPH_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(25_000),
+  /** Đối soát bằng đọc lại bài gần đây: mặc định tắt cho tới khi POC-2 xác nhận (tắt → "Cần kiểm tra"). */
+  META_FACEBOOK_RECONCILE: z.enum(['true', 'false']).default('false'),
+  META_INSTAGRAM_RECONCILE: z.enum(['true', 'false']).default('false'),
+  /** Giới hạn dung lượng một video Facebook (byte): 1 GB theo quyết định của PO (2026-11-16). */
+  FACEBOOK_VIDEO_MAX_BYTES: z.coerce.number().int().min(1_000_000).default(1_000_000_000),
   PLATFORM_SUBMIT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(120_000).default(30_000),
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(40_000),
   AI_FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5_000),

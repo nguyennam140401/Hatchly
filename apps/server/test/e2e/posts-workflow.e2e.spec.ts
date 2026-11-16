@@ -521,7 +521,7 @@ describeDb('Chờ duyệt, trả lại, đổi giờ, sửa sau duyệt (012 US3
       const post = await approvedPost();
       await asOwner((c) =>
         c.query(
-          "UPDATE publishing.publish_attempts SET status = 'succeeded' WHERE post_id = $1 AND channel_connection_id = $2",
+          "UPDATE publishing.publish_attempts SET status = 'succeeded', confirmed_by = 'user' WHERE post_id = $1 AND channel_connection_id = $2",
           [post.id, fb],
         ),
       );
@@ -571,9 +571,10 @@ describeDb('Chờ duyệt, trả lại, đổi giờ, sửa sau duyệt (012 US3
       expect(wide.status).toBe(400);
       // Mục đã rời `scheduled` → không kéo được.
       await asOwner((c) =>
-        c.query("UPDATE publishing.publish_attempts SET status = 'succeeded' WHERE post_id = $1", [
-          post.id,
-        ]),
+        c.query(
+          "UPDATE publishing.publish_attempts SET status = 'succeeded', confirmed_by = 'user' WHERE post_id = $1",
+          [post.id],
+        ),
       );
       const res2 = await actors.owner.get(`/api/v1/calendar?from=${from}&to=${to}`);
       expect(

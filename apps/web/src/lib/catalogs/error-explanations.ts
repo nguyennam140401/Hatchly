@@ -156,6 +156,24 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
     message: 'Bạn đã chọn quá nhiều bài cho một lần. Hãy chia nhỏ lựa chọn.',
     actions: [{ kind: 'fix_input', label: 'Chia nhỏ lựa chọn' }],
   },
+  // 013: Tiến trình đăng.
+  PUBLISH_NOT_REPUBLISHABLE: {
+    message: 'Lượt đăng này không đăng lại được ở trạng thái hiện tại. Hãy tải lại trang.',
+    actions: [{ kind: 'retry', label: 'Tải lại trang' }],
+  },
+  PUBLISH_NOT_CHECKABLE: {
+    message:
+      'Chỉ xác nhận "Đã đăng" được khi bài đang ở trạng thái "Cần kiểm tra". Hãy tải lại trang.',
+    actions: [{ kind: 'retry', label: 'Tải lại trang' }],
+  },
+  PUBLISH_VERSION_CONFLICT: {
+    message: 'Lượt đăng vừa có thay đổi. Hãy tải lại trang rồi thử lại.',
+    actions: [{ kind: 'retry', label: 'Tải lại trang' }],
+  },
+  PUBLISH_ATTEMPT_NOT_FOUND: {
+    message: 'Không tìm thấy lượt đăng này.',
+    actions: [{ kind: 'navigate', label: 'Về danh sách bài viết', href: '/posts' }],
+  },
 };
 
 /** Hành động dự phòng khi máy chủ không trả hành động nào. */

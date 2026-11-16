@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { currentAccountId, uuidV7, type Db } from '../../../core';
 import type { ChannelType } from '@app/shared/content';
 import { publishAttempts, type PublishAttemptRow } from './db/schema';
+import { transition, transitionMany } from './state-machine';
 
 const DAY_MS = 24 * 3_600_000;
 
@@ -69,6 +70,7 @@ export async function insertAttempt(
     channelType: ChannelType;
     scheduledAt: Date;
     contentVersion: number;
+    traceId?: string | undefined;
   },
 ): Promise<string | null> {
   const id = uuidV7();
@@ -83,6 +85,7 @@ export async function insertAttempt(
       status: 'scheduled',
       scheduled_at: input.scheduledAt,
       content_version: input.contentVersion,
+      ...(input.traceId !== undefined ? { trace_id: input.traceId.slice(0, 64) } : {}),
     })
     .onConflictDoNothing({
       target: [
@@ -125,18 +128,8 @@ export async function attemptsByPosts(
 }
 
 /** `scheduled → cancelled` có điều kiện; trả số dòng đã đổi. */
-export async function cancelScheduled(db: Db, ids: readonly string[]): Promise<string[]> {
-  if (ids.length === 0) return [];
-  const rows = await db
-    .update(publishAttempts)
-    .set({
-      status: 'cancelled',
-      version: sql`${publishAttempts.version} + 1`,
-      updated_at: sql`now()`,
-    })
-    .where(and(inArray(publishAttempts.id, [...ids]), eq(publishAttempts.status, 'scheduled')))
-    .returning({ id: publishAttempts.id });
-  return rows.map((r) => r.id);
+export function cancelScheduled(db: Db, ids: readonly string[]): Promise<string[]> {
+  return transitionMany(db, ids, 'scheduled', 'cancelled');
 }
 
 /** Đổi giờ mục còn `scheduled`; trả mã mục đã đổi. */
@@ -165,12 +158,7 @@ export async function transitionAttempt(
   from: PublishAttemptRow['status'],
   to: PublishAttemptRow['status'],
 ): Promise<boolean> {
-  const rows = await db
-    .update(publishAttempts)
-    .set({ status: to, version: sql`${publishAttempts.version} + 1`, updated_at: sql`now()` })
-    .where(and(eq(publishAttempts.id, id), eq(publishAttempts.status, from)))
-    .returning({ id: publishAttempts.id });
-  return rows.length === 1;
+  return (await transition(db, id, from, to)).ok;
 }
 
 export async function loadAttempt(db: Db, id: string): Promise<PublishAttemptRow | null> {

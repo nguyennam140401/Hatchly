@@ -162,6 +162,7 @@ describeDb('Hoàn tác trọn gói và chuyển trạng thái có điều kiện
       reschedule: realPublishing.reschedule.bind(realPublishing),
       statusesByPosts: realPublishing.statusesByPosts.bind(realPublishing),
       precheckChannels: realPublishing.precheckChannels.bind(realPublishing),
+      cancelAllForConnection: realPublishing.cancelAllForConnection.bind(realPublishing),
     };
     await expect(
       as(owner, 'owner', () =>
@@ -194,6 +195,7 @@ describeDb('Hoàn tác trọn gói và chuyển trạng thái có điều kiện
       reschedule: realPublishing.reschedule.bind(realPublishing),
       statusesByPosts: realPublishing.statusesByPosts.bind(realPublishing),
       precheckChannels: realPublishing.precheckChannels.bind(realPublishing),
+      cancelAllForConnection: realPublishing.cancelAllForConnection.bind(realPublishing),
     };
     await expect(
       as(collaborator, 'collaborator', () =>

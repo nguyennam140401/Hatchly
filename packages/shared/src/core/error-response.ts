@@ -155,5 +155,13 @@ export const ERROR_CODES = {
   RETURN_NOTE_REQUIRED: 'RETURN_NOTE_REQUIRED',
   /** 422 – chọn quá số bài cho phép mỗi lần. */
   BULK_LIMIT_EXCEEDED: 'BULK_LIMIT_EXCEEDED',
+  /** 409 – lượt đăng không ở trạng thái cho phép "Đăng lại". */
+  PUBLISH_NOT_REPUBLISHABLE: 'PUBLISH_NOT_REPUBLISHABLE',
+  /** 409 – lượt đăng không ở "Cần kiểm tra" nên không xác nhận "Đã đăng" được. */
+  PUBLISH_NOT_CHECKABLE: 'PUBLISH_NOT_CHECKABLE',
+  /** 409 – lượt đăng vừa thay đổi (phiên bản lệch). */
+  PUBLISH_VERSION_CONFLICT: 'PUBLISH_VERSION_CONFLICT',
+  /** 404 – không có lượt đăng này (hoặc không thuộc tài khoản). */
+  PUBLISH_ATTEMPT_NOT_FOUND: 'PUBLISH_ATTEMPT_NOT_FOUND',
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

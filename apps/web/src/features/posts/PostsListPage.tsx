@@ -50,6 +50,16 @@ function Row({ post, onDelete }: { post: PostSummary; onDelete: (post: PostSumma
         {post.labels.editedAfterApproval && <li>✎ Đã sửa sau khi duyệt</li>}
         {post.labels.timePassed && <li>⏰ Giờ đã qua</li>}
       </ul>
+      {post.status === 'approved' && (
+        <div>
+          <Link
+            className="inline-flex min-h-touch items-center text-label text-brand underline"
+            to={`/posts/${post.id}/progress`}
+          >
+            Xem tiến trình đăng
+          </Link>
+        </div>
+      )}
       {post.status === 'draft' && (
         <div>
           <Button

@@ -15,6 +15,7 @@ import {
   posts,
 } from '../../../src/modules/content/internal/db/schema';
 import { publishAttempts } from '../../../src/modules/publishing/internal/db/schema';
+import { publishSteps } from '../../../src/modules/publishing/internal/db/publish-steps.log-table';
 import type { CrossTenantOptions } from '../helpers/cross-tenant';
 
 /** Hồ sơ của tài khoản (lấy hoặc tạo) – dữ liệu cha cho `profile_versions`. */
@@ -138,6 +139,22 @@ export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
     }),
     updateRow: () => ({ status: 'cancelled' }),
   } satisfies CrossTenantOptions<typeof publishAttempts>,
+  // 013: nhật ký 5 bước – bảng phân vùng CHỈ THÊM (chỉ cấp SELECT, INSERT cho app/system).
+  'publishing.publish_steps': {
+    table: publishSteps,
+    insertRow: () => ({
+      attempt_id: uuidV7(),
+      run_no: 1,
+      step_no: 1,
+      step_key: 'precheck',
+      event: 'started',
+      trace_id: 'trace-test',
+    }),
+    updateRow: () => ({ note: 'sửa trái phép' }),
+    appendOnly: {
+      reason: 'Nhật ký bước đăng chỉ thêm – migration 0020 chỉ cấp SELECT, INSERT cho app',
+    },
+  } satisfies CrossTenantOptions<typeof publishSteps>,
 };
 
 /** Bảng tenant đã có spec truy cập chéo riêng (không chạy lại ở đây) – lý do trỏ tệp spec. */
