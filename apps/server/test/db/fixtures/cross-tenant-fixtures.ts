@@ -9,6 +9,12 @@ import type { Db } from '../../../src/core/db/transaction';
 import { uuidV7 } from '../../../src/core/ids/uuid-v7';
 import { formerMembers, invitations } from '../../../src/modules/account/internal/db/schema';
 import { businessProfiles, profileVersions } from '../../../src/modules/context/internal/db/schema';
+import {
+  channelVariants,
+  postEvents,
+  posts,
+} from '../../../src/modules/content/internal/db/schema';
+import { publishAttempts } from '../../../src/modules/publishing/internal/db/schema';
 import type { CrossTenantOptions } from '../helpers/cross-tenant';
 
 /** Hồ sơ của tài khoản (lấy hoặc tạo) – dữ liệu cha cho `profile_versions`. */
@@ -25,6 +31,21 @@ async function profileOf(db: Db, accountId: string): Promise<{ profileId: string
 }
 
 let versionSeq = 0;
+
+/** Bài nháp của tài khoản (lấy hoặc tạo) – dữ liệu cha cho `channel_variants`, `post_events` (012). */
+async function postOf(db: Db, accountId: string): Promise<{ postId: string }> {
+  const found = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(eq(posts.account_id, accountId))
+    .limit(1);
+  if (found[0] !== undefined) return { postId: found[0].id };
+  const id = uuidV7();
+  await db
+    .insert(posts)
+    .values({ id, account_id: accountId, status: 'draft', created_by: uuidV7() });
+  return { postId: id };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- danh mục chứa nhiều kiểu bảng/cha
 type AnyFixture = CrossTenantOptions<PgTable, any>;
@@ -78,6 +99,45 @@ export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
     updateRow: () => ({ tone: 'sửa' }),
     appendOnly: { reason: 'Lịch sử bất biến – migration 0013 thu hồi UPDATE, DELETE của app' },
   } satisfies CrossTenantOptions<typeof profileVersions, { profileId: string }>,
+  // 012: bài viết, phiên bản theo kênh, lịch sử sự kiện (chỉ thêm), mục lịch đăng.
+  'content.posts': {
+    table: posts,
+    insertRow: () => ({ status: 'draft', created_by: uuidV7(), shared_text: 'Bài thử' }),
+    updateRow: () => ({ shared_text: 'sửa' }),
+  } satisfies CrossTenantOptions<typeof posts>,
+  'content.channel_variants': {
+    table: channelVariants,
+    seedParent: postOf,
+    insertRow: (parent: { postId: string }) => ({
+      post_id: parent.postId,
+      connection_id: uuidV7(),
+      channel_type: 'test_channel',
+    }),
+    updateRow: () => ({ text: 'sửa', customized: true }),
+  } satisfies CrossTenantOptions<typeof channelVariants, { postId: string }>,
+  'content.post_events': {
+    table: postEvents,
+    seedParent: postOf,
+    insertRow: (parent: { postId: string }) => ({
+      post_id: parent.postId,
+      type: 'created',
+      actor_user_id: uuidV7(),
+    }),
+    updateRow: () => ({ type: 'submitted' }),
+    appendOnly: { reason: 'Lịch sử chỉ thêm – migration 0018 thu hồi UPDATE, DELETE của app' },
+  } satisfies CrossTenantOptions<typeof postEvents, { postId: string }>,
+  'publishing.publish_attempts': {
+    table: publishAttempts,
+    insertRow: () => ({
+      post_id: uuidV7(),
+      channel_connection_id: uuidV7(),
+      channel_type: 'test_channel',
+      status: 'scheduled',
+      scheduled_at: new Date(Date.now() + 3_600_000),
+      content_version: 1,
+    }),
+    updateRow: () => ({ status: 'cancelled' }),
+  } satisfies CrossTenantOptions<typeof publishAttempts>,
 };
 
 /** Bảng tenant đã có spec truy cập chéo riêng (không chạy lại ở đây) – lý do trỏ tệp spec. */

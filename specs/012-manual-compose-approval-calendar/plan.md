@@ -116,6 +116,23 @@ ràng buộc CSDL ✅ · không thêm hạ tầng ✅ · `trace_id`, không log 
 
 Không có điều chỉnh nào đổi hành vi nhìn từ người dùng; chỉ làm rõ chỗ spec để lửng. `spec.md` giữ nguyên.
 
+## Ghi nhận khi thi công (T095) – lệch nhỏ so với kế hoạch
+
+| Mục kế hoạch | Thực tế | Lý do |
+|---|---|---|
+| 2 migration `0017`, `0018` tách bảng | `0017_content_posts.sql` (sinh bằng drizzle-kit) chứa **cả** 5 bảng `content` + `publishing`; `0018_content_publishing_grants_seed.sql` (tay) là quyền + dữ liệu `channel_rules` | drizzle-kit sinh một tệp cho mọi lược đồ thay đổi; tách tay làm hỏng chuỗi snapshot |
+| `internal/db/{posts,…}.table.ts` | một `internal/db/schema.ts` mỗi module | cấu hình `drizzle.config.ts` chỉ nạp `modules/*/internal/db/schema.ts` (khuôn của 006) |
+| `GET /posts/:id`, `GET /calendar` trong `content` | nằm ở `approval.controller.ts` | cần `publishing.statusesByPosts`; `content` không được gọi `publishing` (tệp kê khai, tránh vòng) |
+| `validation/` một tệp mỗi quy tắc | một `validation/rules.ts` | các quy tắc là hàm thuần ngắn |
+| Kiểm tra gói còn hạn (`PLAN_EXPIRED`) qua `AccountPublicApi` | cổng `PLAN_GATE` tùy chọn (hiện `null` = còn hạn) | `account` chưa có mô hình gói; mã lỗi và thông điệp đã có sẵn cho khi gắn cổng |
+| `PlatformGatewayPublicApi` giữ nguyên | thêm `listConnections()` | `content` cần "có kênh hoạt động nào không" khi tạo bài (`NO_ACTIVE_CHANNEL`); chỉ thêm, không đổi hàm có sẵn |
+| `PlatformGatewayModule` không global | `global: true` | `content` và `publishing` tiêm `PLATFORM_GATEWAY` (như `account`, `notifications`) |
+| Mục đã `running` khi hủy → `CHANNEL_ALREADY_PUBLISHING` | chỉ khi mục đã rời `scheduled`; mục còn `scheduled` mà việc đã được nhận thì hủy thắng | trạng thái trong CSDL là nguồn sự thật; bộ xử lý đổi `scheduled → processing` có điều kiện nên không đăng nội dung đã hủy |
+| Hợp đồng `ErrorResponse` | thêm trường tùy chọn `extra` (`channelIssues`, `suggestedAt`, bài mới nhất khi `VERSION_CONFLICT`) | để giao diện hiện đủ kênh vướng cùng lúc (tất cả hoặc không) |
+| Danh mục giải thích lỗi của web (011) | thêm 11 mã lỗi mới ở `apps/web/src/lib/catalogs/error-explanations.ts` | danh mục là `Record` đầy đủ theo `ERROR_CODES` (biên dịch bắt) |
+| Kiểm thử tách theo tệp T037/T039/T060… | gom vào `test/e2e/posts-{compose,approve,workflow,security,performance}.e2e.spec.ts` và `test/db/{approval-atomicity,publishing-api.contract}.db.spec.ts` | cùng phạm vi, ít tệp mồi hơn; đồng thời/hạn mức/hoàn tác đều có ca riêng |
+| Dữ liệu mẫu dev có sẵn 2 kênh giả lập | `seed-auth` in hướng dẫn kết nối kênh bằng OAuth giả | kho kết nối là nội bộ module Cổng nền tảng, không seed trực tiếp |
+
 ## Rủi ro và điều kiện tiên quyết
 
 | Mã | Rủi ro | Cách xử lý |

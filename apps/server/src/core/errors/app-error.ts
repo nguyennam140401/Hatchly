@@ -15,6 +15,8 @@ export interface AppErrorOptions {
   detail?: string;
   /** 011: lý do phiên kết thúc (chỉ 401 UNAUTHENTICATED). */
   reason?: SessionEndReason;
+  /** 012: dữ liệu kèm theo (channelIssues, suggestedAt, bài mới nhất…) – không bí mật, không số tiền. */
+  extra?: Record<string, unknown>;
 }
 
 /** Lỗi nghiệp vụ có chủ đích; bộ lọc toàn cục chuyển thành `ErrorResponse`. */
@@ -26,6 +28,7 @@ export class AppError extends Error {
   readonly detail: string | undefined;
   readonly retryAfterSeconds: number | undefined;
   readonly reason: SessionEndReason | undefined;
+  readonly extra: Record<string, unknown> | undefined;
 
   constructor(options: AppErrorOptions) {
     super(options.message);
@@ -37,5 +40,6 @@ export class AppError extends Error {
     this.detail = options.detail;
     this.retryAfterSeconds = options.retryAfterSeconds;
     this.reason = options.reason;
+    this.extra = options.extra;
   }
 }

@@ -77,6 +77,12 @@ describe('loadConfig', () => {
       DETACHED_NOTICE_DAYS: 7,
       S3_FORCE_PATH_STYLE: false,
       STAGING_ALLOW_FAKES: false,
+      // 012: cấu hình bài viết, duyệt, lịch.
+      POST_MIN_LEAD_MINUTES: 5,
+      POST_SUGGEST_HOURS: '09:00,12:00,19:00',
+      POST_BULK_APPROVE_LIMIT: 100,
+      POST_BULK_SUBMIT_LIMIT: 50,
+      PUBLISH_EXECUTOR: 'none',
       AI_SYSTEM_WEEKLY_CAP_MICRO_USD: 2_000_000,
       PLATFORM_SUBMIT_TIMEOUT_MS: 30_000,
       AI_PROVIDER_TIMEOUT_MS: 40_000,

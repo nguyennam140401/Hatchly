@@ -111,6 +111,51 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
     actions: [{ kind: 'navigate', label: 'Xem lựa chọn của bạn', href: '/no-account' }],
   },
   SIGNED_REQUEST_INVALID: { message: 'Yêu cầu không hợp lệ.', actions: [HOME] },
+  // ----- 012: bài viết, duyệt, lịch (khớp POST_ERROR_MESSAGES của @app/shared/core) -----
+  NO_ACTIVE_CHANNEL: {
+    message: 'Bạn chưa có kênh nào đang hoạt động. Hãy kết nối kênh để bắt đầu soạn bài.',
+    actions: [{ kind: 'navigate', label: 'Kết nối kênh', href: '/channels' }],
+  },
+  POST_NOT_EDITABLE: {
+    message: 'Bài này không sửa được ở trạng thái hiện tại.',
+    actions: [{ kind: 'retry', label: 'Tải lại bài' }],
+  },
+  POST_ALREADY_APPROVED: {
+    message: 'Bài này đã được xử lý trước đó.',
+    actions: [{ kind: 'navigate', label: 'Mở bài', href: '/posts' }],
+  },
+  POST_CONTENT_INVALID: {
+    message: 'Nội dung bài chưa phù hợp với kênh đã chọn. Hãy sửa rồi thử lại.',
+    actions: [{ kind: 'fix_input', label: 'Sửa nội dung' }],
+  },
+  TIME_IN_PAST: {
+    message: 'Giờ đăng đã qua hoặc quá gần. Hãy chọn giờ muộn hơn ít nhất 5 phút.',
+    actions: [{ kind: 'fix_input', label: 'Chọn giờ khác' }],
+  },
+  CHANNEL_INACTIVE: {
+    message: 'Có kênh đã ngắt kết nối hoặc hết hạn quyền, nên chưa lên lịch được.',
+    actions: [{ kind: 'navigate', label: 'Kết nối lại', href: '/channels' }],
+  },
+  CHANNEL_QUOTA_EXCEEDED: {
+    message: 'Kênh này đã hết số bài được đăng trong khung giờ đó.',
+    actions: [{ kind: 'fix_input', label: 'Chọn giờ khác' }],
+  },
+  CHANNEL_ALREADY_PUBLISHING: {
+    message: 'Bài này đã bắt đầu được đăng lên kênh nên không thay đổi được nữa.',
+    actions: [{ kind: 'navigate', label: 'Xem tiến trình', href: '/posts' }],
+  },
+  PLAN_EXPIRED: {
+    message: 'Gói dịch vụ của bạn đã hết hạn. Hãy gia hạn để duyệt và lên lịch bài.',
+    actions: [{ kind: 'navigate', label: 'Gia hạn gói', href: '/plan' }],
+  },
+  RETURN_NOTE_REQUIRED: {
+    message: 'Hãy nhập ghi chú trả lại (tối đa 500 ký tự) để người soạn biết cần sửa gì.',
+    actions: [{ kind: 'fix_input', label: 'Nhập ghi chú' }],
+  },
+  BULK_LIMIT_EXCEEDED: {
+    message: 'Bạn đã chọn quá nhiều bài cho một lần. Hãy chia nhỏ lựa chọn.',
+    actions: [{ kind: 'fix_input', label: 'Chia nhỏ lựa chọn' }],
+  },
 };
 
 /** Hành động dự phòng khi máy chủ không trả hành động nào. */

@@ -151,6 +151,23 @@ export const AppConfigSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // ----- Bài viết, duyệt, lịch (012, contracts/module-api.md mục 6) -----
+  /** Giờ đăng tối thiểu kể từ bây giờ, tính bằng phút (FR-011). */
+  POST_MIN_LEAD_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
+  /** "Giờ vàng" gợi ý, giờ UTC+7, dạng `HH:MM` ngăn cách bằng dấu phẩy. */
+  POST_SUGGEST_HOURS: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d(,([01]\d|2[0-3]):[0-5]\d)*$/, 'dạng HH:MM,HH:MM')
+    .default('09:00,12:00,19:00'),
+  /** Tối đa số bài mỗi lần duyệt / trả lại hàng loạt. */
+  POST_BULK_APPROVE_LIMIT: z.coerce.number().int().min(1).max(500).default(100),
+  /** Tối đa số bài mỗi lần gửi duyệt (khớp `postIds ≤ 50` của thông báo). */
+  POST_BULK_SUBMIT_LIMIT: z.coerce.number().int().min(1).max(50).default(50),
+  /**
+   * Bộ thực thi tạm của `publishing.run_attempt` (012 R10): `fake` chỉ ở dev/test/thử nghiệm;
+   * `none` (mặc định) hoãn việc 15 phút và không đổi trạng thái cho đến khi 013 thay thân hàm.
+   */
+  PUBLISH_EXECUTOR: z.enum(['none', 'fake']).default('none'),
   /** Bắt buộc khi `STORAGE_DRIVER=s3`. */
   S3_ENDPOINT: z.url().optional(),
   /** Địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = S3_ENDPOINT. */
