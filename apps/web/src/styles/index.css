@@ -57,8 +57,9 @@
 }
 
 /* Công cụ kiểm tra của danh mục thành phần (chỉ dùng ở /_catalog): giả lập cỡ chữ 200% và tương phản cao. */
-[data-catalog-text='200'] {
-  zoom: 2;
+/* Cỡ chữ 200%: tăng cỡ chữ gốc như cài đặt trình duyệt (mọi token dùng rem), không dùng `zoom` vì đo sai vùng cuộn. */
+html[data-catalog-text='200'] {
+  font-size: 200%;
 }
 
 [data-catalog-contrast='high'] {

@@ -21,7 +21,8 @@ const schema = objectSchema<Values>({
 /** Vận chuyển mẫu cho danh mục: không có kho thật nên chỉ giả lập tiến độ. */
 function demoTransport(): UploadTransport {
   return {
-    start: (file) => Promise.resolve({ uploadUrl: 'https://kho.invalid/demo', completionRef: file.name }),
+    start: (file) =>
+      Promise.resolve({ uploadUrl: 'https://kho.invalid/demo', completionRef: file.name }),
     putPart: (_session, _file, onProgress) => {
       onProgress(100);
       return Promise.resolve();
@@ -56,7 +57,12 @@ export function UploadForm({ onSubmit, loadLatest, readOnly, draftKey }: Harness
             queue.add(files);
           }}
         />
-        <UploadQueue items={items} onCancel={queue.cancel} onRetry={queue.retry} freeUpHref="/media" />
+        <UploadQueue
+          items={items}
+          onCancel={queue.cancel}
+          onRetry={queue.retry}
+          freeUpHref="/media"
+        />
         <TextField name="secretCode" label="Mã bí mật" />
       </Form>
     </main>

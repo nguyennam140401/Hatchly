@@ -3,9 +3,9 @@ import type { FormSchema, SchemaIssue } from '../../../lib/forms/resolver';
 // Lược đồ tối giản dùng cho biểu mẫu MẪU của danh mục (biểu mẫu thật dùng lược đồ Zod của @app/shared).
 export type Rule<V> = (value: V) => string | undefined;
 
-export function objectSchema<T extends Record<string, unknown>>(
-  rules: { [K in keyof T]?: Rule<T[K]> },
-): FormSchema<T> {
+export function objectSchema<T extends Record<string, unknown>>(rules: {
+  [K in keyof T]?: Rule<T[K]>;
+}): FormSchema<T> {
   return {
     safeParse(value) {
       const input = value as T;

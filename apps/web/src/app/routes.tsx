@@ -28,6 +28,12 @@ const catalogRoutes: RouteObject[] =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_CATALOG === '1'
     ? [
         {
+          path: '/_catalog/sample',
+          lazy: async () => ({
+            Component: (await import('../catalog/sample/SampleScreen')).SampleScreen,
+          }),
+        },
+        {
           path: '/_catalog/*',
           lazy: async () => ({ Component: (await import('../catalog')).CatalogPage }),
         },
@@ -74,7 +80,8 @@ export const appRoutes: RouteObject[] = [
               {
                 path: '/settings/security',
                 lazy: async () => ({
-                  Component: (await import('../features/auth/SecuritySettingsPage')).SecuritySettingsPage,
+                  Component: (await import('../features/auth/SecuritySettingsPage'))
+                    .SecuritySettingsPage,
                 }),
               },
               // 009: cách đăng nhập (mọi người, kể cả người ở tài khoản chờ); thành viên (chỉ chủ – trang tự
@@ -96,13 +103,15 @@ export const appRoutes: RouteObject[] = [
               {
                 path: '/business-profile',
                 lazy: async () => ({
-                  Component: (await import('../features/context/BusinessProfilePage')).BusinessProfilePage,
+                  Component: (await import('../features/context/BusinessProfilePage'))
+                    .BusinessProfilePage,
                 }),
               },
               {
                 path: '/business-profile/versions/:versionId',
                 lazy: async () => ({
-                  Component: (await import('../features/context/VersionDetailPage')).VersionDetailPage,
+                  Component: (await import('../features/context/VersionDetailPage'))
+                    .VersionDetailPage,
                 }),
               },
               { path: '/forbidden', element: <Forbidden /> },

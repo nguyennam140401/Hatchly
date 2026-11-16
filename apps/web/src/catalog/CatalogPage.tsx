@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Chip } from '../ui/chip-tabs/Chip';
 import type { CatalogEntry } from '../ui/catalog-types';
@@ -7,7 +7,9 @@ import { PageHeader } from '../ui/layout/PageHeader';
 // Danh mục thành phần (FR-033): liệt kê mọi `*.catalog.tsx` trong `ui/` theo nhóm, mỗi biến thể một khung; chọn khung
 // 360/768/1280 px, công tắc "cỡ chữ 200%" và "tương phản cao". Chỉ chạy khi DEV hoặc VITE_ENABLE_CATALOG=1 (xem routes.tsx).
 
-const modules = import.meta.glob<Record<string, unknown>>('../ui/**/*.catalog.tsx', { eager: true });
+const modules = import.meta.glob<Record<string, unknown>>('../ui/**/*.catalog.tsx', {
+  eager: true,
+});
 
 function isEntry(value: unknown): value is CatalogEntry {
   return (
@@ -26,7 +28,9 @@ export function collectCatalog(): { group: string; entry: CatalogEntry }[] {
     const group = path.split('/').at(-2) ?? 'khác';
     for (const value of Object.values(mod)) if (isEntry(value)) out.push({ group, entry: value });
   }
-  return out.sort((a, b) => a.group.localeCompare(b.group) || a.entry.name.localeCompare(b.entry.name));
+  return out.sort(
+    (a, b) => a.group.localeCompare(b.group) || a.entry.name.localeCompare(b.entry.name),
+  );
 }
 
 const FRAMES = [
@@ -41,9 +45,18 @@ export function CatalogPage() {
   const [contrast, setContrast] = useState(false);
   const entries = collectCatalog();
 
+  // Cỡ chữ 200% đặt ở <html> (xem index.css); gỡ khi rời danh mục để không rò sang màn khác.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (bigText) root.dataset.catalogText = '200';
+    else delete root.dataset.catalogText;
+    return () => {
+      delete root.dataset.catalogText;
+    };
+  }, [bigText]);
+
   return (
     <div
-      data-catalog-text={bigText ? '200' : undefined}
       data-catalog-contrast={contrast ? 'high' : undefined}
       className="mx-auto flex max-w-full flex-col gap-6 bg-surface-100 p-gutter text-ink"
     >
@@ -84,7 +97,11 @@ export function CatalogPage() {
         </Link>
       </div>
       {entries.map(({ group, entry }) => (
-        <section key={`${group}/${entry.name}`} aria-labelledby={`cat-${entry.name}`} className="flex flex-col gap-3">
+        <section
+          key={`${group}/${entry.name}`}
+          aria-labelledby={`cat-${entry.name}`}
+          className="flex flex-col gap-3"
+        >
           <h2 id={`cat-${entry.name}`} className="text-title">
             {entry.name} <span className="text-body-sm text-ink-muted">({group})</span>
           </h2>

@@ -1,6 +1,12 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { mountForm, testForm, type FormContractSpec, type HarnessProps, type } from '../../../ui/form/__tests__/form-contract';
+import {
+  mountForm,
+  testForm,
+  type FormContractSpec,
+  type HarnessProps,
+  type,
+} from '../../../ui/form/__tests__/form-contract';
 import { KeywordsForm } from './KeywordsForm';
 import { SingleFieldForm } from './SingleFieldForm';
 import { UploadForm } from './UploadForm';
@@ -21,7 +27,11 @@ const single: FormContractSpec = {
     return 'Tên cửa hàng';
   },
   invalidMessage: /Tên cửa hàng quá ngắn/,
-  serverField: { path: 'shopName', message: 'Tên này đã có người dùng. Hãy chọn tên khác.', label: 'Tên cửa hàng' },
+  serverField: {
+    path: 'shopName',
+    message: 'Tên này đã có người dùng. Hãy chọn tên khác.',
+    label: 'Tên cửa hàng',
+  },
   sensitive,
 };
 
@@ -74,7 +84,9 @@ describe('UploadForm – tải tệp', () => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input).not.toBeNull();
     const ok = new File([new Uint8Array(100)], 'anh.jpg', { type: 'image/jpeg' });
-    const bad = new File([new Uint8Array(100)], 'tai-lieu.exe', { type: 'application/x-msdownload' });
+    const bad = new File([new Uint8Array(100)], 'tai-lieu.exe', {
+      type: 'application/x-msdownload',
+    });
     fireEvent.change(input!, { target: { files: [ok, bad] } });
     await waitFor(() => {
       expect(screen.getByText('Đã xong')).toBeInTheDocument();

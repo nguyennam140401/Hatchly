@@ -21,9 +21,27 @@ export interface SampleResponse {
 }
 
 export const SAMPLE_ITEMS: SampleItem[] = [
-  { id: 's1', title: 'Khuyến mãi cuối tuần', excerpt: 'Giảm 10% cho khách quen.', status: 'scheduled', channels: ['facebook'] },
-  { id: 's2', title: 'Giới thiệu sản phẩm mới', excerpt: 'Bộ sưu tập mùa thu đã về.', status: 'published', channels: ['facebook', 'instagram'] },
-  { id: 's3', title: 'Cảm ơn khách hàng', excerpt: 'Một lời cảm ơn nhỏ.', status: 'attention', channels: ['tiktok'] },
+  {
+    id: 's1',
+    title: 'Khuyến mãi cuối tuần',
+    excerpt: 'Giảm 10% cho khách quen.',
+    status: 'scheduled',
+    channels: ['facebook'],
+  },
+  {
+    id: 's2',
+    title: 'Giới thiệu sản phẩm mới',
+    excerpt: 'Bộ sưu tập mùa thu đã về.',
+    status: 'published',
+    channels: ['facebook', 'instagram'],
+  },
+  {
+    id: 's3',
+    title: 'Cảm ơn khách hàng',
+    excerpt: 'Một lời cảm ơn nhỏ.',
+    status: 'attention',
+    channels: ['tiktok'],
+  },
 ];
 
 export const SAMPLE_ERROR = () =>
@@ -42,7 +60,13 @@ export function respondTo(scenario: Scenario): SampleResponse {
     case 'empty':
       return { items: [] };
     case 'locked':
-      return { items: [], locked: { reason: 'Đã dùng hết lượt AI trong chu kỳ này.', reopensAt: '2026-12-01T00:00:00Z' } };
+      return {
+        items: [],
+        locked: {
+          reason: 'Đã dùng hết lượt AI trong chu kỳ này.',
+          reopensAt: '2026-12-01T00:00:00Z',
+        },
+      };
     case 'partial':
       return { items: SAMPLE_ITEMS, partial: { done: 2, attention: 1 } };
     default:

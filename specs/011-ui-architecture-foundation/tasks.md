@@ -186,8 +186,8 @@ Quy tắc chung mỗi thành phần (contracts/ui-components.md mục 1): thư m
 ### Danh mục
 
 - [X] T067 [US6] `web/catalog/CatalogPage.tsx` + `web/catalog/index.ts` (tải lười; **chỉ** khi `import.meta.env.DEV` hoặc `VITE_ENABLE_CATALOG=1`; liệt kê `*.catalog.tsx` theo nhóm với `{ name, description, a11yNotes, variants }`; chọn khung 360/768/1280 px; công tắc "cỡ chữ 200%" và "tương phản cao"; gắn tuyến `/_catalog/**`).
-- [ ] T068 [US6] `web/catalog/sample/SampleScreen.tsx` tại `/_catalog/sample`: danh sách + thẻ + biểu mẫu dựng **chỉ** từ thành phần dùng chung, không dòng viết cứng màu/cỡ chữ/khoảng cách (SC-002); kiểm thử bằng `check-web-rules`.
-- [ ] T069 [P] [US6] `apps/web/e2e/catalog.a11y.spec.ts` (`@axe-core/playwright` trên mọi trang danh mục ở 360/768/1280 px: **0 vi phạm mức nghiêm trọng**, không cuộn ngang, vùng chạm ≥ 44 px; công tắc cỡ chữ 200% không cắt nút).
+- [X] T068 [US6] `web/catalog/sample/SampleScreen.tsx` tại `/_catalog/sample`: danh sách + thẻ + biểu mẫu dựng **chỉ** từ thành phần dùng chung, không dòng viết cứng màu/cỡ chữ/khoảng cách (SC-002); kiểm thử bằng `check-web-rules`.
+- [X] T069 [P] [US6] `apps/web/e2e/catalog.a11y.spec.ts` (`@axe-core/playwright` trên mọi trang danh mục ở 360/768/1280 px: **0 vi phạm mức nghiêm trọng**, không cuộn ngang, vùng chạm ≥ 44 px; công tắc cỡ chữ 200% không cắt nút).
 
 ### Chuyển trang hiện có (FR-036) — mỗi nhóm giữ nguyên kiểm thử cũ
 
