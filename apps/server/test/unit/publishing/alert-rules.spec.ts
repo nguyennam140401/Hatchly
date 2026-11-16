@@ -16,7 +16,7 @@ interface Rule {
 const file = resolve(process.cwd(), '..', '..', 'ops', 'alerts', 'publishing.rules.yml');
 const doc = parse(readFileSync(file, 'utf8')) as { groups: { name: string; rules: Rule[] }[] };
 const rules = doc.groups.find((g) => g.name === 'publishing')?.rules ?? [];
-const byName = (name: string) => rules.find((r) => r.alert === name) as Rule;
+const byName = (name: string) => rules.find((r) => r.alert === name)!;
 
 const METRICS = new Set([
   'publish_attempt_transitions_total',
@@ -38,11 +38,15 @@ describe('ops/alerts/publishing.rules.yml', () => {
   });
 
   it('ngưỡng: lỗi kênh > 5%/15 phút; quá hạn > 5 phút; Cần kiểm tra > 1%/ngày; không đối soát > 20%', () => {
-    expect(byName('PublishChannelErrorRatioHigh').expr).toMatch(/\[15m\][\s\S]*\[15m\]\)\), 1\) > 0\.05/);
+    expect(byName('PublishChannelErrorRatioHigh').expr).toMatch(
+      /\[15m\][\s\S]*\[15m\]\)\), 1\) > 0\.05/,
+    );
     expect(byName('PublishChannelErrorRatioHigh').labels.severity).toBe('critical');
     expect(byName('PublishOverdueAttempts').expr).toMatch(/publish_overdue_attempts\) > 0/);
     expect(byName('PublishOverdueAttempts').for).toBe('5m');
-    expect(byName('PublishNeedsCheckRatioHigh').expr).toMatch(/\[1d\][\s\S]*\[1d\]\)\), 1\) > 0\.01/);
+    expect(byName('PublishNeedsCheckRatioHigh').expr).toMatch(
+      /\[1d\][\s\S]*\[1d\]\)\), 1\) > 0\.01/,
+    );
     expect(byName('PublishReconcileUnsupportedHigh').expr).toMatch(/> 0\.2/);
   });
 
@@ -50,7 +54,8 @@ describe('ops/alerts/publishing.rules.yml', () => {
     for (const rule of rules) {
       const referenced = rule.expr.match(/\bpublish_[a-z0-9_]+\b/g) ?? [];
       expect(referenced.length, rule.alert).toBeGreaterThan(0);
-      for (const metric of referenced) expect(METRICS, `${rule.alert}: ${metric}`).toContain(metric);
+      for (const metric of referenced)
+        expect(METRICS, `${rule.alert}: ${metric}`).toContain(metric);
       expect(rule.expr).not.toMatch(/account_id|post_id|attempt_id/);
       expect(rule.annotations.description.length).toBeGreaterThan(20);
     }

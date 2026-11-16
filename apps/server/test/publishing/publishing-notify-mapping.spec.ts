@@ -155,7 +155,9 @@ describe('SC-009: luồng đăng chính không rẽ nhánh theo tên nền tản
       join(root, 'internal', 'retry-policy.ts'),
     );
     for (const file of core) {
-      const src = readFileSync(file, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      const src = readFileSync(file, 'utf8')
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
       expect(src, file).not.toMatch(/['"`](facebook_page|instagram|zalo_oa)['"`]/);
       expect(src, file).not.toMatch(/\bfacebook\b|\binstagram\b/i);
     }
