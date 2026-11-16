@@ -31,6 +31,8 @@ test('bộ lưu của trình duyệt không chứa dữ liệu tài khoản', as
   }));
   const text = JSON.stringify({ local: dump.local, session: dump.session });
   expect(text).not.toMatch(/chu@example\.test|u-1|a-1|Chủ Tiệm|token|password/i);
-  expect(Object.keys(Object.fromEntries(dump.local)).every((k) => k.startsWith('app:ui.'))).toBe(true);
+  expect(Object.keys(Object.fromEntries(dump.local)).every((k) => k.startsWith('app:ui.'))).toBe(
+    true,
+  );
   expect(dump.databases).toEqual([]);
 });

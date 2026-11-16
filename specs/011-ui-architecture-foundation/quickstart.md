@@ -70,3 +70,56 @@ tương phản (27 ca) vẫn qua với màu thử. Đã hoàn lại về `#0E6F6
 Danh mục đủ biến thể (SC-001) · 0 vi phạm quy tắc viết cứng (SC-002) · 0 vi phạm axe nghiêm trọng (SC-003) · kiểm thử cũ vẫn qua và
 không còn khối kiểu dáng riêng trong `features/*` (SC-011: `grep -r "style={{" apps/web/src/features` chỉ còn các trường hợp có chú
 thích lý do) · bản dựng sản xuất không chứa `/_catalog` hay `/internal` trong gói khởi đầu (SC-006).
+
+## 6. Kết quả chạy (T084, 2026-11-16)
+
+Chạy trong worktree `impl/011-ui-architecture-foundation` (Windows, Node 24, pnpm 10).
+
+### Kiểm tra tự động (mục 2)
+
+| Lệnh | Kết quả |
+|---|---|
+| `pnpm --filter @app/web test` | **410/410** ca, 64 tệp |
+| `tsc --noEmit` ở `apps/web`, `e2e`, `packages/*`, `apps/server` | sạch. Toàn repo còn **1 lỗi có sẵn ở `dev`**: `tooling/test/check-wiki.spec.ts` (`sources` không có trong kiểu `{}`) – không thuộc 011 |
+| `eslint` (gồm `jsx-a11y`, quy tắc nhập khẩu theo thư mục) | 0 lỗi |
+| `prettier --check` | 0 tệp của 011 sai định dạng; còn `docs/wiki/concepts/feature-status.md` (có sẵn, do bước wiki quản lý) |
+| `pnpm check:web-rules` | 163 tệp, **0 vi phạm** |
+| `pnpm check:web-bundle` | gói khởi đầu **203,8 KB gzip** (≤ 240 KB), không chứa `/_catalog` hay `/internal` |
+| `pnpm check:boundaries`, `pnpm check:secrets` | đạt |
+| `pnpm test:web-e2e` (Playwright, Chromium, 360/768/1280 px) | **51/51** (axe 0 lỗi nghiêm trọng, không cuộn ngang, vùng chạm ≥ 44 px, cỡ chữ 200%, tương phản cao, khung theo vai trò, hết phiên, hai tab) |
+| `pnpm --filter tooling test` | 298 ca qua; **1 tệp lỗi có sẵn ở `dev`**: `test/infra/power.spec.ts` (thiếu `tooling/infra/commands/kubeconfig.mjs`, của 007) |
+
+Kiểm thử cũ của 004/006/009 qua trọn vẹn. **Có chỉnh một số khẳng định ở kiểm thử cũ** (kỳ vọng hành vi không đổi, chỉ đổi cách biểu diễn
+theo chuẩn mới của 011): (a) nút bị khóa dùng `aria-disabled="true"` kèm lý do thay vì `disabled` thuần (7 chỗ: Mời, Tạo tài khoản
+kinh doanh, nút Google ở trang mời, Tạo tài khoản ở OAuth, nút "Đang lưu…"); (b) kiểm tra của react-hook-form chạy bất đồng bộ nên một
+khẳng định về lỗi ô đồng ý ở trang Đăng ký chờ bằng `waitFor`; (c) vùng chạm của nút "Thử lại" ở `StartPage` kiểm bằng lớp token
+`min-h-touch min-w-touch` thay vì style nội tuyến.
+
+### 13 kịch bản thủ công (mục 3) – bằng chứng thực tế
+
+Không có người thao tác trên trình duyệt thật cho các kịch bản này; dưới đây là bằng chứng **tự động** tương ứng và phần **chưa kiểm chứng**.
+
+| # | Bằng chứng | Chưa kiểm chứng |
+|---|---|---|
+| 1 | e2e `shell-roles`: chủ thấy 7 mục ở 1280 px, 5 mục ở 360/768 px; không cuộn ngang | — |
+| 2 | e2e `shell-roles`: cộng tác viên vào `/settings/members` → bị chặn, có lối về | — |
+| 3 | e2e `session-expiry`: hết phiên → hộp đăng nhập lại, cùng tài khoản đóng hộp, màn hình còn nguyên | bản nháp sau đăng nhập lại ở trình duyệt thật |
+| 4 | e2e `session-expiry`: đăng nhập tài khoản khác → về Tổng quan, không còn dữ liệu cũ | — |
+| 5 | `test/context/Conflict.spec` + hợp đồng biểu mẫu (6): 409 → hai lựa chọn, không ghi đè | thao tác hai trình duyệt thật |
+| 6 | hợp đồng biểu mẫu (4): bấm nhanh 10 lần = 1 lời gọi (Login, Register, Mời, 3 biểu mẫu mẫu) | đếm trong tab Network |
+| 7 | hợp đồng biểu mẫu (5): chặn rời trang khi còn thay đổi | đóng tab (`beforeunload`) |
+| 8 | `stale-data.spec`: mất mạng vẫn xem dữ liệu đã tải, báo "Chưa gửi được", dữ liệu nhập còn | tắt mạng thật |
+| 9 | `mutations.spec`/`optimistic.spec`: thao tác khai báo đủ khóa làm mới (danh sách, chi tiết, số đếm, Tổng quan) | **chưa đo ≤ 1 giây** trên màn hình thật (chưa có màn Bài viết) |
+| 10 | `limits.spec`: AI = 100% → mọi nút AI khóa cùng lúc, có ngày mở lại, không trường tiền | — |
+| 11 | e2e `two-tabs`: đăng xuất tab A → tab B về `/login`; bộ lưu trình duyệt không có dữ liệu tài khoản | — |
+| 12 | chỉ dùng lớp `motion-safe:`; chữ trạng thái luôn có | **chưa thử bằng `prefers-reduced-motion` thật** |
+| 13 | axe (Vitest + Playwright) và hợp đồng biểu mẫu (10): bàn phím tới được mọi điều khiển, lỗi gắn `aria-describedby` | **chưa thử với bộ đọc màn hình thật** (NVDA/VoiceOver) |
+
+### Lỗi phát hiện và đã sửa khi chạy
+
+- `two-tabs.spec.ts` (T060) truyền `Promise` lồng trong kết quả `page.evaluate` nên luôn nhận `{}`: chưa từng chạy vì máy chưa cài Chromium.
+- Công tắc "cỡ chữ 200%" của danh mục dùng `zoom` nên đo sai vùng cuộn → đổi sang tăng cỡ chữ gốc của `<html>`.
+- Hai phiên bản Playwright (`e2e` 1.64.1, `apps/web` 1.65.1 qua peer của `@axe-core/playwright`) làm lệch kiểu → chốt một bản bằng `overrides` ở `pnpm-workspace.yaml`.
+- Đăng nhập xóa mật khẩu cả khi lỗi hệ thống nên "Thử lại" không gửi lại được cùng dữ liệu → chỉ xóa khi thông tin bị từ chối.
+- Chặn rời trang cản chính việc chuyển trang sau khi gửi thành công → bộ chặn bỏ qua trong lúc đang gửi.
+

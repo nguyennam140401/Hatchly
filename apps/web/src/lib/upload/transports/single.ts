@@ -19,7 +19,8 @@ export function createSingleTransport(options: SingleTransportOptions): UploadTr
       new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', session.uploadUrl);
-        for (const [name, value] of Object.entries(session.headers ?? {})) xhr.setRequestHeader(name, value);
+        for (const [name, value] of Object.entries(session.headers ?? {}))
+          xhr.setRequestHeader(name, value);
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
         };

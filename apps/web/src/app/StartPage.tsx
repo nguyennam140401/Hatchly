@@ -28,7 +28,11 @@ export function StartPage() {
     } catch (err) {
       if (!(err instanceof AppError)) throw err;
       // Chỉ lỗi do máy chủ trả về mới có lời giải thích riêng; mạng/sai hình dùng lời nhắn mặc định.
-      setState(err.kind === 'network' || err.kind === 'invalid_response' ? { kind: 'error' } : { kind: 'error', message: err.message });
+      setState(
+        err.kind === 'network' || err.kind === 'invalid_response'
+          ? { kind: 'error' }
+          : { kind: 'error', message: err.message },
+      );
     }
   }, []);
 

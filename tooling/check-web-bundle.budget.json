@@ -1,4 +1,4 @@
 {
-  "$comment": "Ngân sách gói khởi đầu (KB, gzip). null = chưa đặt; T081 đo bản dựng đầu rồi ghi số thật vào đây.",
-  "BUNDLE_BUDGET_KB": null
+  "$comment": "Ngân sách gói khởi đầu (KB, gzip). Đo ở T081 (2026-11-16): 203,8 KB (5 tệp) → đặt 240 KB (dư ~18%). Tăng ngưỡng cần lý do trong PR; /_catalog và /internal luôn phải nằm NGOÀI gói khởi đầu.",
+  "BUNDLE_BUDGET_KB": 240
 }

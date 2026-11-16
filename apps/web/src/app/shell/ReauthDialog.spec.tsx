@@ -38,7 +38,12 @@ function Probe() {
       </button>
       <label>
         Bản nháp
-        <input value={draft} onChange={(e) => { setDraft(e.target.value); }} />
+        <input
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+          }}
+        />
       </label>
       <p>{text}</p>
     </section>
@@ -79,7 +84,9 @@ describe('ReauthDialog + AuthGate', () => {
       },
     });
     setup();
-    fireEvent.change(await screen.findByLabelText('Bản nháp'), { target: { value: 'nội dung đang gõ dở' } });
+    fireEvent.change(await screen.findByLabelText('Bản nháp'), {
+      target: { value: 'nội dung đang gõ dở' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Tải' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Phiên đã hết hạn' });

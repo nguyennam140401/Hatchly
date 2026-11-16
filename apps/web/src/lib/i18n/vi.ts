@@ -83,7 +83,8 @@ export const vi = {
   'stale.view': 'Xem bản mới',
   'limit.ai.reached':
     'Đã dùng hết lượt AI trong chu kỳ này. Bạn vẫn soạn tay, duyệt và đăng bình thường.',
-  'limit.posts.reached': 'Đã dùng hết số bài của chu kỳ này. Bạn vẫn xem, sửa và đăng các bài đã duyệt.',
+  'limit.posts.reached':
+    'Đã dùng hết số bài của chu kỳ này. Bạn vẫn xem, sửa và đăng các bài đã duyệt.',
   'limit.storage.reached': 'Thư viện đã đầy. Hãy xóa bớt tệp rồi tải lại.',
   'limit.ai.near': 'Sắp hết lượt AI trong chu kỳ này.',
   'upload.full': 'Đã đầy 5 GB',

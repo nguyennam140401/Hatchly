@@ -18,12 +18,17 @@ declare module 'vitest' {
 
 // MSW (011): máy chủ giả cho kiểm thử mới. Kiểm thử cũ (004/006/009) vẫn thay `fetch` bằng `vi.stubGlobal`
 // nên không bị ảnh hưởng; yêu cầu không có handler chỉ cảnh báo, không làm hỏng kiểm thử.
-beforeAll(() => { server.listen({ onUnhandledFrame: 'bypass' }); });
+beforeAll(() => {
+  server.listen({ onUnhandledFrame: 'bypass' });
+});
 afterEach(() => {
   cleanup();
   server.resetHandlers();
 });
-afterAll(() => { server.close(); });
+afterAll(() => {
+  server.close();
+});
 
 // jsdom không có canvas; axe thử gọi `getContext` khi kiểm tương phản → tắt để khỏi tràn cảnh báo.
-HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+HTMLCanvasElement.prototype.getContext = (() =>
+  null) as typeof HTMLCanvasElement.prototype.getContext;

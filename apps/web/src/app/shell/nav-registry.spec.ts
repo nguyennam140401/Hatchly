@@ -25,7 +25,8 @@ describe('nav-registry', () => {
   it('hai thanh sinh từ cùng một mảng (mọi id đều có trong NAV_ITEMS)', () => {
     const nav = selectNavItems(permissionsOf('owner'));
     const known = new Set<string>(NAV_ITEMS.map((i) => i.id));
-    for (const item of [...nav.sidebar, ...nav.bottom, ...nav.more]) expect(known.has(item.id)).toBe(true);
+    for (const item of [...nav.sidebar, ...nav.bottom, ...nav.more])
+      expect(known.has(item.id)).toBe(true);
   });
 
   it('mỗi vai trò thấy đúng tập mục theo PERMISSIONS (SC-003)', () => {

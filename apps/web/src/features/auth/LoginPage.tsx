@@ -27,7 +27,12 @@ const loginSchema = objectSchema<LoginValues>({
 });
 
 /** Biểu mẫu đăng nhập (tách riêng để dùng lại và kiểm thử theo hợp đồng biểu mẫu – SC-007). */
-export function LoginForm({ onSubmit, loadLatest, readOnly, draftKey }: FormComponentProps<LoginValues>) {
+export function LoginForm({
+  onSubmit,
+  loadLatest,
+  readOnly,
+  draftKey,
+}: FormComponentProps<LoginValues>) {
   const form = useAppForm<LoginValues>({
     schema: loginSchema,
     defaultValues: { email: '', password: '' },

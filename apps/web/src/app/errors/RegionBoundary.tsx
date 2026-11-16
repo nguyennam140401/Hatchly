@@ -7,7 +7,8 @@ import { InlineAlert } from '../../ui/alert/InlineAlert';
 // Lỗi hiển thị trong MỘT vùng không làm sập cả ứng dụng: phần còn lại sống, vùng lỗi có "Thử lại vùng này" (FR-011).
 // Chunk không tải được (có bản mới) → "Có bản mới – tải lại".
 
-const CHUNK_ERROR = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
+const CHUNK_ERROR =
+  /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
 
 function Fallback({ error, resetErrorBoundary }: FallbackProps) {
   const message = error instanceof Error ? error.message : '';

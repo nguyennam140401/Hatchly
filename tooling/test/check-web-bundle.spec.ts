@@ -5,7 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { analyzeInitialBundle } from '../check-web-bundle.mjs';
 
 // FR-012/SC-006: gói khởi đầu không chứa danh mục hay khu vực nội bộ; chỉ tính chunk được index.html tham chiếu.
-type Result = { chunks: number; gzipKb: number; forbidden: string[] };
+interface Result {
+  chunks: number;
+  gzipKb: number;
+  forbidden: string[];
+}
 const analyze = analyzeInitialBundle as (dist: string) => Result;
 
 function dist(sourcesOfEntry: string[]) {

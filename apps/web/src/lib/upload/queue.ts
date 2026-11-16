@@ -46,7 +46,8 @@ interface Internal {
 
 export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
   const rules = options.rules ?? DEFAULT_RULES;
-  const wait = options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const wait =
+    options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const entries: Internal[] = [];
   const listeners = new Set<() => void>();
   let snapshot: readonly UploadItem[] = [];
@@ -67,7 +68,13 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
       const controller = new AbortController();
       entry.controller = controller;
-      patch(entry, { status: 'uploading', attempt, error: undefined, errorKind: undefined, progress: 0 });
+      patch(entry, {
+        status: 'uploading',
+        attempt,
+        error: undefined,
+        errorKind: undefined,
+        progress: 0,
+      });
       try {
         const session = await options.transport.start(file, controller.signal);
         await options.transport.putPart(
@@ -82,7 +89,10 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
         patch(entry, { status: 'done', progress: 100 });
         return;
       } catch (error) {
-        if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+        if (
+          controller.signal.aborted ||
+          (error instanceof DOMException && error.name === 'AbortError')
+        ) {
           patch(entry, { status: 'canceled' });
           return;
         }
@@ -96,7 +106,11 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
         }
         const delay = RETRY_DELAYS_MS[attempt];
         if (delay === undefined) {
-          patch(entry, { status: 'error', error: 'Không tải lên được. Hãy thử lại.', errorKind: 'failed' });
+          patch(entry, {
+            status: 'error',
+            error: 'Không tải lên được. Hãy thử lại.',
+            errorKind: 'failed',
+          });
           return;
         }
         await wait(delay);
@@ -169,7 +183,13 @@ export function createUploadQueue(options: UploadQueueOptions): UploadQueue {
       if (entry?.file == null) return;
       if (entry.item.status !== 'error' && entry.item.status !== 'canceled') return;
       entry.controller = null;
-      patch(entry, { status: 'queued', progress: 0, attempt: 0, error: undefined, errorKind: undefined });
+      patch(entry, {
+        status: 'queued',
+        progress: 0,
+        attempt: 0,
+        error: undefined,
+        errorKind: undefined,
+      });
       pump();
     },
   };

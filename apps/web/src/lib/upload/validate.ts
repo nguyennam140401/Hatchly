@@ -35,12 +35,18 @@ export function validateFile(file: FileLike, rules: UploadRules = DEFAULT_RULES)
   }
   if (rules.imageTypes.includes(file.type)) {
     return file.size > rules.maxImageBytes
-      ? { ok: false, message: `Ảnh "${file.name}" lớn hơn ${mb(rules.maxImageBytes)}. Hãy chọn ảnh nhỏ hơn.` }
+      ? {
+          ok: false,
+          message: `Ảnh "${file.name}" lớn hơn ${mb(rules.maxImageBytes)}. Hãy chọn ảnh nhỏ hơn.`,
+        }
       : { ok: true };
   }
   if (rules.videoTypes.includes(file.type)) {
     return file.size > rules.maxVideoBytes
-      ? { ok: false, message: `Video "${file.name}" lớn hơn ${mb(rules.maxVideoBytes)}. Hãy chọn video nhỏ hơn.` }
+      ? {
+          ok: false,
+          message: `Video "${file.name}" lớn hơn ${mb(rules.maxVideoBytes)}. Hãy chọn video nhỏ hơn.`,
+        }
       : { ok: true };
   }
   return {

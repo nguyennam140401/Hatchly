@@ -26,8 +26,10 @@ describe('InlineAlert', () => {
   });
 
   it('tone="error" bắt buộc có hành động (kiểm tra bằng kiểu)', () => {
+    // prettier-ignore
     // @ts-expect-error lỗi mà không có `actions` phải bị chặn lúc biên dịch
     const bad = <InlineAlert tone="error">Lỗi</InlineAlert>;
+    // prettier-ignore
     // @ts-expect-error `actions` rỗng không được chấp nhận cho tone="error"
     const empty = <InlineAlert tone="error" actions={[]}>Lỗi</InlineAlert>;
     expect(bad).toBeDefined();

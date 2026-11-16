@@ -76,7 +76,9 @@ export function ErrorPage() {
       </Button>
       {detail !== undefined && (
         <details className="w-full text-caption text-ink-muted">
-          <summary className="min-h-touch cursor-pointer py-3 text-label">{t('support.detailsTitle')}</summary>
+          <summary className="min-h-touch cursor-pointer py-3 text-label">
+            {t('support.detailsTitle')}
+          </summary>
           <p>{detail}</p>
         </details>
       )}

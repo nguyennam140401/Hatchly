@@ -26,7 +26,8 @@ export function initialChunks(dist) {
   const html = readFileSync(join(dist, 'index.html'), 'utf8');
   const refs = new Set();
   for (const m of html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)) refs.add(m[1]);
-  for (const m of html.matchAll(/<link[^>]*rel="modulepreload"[^>]*\shref="([^"]+)"/g)) refs.add(m[1]);
+  for (const m of html.matchAll(/<link[^>]*rel="modulepreload"[^>]*\shref="([^"]+)"/g))
+    refs.add(m[1]);
   return [...refs].map((r) => join(dist, r.replace(/^\//, '')));
 }
 

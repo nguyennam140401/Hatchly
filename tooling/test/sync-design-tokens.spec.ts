@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { applyBlock, BEGIN, buildThemeBlock, END, syncDesignTokens } from '../sync-design-tokens.mjs';
+import {
+  applyBlock,
+  BEGIN,
+  buildThemeBlock,
+  END,
+  syncDesignTokens,
+} from '../sync-design-tokens.mjs';
 
 // SC-012: giá trị thiết kế chỉ ở figma-tokens.json; đồng bộ lại không đổi gì nếu JSON không đổi.
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,7 +40,7 @@ describe('sync-design-tokens', () => {
     const json = JSON.parse(readFileSync(join(dir, 'figma-tokens.json'), 'utf8')) as {
       colors: Record<string, string>;
     };
-    json.colors['brand'] = '#123456';
+    json.colors.brand = '#123456';
     writeFileSync(join(dir, 'figma-tokens.json'), JSON.stringify(json));
     syncDesignTokens(root);
     const css = readFileSync(cssPath, 'utf8');
@@ -43,7 +49,7 @@ describe('sync-design-tokens', () => {
   });
 
   it('khoảng cách không có 5 và 7; có đủ cỡ chữ và mốc bố cục', () => {
-    const json = JSON.parse(readFileSync(realJson, 'utf8')) as Parameters<typeof buildThemeBlock>[0];
+    const json: unknown = JSON.parse(readFileSync(realJson, 'utf8'));
     const block = buildThemeBlock(json);
     expect(block).not.toMatch(/--spacing-[57]:/);
     for (const n of ['1', '2', '3', '4', '6', '8']) expect(block).toContain(`--spacing-${n}:`);

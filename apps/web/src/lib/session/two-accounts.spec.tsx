@@ -40,7 +40,9 @@ describe('đổi tài khoản trên cùng trình duyệt', () => {
 
   it('chỉ có cờ giao diện trong localStorage; không có giá trị nhạy cảm/mã định danh', () => {
     safeStorage.set('ui.sidebar.collapsed', '1');
-    const all = JSON.stringify(Object.entries(window.localStorage)) + JSON.stringify(Object.entries(window.sessionStorage));
+    const all =
+      JSON.stringify(Object.entries(window.localStorage)) +
+      JSON.stringify(Object.entries(window.sessionStorage));
     expect(all).not.toMatch(/u-1|a-1|@example|token|password|session/i);
     expect(Object.keys(window.localStorage).every((k) => k.startsWith('app:ui.'))).toBe(true);
   });
@@ -48,13 +50,21 @@ describe('đổi tài khoản trên cùng trình duyệt', () => {
   it('tab khác đăng xuất → tab này dọn dữ liệu và chuyển /login', async () => {
     let ended = 0;
     function Probe() {
-      const q = useApiQuery(queryKeys.posts.list(), () => Promise.resolve([SECRET]), { freshness: 'entity' });
+      const q = useApiQuery(queryKeys.posts.list(), () => Promise.resolve([SECRET]), {
+        freshness: 'entity',
+      });
       return <p>{q.data?.[0] ?? 'trống'}</p>;
     }
     const me = fakeMe('owner');
     // SessionProvider tự tạo QueryClient riêng; QueryClientProvider ngoài không cần – dùng provider của phiên.
     render(
-      <SessionProvider me={me} refresh={() => Promise.resolve()} onRemoteEnd={() => { ended += 1; }}>
+      <SessionProvider
+        me={me}
+        refresh={() => Promise.resolve()}
+        onRemoteEnd={() => {
+          ended += 1;
+        }}
+      >
         <Probe />
       </SessionProvider>,
     );
@@ -67,7 +77,9 @@ describe('đổi tài khoản trên cùng trình duyệt', () => {
     // Giả lập tab khác: phát sự kiện với mã tab khác (tab gửi bỏ qua sự kiện của chính nó).
     const other = new BroadcastChannel('app-session');
     other.postMessage({ type: 'logout', at: Date.now(), from: 'tab-khac' });
-    await waitFor(() => { expect(ended).toBe(1); });
+    await waitFor(() => {
+      expect(ended).toBe(1);
+    });
     other.close();
     expect(cleaned).toBe(1); // mọi kho dữ liệu tài khoản đã được dọn
     off();
@@ -76,7 +88,13 @@ describe('đổi tài khoản trên cùng trình duyệt', () => {
   it('tab gửi sự kiện KHÔNG tự chuyển trang của chính nó', async () => {
     let ended = 0;
     render(
-      <SessionProvider me={fakeMe('owner')} refresh={() => Promise.resolve()} onRemoteEnd={() => { ended += 1; }}>
+      <SessionProvider
+        me={fakeMe('owner')}
+        refresh={() => Promise.resolve()}
+        onRemoteEnd={() => {
+          ended += 1;
+        }}
+      >
         <p>nội dung</p>
       </SessionProvider>,
     );

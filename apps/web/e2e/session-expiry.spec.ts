@@ -6,7 +6,9 @@ import { errorBody, meBody, mockSession } from './helpers';
 
 const METHODS_URL = '**/api/v1/auth/login-methods';
 
-test('hết phiên giữa chừng → hộp đăng nhập lại; cùng tài khoản → đóng hộp, màn hình còn nguyên', async ({ page }) => {
+test('hết phiên giữa chừng → hộp đăng nhập lại; cùng tài khoản → đóng hộp, màn hình còn nguyên', async ({
+  page,
+}) => {
   await mockSession(page, 'owner');
   let loginCalls = 0;
   await page.route('**/api/v1/auth/login', (route) => {
@@ -49,7 +51,9 @@ test('đăng nhập lại bằng tài khoản khác → về Tổng quan, không
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('mật khẩu bị đổi ở nơi khác (reason=password_changed) → không có "tiếp tục", chỉ về đăng nhập', async ({ page }) => {
+test('mật khẩu bị đổi ở nơi khác (reason=password_changed) → không có "tiếp tục", chỉ về đăng nhập', async ({
+  page,
+}) => {
   await mockSession(page, 'owner');
   await page.route(METHODS_URL, (route) =>
     route.fulfill({

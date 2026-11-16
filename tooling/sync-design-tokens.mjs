@@ -5,7 +5,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const BEGIN = '/* BEGIN figma-tokens – sinh bởi tooling/sync-design-tokens.mjs, KHÔNG sửa tay */';
+export const BEGIN =
+  '/* BEGIN figma-tokens – sinh bởi tooling/sync-design-tokens.mjs, KHÔNG sửa tay */';
 export const END = '/* END figma-tokens */';
 
 const px = (n) => `${String(n)}px`;
@@ -34,12 +35,16 @@ export function buildThemeBlock(tokens) {
     lines.push(`  --text-${name}--font-weight: ${String(t.weight)};`);
   }
   lines.push('');
-  for (const [name, v] of Object.entries(tokens.spacing)) lines.push(`  --spacing-${name}: ${px(v)};`);
-  for (const [name, v] of Object.entries(tokens.sizes)) lines.push(`  --spacing-${name}: ${px(v)};`);
+  for (const [name, v] of Object.entries(tokens.spacing))
+    lines.push(`  --spacing-${name}: ${px(v)};`);
+  for (const [name, v] of Object.entries(tokens.sizes))
+    lines.push(`  --spacing-${name}: ${px(v)};`);
   lines.push('');
-  for (const [name, v] of Object.entries(tokens.radius)) lines.push(`  --radius-${name}: ${px(v)};`);
+  for (const [name, v] of Object.entries(tokens.radius))
+    lines.push(`  --radius-${name}: ${px(v)};`);
   lines.push('');
-  for (const [name, v] of Object.entries(tokens.breakpoints)) lines.push(`  --breakpoint-${name}: ${px(v)};`);
+  for (const [name, v] of Object.entries(tokens.breakpoints))
+    lines.push(`  --breakpoint-${name}: ${px(v)};`);
   lines.push('');
   for (const [name, v] of Object.entries(tokens.motion)) {
     lines.push(`  --${name}: ${typeof v === 'number' ? ms(v) : v};`);

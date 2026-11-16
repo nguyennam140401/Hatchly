@@ -15,14 +15,25 @@ export function setCountSources(next: CountSources): void {
   sources = next;
 }
 
-export function useNavCounts(): { pendingReviewCount: number | undefined; unreadCount: number | undefined } {
-  const pending = useApiQuery(queryKeys.counters.pendingReview(), () => sources.pendingReview?.() ?? Promise.resolve(0), {
-    freshness: 'counter',
-    enabled: sources.pendingReview !== undefined,
-  });
-  const unread = useApiQuery(queryKeys.notifications.unread(), () => sources.unread?.() ?? Promise.resolve(0), {
-    freshness: 'counter',
-    enabled: sources.unread !== undefined,
-  });
+export function useNavCounts(): {
+  pendingReviewCount: number | undefined;
+  unreadCount: number | undefined;
+} {
+  const pending = useApiQuery(
+    queryKeys.counters.pendingReview(),
+    () => sources.pendingReview?.() ?? Promise.resolve(0),
+    {
+      freshness: 'counter',
+      enabled: sources.pendingReview !== undefined,
+    },
+  );
+  const unread = useApiQuery(
+    queryKeys.notifications.unread(),
+    () => sources.unread?.() ?? Promise.resolve(0),
+    {
+      freshness: 'counter',
+      enabled: sources.unread !== undefined,
+    },
+  );
   return { pendingReviewCount: pending.data, unreadCount: unread.data };
 }

@@ -54,7 +54,8 @@ export function AsyncBoundary<T>({
     return (
       <InlineAlert tone="warning" title={t('state.locked')}>
         {lockedBy.reason}
-        {lockedBy.reopensAt !== undefined && ` ${t('state.reopensAt', { date: formatDate(lockedBy.reopensAt.toISOString()) })}`}
+        {lockedBy.reopensAt !== undefined &&
+          ` ${t('state.reopensAt', { date: formatDate(lockedBy.reopensAt.toISOString()) })}`}
       </InlineAlert>
     );
   }
@@ -73,7 +74,13 @@ export function AsyncBoundary<T>({
   }
   const data = query.data as T;
   // 4. trống
-  if (isEmpty(data)) return <EmptyState message={empty.message} {...(empty.action !== undefined ? { action: empty.action } : {})} />;
+  if (isEmpty(data))
+    return (
+      <EmptyState
+        message={empty.message}
+        {...(empty.action !== undefined ? { action: empty.action } : {})}
+      />
+    );
   // 5. một phần (+ nội dung)
   const part = partial?.(data) ?? null;
   return (
@@ -87,9 +94,7 @@ export function AsyncBoundary<T>({
         />
       )}
       {part !== null && (
-        <InlineAlert tone="warning">
-          {`${part.done} · ${part.attention}`}
-        </InlineAlert>
+        <InlineAlert tone="warning">{`${part.done} · ${part.attention}`}</InlineAlert>
       )}
       {children(data)}
       {query.isFetching && <span className="sr-only">{t('common.loading')}</span>}

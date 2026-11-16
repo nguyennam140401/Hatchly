@@ -42,7 +42,9 @@ describe('check-web-rules: mẫu sai bị bắt', () => {
 
 describe('check-web-rules: mẫu đúng không báo gì', () => {
   it('lớp token, biến CSS động, biến thể có điều kiện', () => {
-    expect(rules(`<p className="bg-brand text-ink p-4 min-h-touch data-[state=open]:bg-brand-soft" />`)).toEqual([]);
+    expect(
+      rules(`<p className="bg-brand text-ink p-4 min-h-touch data-[state=open]:bg-brand-soft" />`),
+    ).toEqual([]);
     expect(rules(`<i style={{ '--value': \`\${pct}%\` }} className="w-(--value)" />`)).toEqual([]);
     expect(rules(`<a href="#main">Bỏ qua</a>`)).toEqual([]);
   });
@@ -90,6 +92,8 @@ describe('check-web-rules: quét thư mục', () => {
   it('báo tệp:dòng', () => {
     const root = workspace({ 'features/X.tsx': `export const a = 1;\nexport const b = 'USD';` });
     const { violations } = run({ root });
-    expect(violations).toEqual([expect.objectContaining({ file: 'apps/web/src/features/X.tsx', line: 2 })]);
+    expect(violations).toEqual([
+      expect.objectContaining({ file: 'apps/web/src/features/X.tsx', line: 2 }),
+    ]);
   });
 });

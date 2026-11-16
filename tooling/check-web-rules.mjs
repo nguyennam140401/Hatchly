@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 const IGNORE_MARK = 'web-rules-ignore:';
 
 const COLOR_RE = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|\brgba?\(|\bhsla?\(/;
-const ARBITRARY_RE = /(?<![\w-])[a-z][\w-]*-\[(?:#|-?\d)[^\]\s]*\]|(?<![\w-])[a-z][\w-]*-\[[^\]\s]*(?:px|rem|em|vh|vw|%)\]/;
+const ARBITRARY_RE =
+  /(?<![\w-])[a-z][\w-]*-\[(?:#|-?\d)[^\]\s]*\]|(?<![\w-])[a-z][\w-]*-\[[^\]\s]*(?:px|rem|em|vh|vw|%)\]/;
 const STYLE_KEY_RE =
   /^(?:color|background\w*|font\w*|line-?height|margin\w*|padding\w*|gap|row-?gap|column-?gap|width|height|min\w+|max\w+|border\w*|top|left|right|bottom|inset\w*|fill|stroke|letter-?spacing)$/i;
 const MONEY_RES = [
@@ -92,27 +93,41 @@ export function scanSource(raw, { customerArea }) {
   const lines = text.split('\n');
   const found = [];
   const ignored = (line) =>
-    (rawLines[line - 1] ?? '').includes(IGNORE_MARK) || (rawLines[line - 2] ?? '').includes(IGNORE_MARK);
+    (rawLines[line - 1] ?? '').includes(IGNORE_MARK) ||
+    (rawLines[line - 2] ?? '').includes(IGNORE_MARK);
   const add = (line, rule, message) => {
     if (!ignored(line)) found.push({ line, rule, message });
   };
 
   lines.forEach((l, idx) => {
     const line = idx + 1;
-    if (COLOR_RE.test(l)) add(line, 'hard-coded-color', 'màu viết cứng – dùng token (bg-brand, text-ink…)');
-    if (ARBITRARY_RE.test(l)) add(line, 'arbitrary-value', 'giá trị tùy ý trong className – dùng token/thang khoảng cách');
+    if (COLOR_RE.test(l))
+      add(line, 'hard-coded-color', 'màu viết cứng – dùng token (bg-brand, text-ink…)');
+    if (ARBITRARY_RE.test(l))
+      add(line, 'arbitrary-value', 'giá trị tùy ý trong className – dùng token/thang khoảng cách');
     if (customerArea) {
       for (const [re, what] of MONEY_RES) {
-        if (re.test(l)) add(line, 'money-format', `định dạng tiền (${what}) ở khu vực khách hàng – chỉ hiện % (FR-032)`);
+        if (re.test(l))
+          add(
+            line,
+            'money-format',
+            `định dạng tiền (${what}) ở khu vực khách hàng – chỉ hiện % (FR-032)`,
+          );
       }
     }
   });
 
   for (const block of styleBlocks(text)) {
-    const keys = [...block.body.matchAll(/(?:^|[,{\s])(['"]?)([A-Za-z-][\w-]*)\1\s*:/g)].map((k) => k[2]);
+    const keys = [...block.body.matchAll(/(?:^|[,{\s])(['"]?)([A-Za-z-][\w-]*)\1\s*:/g)].map(
+      (k) => k[2],
+    );
     const bad = keys.filter((k) => !k.startsWith('--') && STYLE_KEY_RE.test(k));
     if (bad.length > 0) {
-      add(lineOf(text, block.index), 'inline-style', `style={{}} có ${bad.join(', ')} – dùng lớp Tailwind; giá trị động qua biến '--x'`);
+      add(
+        lineOf(text, block.index),
+        'inline-style',
+        `style={{}} có ${bad.join(', ')} – dùng lớp Tailwind; giá trị động qua biến '--x'`,
+      );
     }
   }
   return found;
@@ -126,7 +141,10 @@ function* walk(dir) {
   }
 }
 
-export function checkWebRules({ root = join(dirname(fileURLToPath(import.meta.url)), '..'), scope } = {}) {
+export function checkWebRules({
+  root = join(dirname(fileURLToPath(import.meta.url)), '..'),
+  scope,
+} = {}) {
   const src = join(root, 'apps', 'web', 'src');
   const base = scope ? join(root, scope) : src;
   const violations = [];
@@ -139,7 +157,8 @@ export function checkWebRules({ root = join(dirname(fileURLToPath(import.meta.ur
   for (const file of walk(base)) {
     const rel = relative(src, file).split(sep).join('/');
     if (!/\.(tsx?|jsx?)$/.test(rel)) continue;
-    if (/\.spec\.[tj]sx?$/.test(rel) || /(^|\/)__tests__\//.test(rel) || /\.d\.ts$/.test(rel)) continue;
+    if (/\.spec\.[tj]sx?$/.test(rel) || /(^|\/)__tests__\//.test(rel) || /\.d\.ts$/.test(rel))
+      continue;
     if (rel.startsWith('styles/')) continue;
     files += 1;
     const customerArea = !rel.startsWith('internal/');
@@ -154,8 +173,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const scope = process.argv[2];
   const { violations, files } = checkWebRules({ scope });
   if (violations.length > 0) {
-    console.error(`✗ check-web-rules: ${String(violations.length)} vi phạm trong ${String(files)} tệp:`);
-    for (const v of violations) console.error(`  ${v.file}:${String(v.line)} [${v.rule}] ${v.message}`);
+    console.error(
+      `✗ check-web-rules: ${String(violations.length)} vi phạm trong ${String(files)} tệp:`,
+    );
+    for (const v of violations)
+      console.error(`  ${v.file}:${String(v.line)} [${v.rule}] ${v.message}`);
     process.exit(1);
   }
   console.log(`✓ check-web-rules: ${String(files)} tệp, 0 vi phạm.`);

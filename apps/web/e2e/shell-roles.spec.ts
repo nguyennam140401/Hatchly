@@ -25,10 +25,14 @@ test.describe('khung ứng dụng', () => {
     expect(overflow).toBe(false);
   });
 
-  test('cộng tác viên vào thẳng /settings/members → bị chặn, không trang trắng', async ({ page }) => {
+  test('cộng tác viên vào thẳng /settings/members → bị chặn, không trang trắng', async ({
+    page,
+  }) => {
     await mockSession(page, 'collaborator');
     await page.goto('/settings/members');
-    await expect(page.getByText('Chỉ chủ tài khoản mới mời hoặc gỡ được cộng tác viên.')).toBeVisible();
+    await expect(
+      page.getByText('Chỉ chủ tài khoản mới mời hoặc gỡ được cộng tác viên.'),
+    ).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
   });
 

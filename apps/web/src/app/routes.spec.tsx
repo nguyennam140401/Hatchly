@@ -18,7 +18,9 @@ describe('routes', () => {
   it('đường dẫn không có → NotFound với nút về Tổng quan (không trang trắng)', async () => {
     fakeApi({ 'GET /api/v1/auth/me': () => ({ status: 200, body: me() }) });
     renderAt('/khong-co-trang-nay');
-    expect(await screen.findByRole('heading', { name: 'Không tìm thấy trang' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Không tìm thấy trang' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Về Tổng quan' })).toBeInTheDocument();
   });
 

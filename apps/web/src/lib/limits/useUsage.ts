@@ -36,5 +36,6 @@ export function useUsage(): { usage: UsageSnapshot | undefined; isLoading: boole
 /** Bắt buộc gọi TRƯỚC thao tác phụ thuộc hạn mức (vd bấm "Tạo bài bằng AI"): lấy mức mới nhất, không dùng bản cũ. */
 export function useEnsureUsageFresh(): () => Promise<UsageSnapshot | undefined> {
   const client = useQueryClient();
-  return async () => (source === undefined ? undefined : ensureFresh(client, queryKeys.usage.current(), source));
+  return async () =>
+    source === undefined ? undefined : ensureFresh(client, queryKeys.usage.current(), source);
 }

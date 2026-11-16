@@ -63,7 +63,10 @@ export function ReauthDialog() {
   // Phiên đã kết thúc hẳn (đổi mật khẩu ở nơi khác, bị gỡ/khóa…): chỉ còn đường về đăng nhập.
   if (snapshot.status === 'ended') {
     const reason = snapshot.reason;
-    const key = reason !== undefined && reason in END_MESSAGES ? END_MESSAGES[reason as keyof typeof END_MESSAGES] : 'session.expired.body';
+    const key =
+      reason !== undefined && reason in END_MESSAGES
+        ? END_MESSAGES[reason as keyof typeof END_MESSAGES]
+        : 'session.expired.body';
     return (
       <Modal open dismissible={false} title={t('session.expired.title')} description={t(key)}>
         <Button onClick={leave}>{t('session.signOut')}</Button>

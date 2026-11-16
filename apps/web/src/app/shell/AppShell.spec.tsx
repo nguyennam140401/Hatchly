@@ -41,7 +41,10 @@ describe('AppShell', () => {
     const { container } = renderWithProviders(tree, { route: '/calendar' });
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
     expect(within(nav).getAllByRole('link')).toHaveLength(7);
-    expect(within(nav).getByRole('link', { name: 'Lịch đăng' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('link', { name: 'Lịch đăng' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -52,7 +55,10 @@ describe('AppShell', () => {
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
     expect(within(nav).getAllByRole('link')).toHaveLength(5);
     expect(within(nav).getByRole('link', { name: 'Tạo bài' })).toBeInTheDocument();
-    expect(within(nav).getByRole('link', { name: 'Tổng quan' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('link', { name: 'Tổng quan' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -60,10 +66,14 @@ describe('AppShell', () => {
   it('cộng tác viên không thấy mục cần quyền chủ; chủ thấy đủ', () => {
     stubViewport(true);
     const collab = renderWithProviders(tree, { role: 'collaborator' });
-    const collabLinks = within(screen.getByRole('navigation')).getAllByRole('link').map((l) => l.textContent);
+    const collabLinks = within(screen.getByRole('navigation'))
+      .getAllByRole('link')
+      .map((l) => l.textContent);
     collab.unmount();
     renderWithProviders(tree, { role: 'owner' });
-    const ownerLinks = within(screen.getByRole('navigation')).getAllByRole('link').map((l) => l.textContent);
+    const ownerLinks = within(screen.getByRole('navigation'))
+      .getAllByRole('link')
+      .map((l) => l.textContent);
     expect(ownerLinks.length).toBeGreaterThanOrEqual(collabLinks.length);
     expect(ownerLinks).toContain('Hồ sơ kinh doanh');
   });

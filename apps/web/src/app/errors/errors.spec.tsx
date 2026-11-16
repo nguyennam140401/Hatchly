@@ -18,7 +18,9 @@ describe('trang lỗi', () => {
       ],
       '/khong-co',
     );
-    expect(await screen.findByRole('heading', { name: 'Không tìm thấy trang' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Không tìm thấy trang' }),
+    ).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
     screen.getByRole('button', { name: 'Về Tổng quan' }).click();
     await waitFor(() => {

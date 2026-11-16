@@ -246,7 +246,10 @@ export function BusinessProfilePage() {
     return (
       <Wrap>
         <PageHeader title="Hồ sơ kinh doanh" />
-        <InlineAlert tone="error" actions={[{ kind: 'navigate', label: 'Về Tổng quan', href: '/' }]}>
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về Tổng quan', href: '/' }]}
+        >
           Bạn không có quyền xem hồ sơ kinh doanh.
         </InlineAlert>
       </Wrap>
@@ -299,7 +302,10 @@ export function BusinessProfilePage() {
       )}
 
       {canEdit && state.missingOptional.length > 0 && (
-        <aside aria-label="Gợi ý" className="rounded-md border border-brand bg-brand-soft p-4 text-body-sm">
+        <aside
+          aria-label="Gợi ý"
+          className="rounded-md border border-brand bg-brand-soft p-4 text-body-sm"
+        >
           <span aria-hidden="true">💡 </span>
           AI sẽ viết tốt hơn nếu bạn bổ sung:{' '}
           {state.missingOptional.map((k) => OPTIONAL_LABELS[k]).join(', ')}.
@@ -316,7 +322,9 @@ export function BusinessProfilePage() {
       {state.conflict !== null && (
         <InlineAlert
           tone="error"
-          actions={[{ kind: 'retry', label: state.conflict.actions[0].label || 'Tải bản mới nhất' }]}
+          actions={[
+            { kind: 'retry', label: state.conflict.actions[0].label || 'Tải bản mới nhất' },
+          ]}
           onAction={reloadLatest}
         >
           {state.conflict.message}

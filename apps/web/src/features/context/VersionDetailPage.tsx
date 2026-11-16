@@ -53,7 +53,10 @@ export function VersionDetailPage() {
     return (
       <Wrap>
         <PageHeader title="Hồ sơ kinh doanh" />
-        <InlineAlert tone="error" actions={[{ kind: 'navigate', label: 'Về Tổng quan', href: '/' }]}>
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về Tổng quan', href: '/' }]}
+        >
           Bạn không có quyền xem hồ sơ kinh doanh.
         </InlineAlert>
       </Wrap>

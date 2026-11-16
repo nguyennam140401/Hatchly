@@ -19,16 +19,33 @@ afterEach(() => {
 
 describe('limitOf', () => {
   it('AI: normal → near (≥ 80%) → reached (100%) khóa kèm ngày mở lại', () => {
-    expect(limitOf('ai', usage({ percent: 40, level: 'normal' }))).toMatchObject({ locked: false, near: false });
-    expect(limitOf('ai', usage({ percent: 85, level: 'near' }))).toMatchObject({ locked: false, near: true });
-    const reached = limitOf('ai', usage({ percent: 100, level: 'reached', reopensAt: '2026-12-01T00:00:00Z' }));
+    expect(limitOf('ai', usage({ percent: 40, level: 'normal' }))).toMatchObject({
+      locked: false,
+      near: false,
+    });
+    expect(limitOf('ai', usage({ percent: 85, level: 'near' }))).toMatchObject({
+      locked: false,
+      near: true,
+    });
+    const reached = limitOf(
+      'ai',
+      usage({ percent: 100, level: 'reached', reopensAt: '2026-12-01T00:00:00Z' }),
+    );
     expect(reached.locked).toBe(true);
     expect(reached.reason).toContain('Bạn vẫn soạn tay');
     expect(reached.reopensAt?.toISOString()).toBe('2026-12-01T00:00:00.000Z');
   });
   it('bài/dung lượng khóa khi chạm trần; chưa biết mức → không khóa', () => {
-    expect(limitOf('posts', usage({ percent: 0, level: 'normal' }, { posts: { used: 100, limit: 100 } })).locked).toBe(true);
-    expect(limitOf('storage', usage({ percent: 0, level: 'normal' }, { storage: { usedBytes: 5, limitBytes: 5 } })).locked).toBe(true);
+    expect(
+      limitOf('posts', usage({ percent: 0, level: 'normal' }, { posts: { used: 100, limit: 100 } }))
+        .locked,
+    ).toBe(true);
+    expect(
+      limitOf(
+        'storage',
+        usage({ percent: 0, level: 'normal' }, { storage: { usedBytes: 5, limitBytes: 5 } }),
+      ).locked,
+    ).toBe(true);
     expect(limitOf('ai', undefined)).toEqual({ locked: false, near: false, percent: 0 });
   });
 });
@@ -63,11 +80,19 @@ describe('LimitGate – AI = 100%', () => {
     );
     const { container } = renderWithProviders(<Screen />);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Tạo bài bằng AI' })).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.getByRole('button', { name: 'Tạo bài bằng AI' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      );
     });
-    expect(screen.getByRole('button', { name: 'Gợi ý chủ đề' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Gợi ý chủ đề' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(screen.getByRole('button', { name: 'Soạn tay' })).not.toHaveAttribute('aria-disabled');
-    expect(screen.getByRole('button', { name: 'Tạo bài bằng AI' })).toHaveAccessibleDescription(/Mở lại vào 01\/12\/2026/);
+    expect(screen.getByRole('button', { name: 'Tạo bài bằng AI' })).toHaveAccessibleDescription(
+      /Mở lại vào 01\/12\/2026/,
+    );
     expect(container.textContent).not.toMatch(/\$|USD|VND|đồng/i);
   });
 });

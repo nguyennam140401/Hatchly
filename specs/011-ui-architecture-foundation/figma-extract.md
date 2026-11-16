@@ -98,3 +98,23 @@ Không có biểu tượng riêng cho từng trạng thái bài/kênh (huy hiệ
 1 Tổng quan · 2 Tạo bài nhanh · 3 Soạn bài – Facebook · 4 Soạn bài – TikTok (đăng tay) · 5 Bài viết – Chờ duyệt · 6 Lịch đăng ·
 7 Tiến trình đăng – xử lý lỗi · 8 Kênh & gói. (Dùng làm "màn hình mẫu" tham chiếu cho danh mục thành phần; **không** dựng
 trong 011.) Chưa có thiết kế cho: Thư viện ảnh & video, Hồ sơ kinh doanh, Cài đặt, đăng nhập/đăng ký/bảo mật/thành viên.
+
+## 7. Điểm lệch Figma ↔ UI/UX cần Product Owner xác nhận (T083, 2026-11-16)
+
+Đã chốt trong spec (mục Clarifications) và đã cập nhật `TaiLieuDacTa/Mo_ta_UI_UX_App_AI_Content_MXH.md` mục 4. Figma là nguồn cho **giá trị
+thiết kế và cấu trúc điều hướng**; UI/UX là nguồn cho **hành vi, quyền và nội dung chữ**.
+
+| # | Nội dung | Figma | UI/UX v1.3 (trước khi sửa) | Đã làm ở 011 | Cần ai làm |
+|---|---|---|---|---|---|
+| 1 | Điều hướng | Thanh bên 7 mục; thanh dưới 5 ô (có "Tạo bài" nổi bật) | Thanh dưới 4 mục (Tổng quan, Lịch, Bài viết, Thư viện) + "Thêm" | Theo Figma; UI/UX mục 4 đã sửa | PO xác nhận |
+| 2 | Mục "Kênh & gói" | Mục cấp một | Nằm trong Cài đặt | Theo Figma (sơ đồ UI/UX đã sửa) | PO xác nhận |
+| 3 | Kênh TikTok, nhãn "Đăng tay" | Có (thẻ kênh, "Soạn bài – TikTok (đăng tay)") | Chưa nêu | Thẻ kênh 4 kênh × có/không "Đăng tay" | Người thiết kế: biến thể đủ 4 kênh cho `ChannelTabs` |
+| 4 | "Gợi ý hôm nay" | Nhãn trên thẻ chủ đề | Không có | Nhãn riêng, không phải trạng thái bài | — |
+| 5 | Trạng thái "Đã hủy" | **Chưa có** biến thể | Có ở mục 7 | Dựng theo token, đánh dấu `designPending` | Người thiết kế bổ sung vào Figma |
+| 6 | Field: lỗi, tiêu điểm, khóa, chỉ xem, nhiều dòng, chọn, công tắc, thẻ nhập danh sách, tải tệp | **Chưa có** (1 biến thể) | Cần theo mục 10 | Dựng theo token | Người thiết kế bổ sung |
+| 7 | Khung chờ, trạng thái trống, hộp thoại (xác nhận, đăng nhập lại), biểu ngữ ngoại tuyến, trang lỗi/không tìm thấy | **Chưa có** | Có yêu cầu hành vi | Dựng theo token | Người thiết kế bổ sung |
+| 8 | Bóng đổ; điểm ngắt giữa 390 và 1280 px; chuyển động | Không có | — | Không bóng (tách bằng viền); điểm ngắt `lg` = 1024 px; chuyển động tự đặt, tôn trọng `prefers-reduced-motion` | PO/người thiết kế xác nhận |
+| 9 | Bảng màu | Teal `#0E6F60` + nền stone, **chỉ giao diện sáng** | Giao diện cũ của 004/006/009 dùng xanh dương tạm | Theo Figma; các trang cũ đổi diện mạo, **không đổi hành vi hay chữ** | PO xem trước khi phát hành |
+| 10 | Figma Variables | Chưa định nghĩa (`get_variable_defs` không chạy từ xa) | — | `figma-tokens.json` nhập từ nhãn hex | Người thiết kế tạo Variables để đồng bộ tự động |
+| 11 | Màn hình chưa có thiết kế | Thiếu: Thư viện ảnh & video, Hồ sơ kinh doanh, Cài đặt, đăng nhập/đăng ký/bảo mật/thành viên | — | Đăng nhập, đăng ký, bảo mật, thành viên, hồ sơ đã chuyển sang thành phần dùng chung (theo token, chưa có bản vẽ) | Người thiết kế vẽ bản chính thức |
+

@@ -14,7 +14,10 @@ const job = (state: JobProgress['state'], done = 1): JobProgress => ({
   state,
 });
 
-function setup(fetch: () => Promise<JobProgress>, extra: Parameters<typeof useJobProgress>[1] extends infer T ? Partial<T> : never = {}) {
+function setup(
+  fetch: () => Promise<JobProgress>,
+  extra: Parameters<typeof useJobProgress>[1] extends infer T ? Partial<T> : never = {},
+) {
   const client = createQueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -46,45 +49,73 @@ describe('useJobProgress', () => {
     const onFinished = vi.fn();
     const { client } = setup(fetch, { invalidateOnFinish: [queryKeys.posts.lists()], onFinished });
     const spy = vi.spyOn(client, 'invalidateQueries');
-    await waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MS); });
-    await waitFor(() => { expect(fetch).toHaveBeenCalledTimes(2); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MS); });
-    await waitFor(() => { expect(onFinished).toHaveBeenCalledTimes(1); });
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MS);
+    });
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MS);
+    });
+    await waitFor(() => {
+      expect(onFinished).toHaveBeenCalledTimes(1);
+    });
     expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.posts.lists() });
     const calls = fetch.mock.calls.length;
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 3); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 3);
+    });
     expect(fetch.mock.calls.length).toBe(calls); // xong → không làm mới nữa
   });
 
   it('tab ẩn → không làm mới', async () => {
     const fetch = vi.fn<() => Promise<JobProgress>>().mockResolvedValue(job('running'));
     setup(fetch);
-    await waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1); });
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
     setVisibility('hidden');
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 4); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 4);
+    });
     expect(fetch).toHaveBeenCalledTimes(1);
     setVisibility('visible'); // quay lại tab → làm mới ngay
-    await waitFor(() => { expect(fetch.mock.calls.length).toBeGreaterThan(1); });
+    await waitFor(() => {
+      expect(fetch.mock.calls.length).toBeGreaterThan(1);
+    });
   });
 
   it('gỡ gắn thành phần → ngừng làm mới', async () => {
     const fetch = vi.fn<() => Promise<JobProgress>>().mockResolvedValue(job('running'));
     const { unmount } = setup(fetch);
-    await waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1); });
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
     unmount();
     const calls = fetch.mock.calls.length;
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 4); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 4);
+    });
     expect(fetch.mock.calls.length).toBe(calls);
   });
 
   it('dừng sau 5 phút', async () => {
     const fetch = vi.fn<() => Promise<JobProgress>>().mockResolvedValue(job('running'));
     setup(fetch);
-    await waitFor(() => { expect(fetch).toHaveBeenCalledTimes(1); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MAX_MS + JOB_POLL_MS); });
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MAX_MS + JOB_POLL_MS);
+    });
     const calls = fetch.mock.calls.length;
-    await act(async () => { await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 5); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(JOB_POLL_MS * 5);
+    });
     expect(fetch.mock.calls.length).toBe(calls);
   });
 });

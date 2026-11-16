@@ -1,5 +1,10 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { createUploadQueue, type UploadItem, type UploadQueue, type UploadQueueOptions } from './queue';
+import {
+  createUploadQueue,
+  type UploadItem,
+  type UploadQueue,
+  type UploadQueueOptions,
+} from './queue';
 
 /** Hàng đợi tải tệp cho một màn hình; tự theo dõi trạng thái bằng `useSyncExternalStore`. */
 export function useUploadQueue(options: UploadQueueOptions): {

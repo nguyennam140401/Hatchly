@@ -28,18 +28,22 @@ export interface NotificationSource {
 
 export function NotificationCenter({ source }: { source: NotificationSource }) {
   const query = useApiQuery(queryKeys.notifications.list(), source.list, { freshness: 'counter' });
-  const markRead = useMutationOf(MUTATIONS.markRead, (vars: unknown) => source.markRead(String(vars)), {
-    apply: (client, vars) => {
-      const previous = client.getQueryData<NotificationItem[]>(queryKeys.notifications.list());
-      client.setQueryData<NotificationItem[]>(queryKeys.notifications.list(), (items) =>
-        items?.map((n) => (n.id === vars ? { ...n, read: true } : n)),
-      );
-      return previous;
+  const markRead = useMutationOf(
+    MUTATIONS.markRead,
+    (vars: unknown) => source.markRead(String(vars)),
+    {
+      apply: (client, vars) => {
+        const previous = client.getQueryData<NotificationItem[]>(queryKeys.notifications.list());
+        client.setQueryData<NotificationItem[]>(queryKeys.notifications.list(), (items) =>
+          items?.map((n) => (n.id === vars ? { ...n, read: true } : n)),
+        );
+        return previous;
+      },
+      rollback: (client, _vars, previous) => {
+        client.setQueryData(queryKeys.notifications.list(), previous);
+      },
     },
-    rollback: (client, _vars, previous) => {
-      client.setQueryData(queryKeys.notifications.list(), previous);
-    },
-  });
+  );
 
   if (query.isPending) return <Skeleton shape="list" count={3} />;
   if (query.isError) {
@@ -58,7 +62,10 @@ export function NotificationCenter({ source }: { source: NotificationSource }) {
       {query.data.map((n) => (
         <li
           key={n.id}
-          className={cn('flex items-start gap-3 rounded-lg border p-4', n.read ? 'border-line bg-surface-0' : 'border-brand bg-brand-soft')}
+          className={cn(
+            'flex items-start gap-3 rounded-lg border p-4',
+            n.read ? 'border-line bg-surface-0' : 'border-brand bg-brand-soft',
+          )}
         >
           <Icon name="bell" />
           <div className="flex min-w-0 flex-1 flex-col gap-1">

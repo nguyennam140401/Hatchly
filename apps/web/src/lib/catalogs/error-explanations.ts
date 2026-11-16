@@ -4,7 +4,14 @@ import { ERROR_CODES } from '@app/shared/core';
 // mã gốc không hiện ở khu vực chính, chỉ ở "Chi tiết cho hỗ trợ".
 
 export interface ErrorActionView {
-  kind: 'retry' | 'fix_input' | 'contact_support' | 'navigate' | 'reauth' | 'contact_owner' | 'resend_verification';
+  kind:
+    | 'retry'
+    | 'fix_input'
+    | 'contact_support'
+    | 'navigate'
+    | 'reauth'
+    | 'contact_owner'
+    | 'resend_verification';
   label: string;
   href?: string | undefined;
 }
@@ -29,7 +36,10 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
     message: 'Hệ thống đang tạm dừng để cập nhật. Vui lòng thử lại sau ít phút.',
     actions: [RETRY],
   },
-  INTERNAL_ERROR: { message: 'Có lỗi ở phía hệ thống. Bạn thử lại sau ít phút nhé.', actions: [RETRY, SUPPORT] },
+  INTERNAL_ERROR: {
+    message: 'Có lỗi ở phía hệ thống. Bạn thử lại sau ít phút nhé.',
+    actions: [RETRY, SUPPORT],
+  },
   VERSION_CONFLICT: {
     message: 'Nội dung vừa được người khác thay đổi. Hãy xem bản mới nhất trước khi làm tiếp.',
     actions: [{ kind: 'retry', label: 'Xem bản mới' }],
@@ -44,7 +54,10 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
     actions: [{ kind: 'resend_verification', label: 'Gửi lại thư xác nhận' }],
   },
   ACCESS_NOT_DECLARED: { message: 'Chức năng này tạm thời chưa dùng được.', actions: [SUPPORT] },
-  CSRF_REJECTED: { message: 'Yêu cầu không được chấp nhận. Hãy tải lại trang rồi thử lại.', actions: [RETRY] },
+  CSRF_REJECTED: {
+    message: 'Yêu cầu không được chấp nhận. Hãy tải lại trang rồi thử lại.',
+    actions: [RETRY],
+  },
   INVALID_CREDENTIALS: {
     message: 'Email hoặc mật khẩu chưa đúng.',
     actions: [{ kind: 'fix_input', label: 'Nhập lại' }],
@@ -53,7 +66,10 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
     message: 'Bạn đã thử sai nhiều lần. Hãy chờ một lát rồi thử lại.',
     actions: [RETRY],
   },
-  RATE_LIMITED: { message: 'Bạn thao tác hơi nhanh. Hãy chờ một lát rồi thử lại.', actions: [RETRY] },
+  RATE_LIMITED: {
+    message: 'Bạn thao tác hơi nhanh. Hãy chờ một lát rồi thử lại.',
+    actions: [RETRY],
+  },
   ACCOUNT_UNAVAILABLE: { message: 'Tài khoản hiện chưa dùng được.', actions: [SUPPORT] },
   TOKEN_INVALID: { message: 'Liên kết đã hết hạn hoặc đã được dùng.', actions: [HOME] },
   EMAIL_ALREADY_VERIFIED: { message: 'Email này đã được xác nhận rồi.', actions: [HOME] },
@@ -61,14 +77,20 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
   OWNER_REQUIRED: { message: 'Tài khoản luôn phải có một chủ.', actions: [HOME] },
   SEATS_FULL: { message: 'Đã đủ số cộng tác viên cho gói của bạn.', actions: [HOME] },
   OAUTH_CANCELLED: { message: 'Bạn đã hủy đăng nhập.', actions: [LOGIN] },
-  OAUTH_FAILED: { message: 'Chưa đăng nhập được bằng tài khoản này. Hãy thử cách khác.', actions: [LOGIN] },
+  OAUTH_FAILED: {
+    message: 'Chưa đăng nhập được bằng tài khoản này. Hãy thử cách khác.',
+    actions: [LOGIN],
+  },
   OAUTH_FLOW_INVALID: { message: 'Lượt đăng nhập đã hết hạn. Hãy bắt đầu lại.', actions: [LOGIN] },
   PROVIDER_UNAVAILABLE: {
     message: 'Dịch vụ đăng nhập đang tạm gián đoạn. Bạn có thể dùng cách đăng nhập khác.',
     actions: [LOGIN],
   },
   IDENTITY_IN_USE: { message: 'Tài khoản này đã gắn với một người dùng khác.', actions: [HOME] },
-  PROVIDER_ACCOUNT_CONFLICT: { message: 'Email này đã liên kết với một tài khoản khác.', actions: [HOME] },
+  PROVIDER_ACCOUNT_CONFLICT: {
+    message: 'Email này đã liên kết với một tài khoản khác.',
+    actions: [HOME],
+  },
   LOGIN_METHOD_EXISTS: { message: 'Bạn đã có cách đăng nhập này rồi.', actions: [HOME] },
   LAST_LOGIN_METHOD: { message: 'Không thể gỡ cách đăng nhập cuối cùng.', actions: [HOME] },
   REAUTH_REQUIRED: {
@@ -78,7 +100,10 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
   REAUTH_MISMATCH: { message: 'Danh tính xác nhận không khớp với tài khoản.', actions: [RETRY] },
   INVITE_INVALID: { message: 'Lời mời đã hết hạn hoặc không còn dùng được.', actions: [HOME] },
   INVITE_EMAIL_MISMATCH: { message: 'Email khác với email được mời.', actions: [HOME] },
-  INVITE_EMAIL_IN_USE: { message: 'Email được mời đang thuộc một tài khoản khác.', actions: [HOME] },
+  INVITE_EMAIL_IN_USE: {
+    message: 'Email được mời đang thuộc một tài khoản khác.',
+    actions: [HOME],
+  },
   INVITE_SELF: { message: 'Bạn không thể tự mời chính mình.', actions: [HOME] },
   ALREADY_IN_ACCOUNT: { message: 'Bạn đang thuộc một tài khoản rồi.', actions: [HOME] },
   NO_ACCOUNT: {

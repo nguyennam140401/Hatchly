@@ -29,7 +29,9 @@ export function limitOf(kind: LimitKind, usage: UsageSnapshot | undefined): Limi
       near: !locked && (usage.ai.level === 'near' || percent >= NEAR_PERCENT),
       percent,
       ...(locked ? { reason: t('limit.ai.reached') } : {}),
-      ...(locked && usage.ai.reopensAt !== undefined ? { reopensAt: new Date(usage.ai.reopensAt) } : {}),
+      ...(locked && usage.ai.reopensAt !== undefined
+        ? { reopensAt: new Date(usage.ai.reopensAt) }
+        : {}),
     };
   }
   const [used, limit] =
@@ -42,7 +44,9 @@ export function limitOf(kind: LimitKind, usage: UsageSnapshot | undefined): Limi
     locked,
     near: !locked && percent >= NEAR_PERCENT,
     percent,
-    ...(locked ? { reason: t(kind === 'posts' ? 'limit.posts.reached' : 'limit.storage.reached') } : {}),
+    ...(locked
+      ? { reason: t(kind === 'posts' ? 'limit.posts.reached' : 'limit.storage.reached') }
+      : {}),
   };
 }
 

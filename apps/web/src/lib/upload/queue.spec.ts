@@ -1,13 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createUploadQueue, MAX_CONCURRENT_UPLOADS, RETRY_DELAYS_MS, type UploadQueue } from './queue';
+import {
+  createUploadQueue,
+  MAX_CONCURRENT_UPLOADS,
+  RETRY_DELAYS_MS,
+  type UploadQueue,
+} from './queue';
 import { UploadError, type UploadTransport } from './transports/types';
 import { MAX_VIDEO_BYTES, validateFile } from './validate';
 
-const file = (name: string, type = 'image/jpeg', size = 1000) => new File([new Uint8Array(size)], name, { type });
+const file = (name: string, type = 'image/jpeg', size = 1000) =>
+  new File([new Uint8Array(size)], name, { type });
 const bigVideo = (name: string) => ({ name, type: 'video/mp4', size: MAX_VIDEO_BYTES + 1 });
 
 /** Vận chuyển giả: mỗi tệp có thể được điều khiển riêng. */
-function fakeTransport(behaviour: (name: string, attempt: number) => 'ok' | 'retry' | 'full' | 'fatal' | 'hold') {
+function fakeTransport(
+  behaviour: (name: string, attempt: number) => 'ok' | 'retry' | 'full' | 'fatal' | 'hold',
+) {
   const attempts = new Map<string, number>();
   const holds = new Map<string, () => void>();
   const transport: UploadTransport = {
@@ -40,7 +48,8 @@ async function settle(): Promise<void> {
   await new Promise((r) => setTimeout(r, 10));
 }
 
-const statuses = (q: UploadQueue) => Object.fromEntries(q.getItems().map((i) => [i.name, i.status]));
+const statuses = (q: UploadQueue) =>
+  Object.fromEntries(q.getItems().map((i) => [i.name, i.status]));
 
 describe('validateFile', () => {
   it('ảnh/video hợp lệ; video > 500 MB bị từ chối kèm lời giải thích', () => {
@@ -49,7 +58,9 @@ describe('validateFile', () => {
     const tooBig = validateFile(bigVideo('v.mp4'));
     expect(tooBig.ok).toBe(false);
     if (!tooBig.ok) expect(tooBig.message).toContain('500 MB');
-    expect(validateFile({ name: 'a.exe', type: 'application/x-msdownload', size: 5 }).ok).toBe(false);
+    expect(validateFile({ name: 'a.exe', type: 'application/x-msdownload', size: 5 }).ok).toBe(
+      false,
+    );
     expect(validateFile({ name: 'a.jpg', type: 'image/jpeg', size: 0 }).ok).toBe(false);
   });
 });
@@ -60,7 +71,9 @@ describe('UploadQueue', () => {
     const q = createUploadQueue({ transport });
     q.add([file('1.jpg'), file('2.jpg'), file('3.jpg'), file('4.jpg'), file('5.jpg')]);
     await settle();
-    expect(q.getItems().filter((i) => i.status === 'uploading')).toHaveLength(MAX_CONCURRENT_UPLOADS);
+    expect(q.getItems().filter((i) => i.status === 'uploading')).toHaveLength(
+      MAX_CONCURRENT_UPLOADS,
+    );
     expect(q.getItems().filter((i) => i.status === 'queued')).toHaveLength(2);
     holds.get('1.jpg')?.();
     await settle();
@@ -117,7 +130,9 @@ describe('UploadQueue', () => {
   });
 
   it('hủy và thử lại từng tệp', async () => {
-    const { transport, holds } = fakeTransport((name, attempt) => (name === 'a.jpg' && attempt === 1 ? 'hold' : 'ok'));
+    const { transport, holds } = fakeTransport((name, attempt) =>
+      name === 'a.jpg' && attempt === 1 ? 'hold' : 'ok',
+    );
     const q = createUploadQueue({ transport });
     q.add([file('a.jpg'), file('b.jpg')]);
     await settle();

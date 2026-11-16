@@ -44,11 +44,18 @@ describe('<Can>', () => {
   it('thiếu quyền + locked → render ở trạng thái khóa kèm lý do', () => {
     renderWithProviders(
       <Can permission="members.manage" fallback="locked" lockedReason="Chỉ chủ tài khoản">
-        {(s) => <button type="button" aria-disabled={s.locked}>{s.lockedReason ?? 'mở'}</button>}
+        {(s) => (
+          <button type="button" aria-disabled={s.locked}>
+            {s.lockedReason ?? 'mở'}
+          </button>
+        )}
       </Can>,
       { role: 'collaborator' },
     );
-    expect(screen.getByRole('button', { name: 'Chỉ chủ tài khoản' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Chỉ chủ tài khoản' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
   it('đủ quyền → render bình thường', () => {
     renderWithProviders(

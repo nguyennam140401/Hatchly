@@ -7,7 +7,9 @@ import { apiClient, type ResponseSchema } from '../client';
 const apiHealth: ResponseSchema<HealthResponse> = {
   safeParse(value) {
     const parsed = HealthResponse.safeParse(value);
-    return parsed.success && parsed.data.unit === 'api' ? { success: true, data: parsed.data } : { success: false };
+    return parsed.success && parsed.data.unit === 'api'
+      ? { success: true, data: parsed.data }
+      : { success: false };
   },
 };
 
