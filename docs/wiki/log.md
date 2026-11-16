@@ -12,3 +12,10 @@ Append-only. Định dạng: `## [YYYY-MM-DD] ingest|query|lint | tiêu đề`.
 ## [2026-11-15] ingest | Trang danh sách tính năng và trạng thái
 
 - Thêm concepts/feature-status.md: bảng FR-01…FR-15 và tiến độ spec 001–011 (đếm từ tasks.md)
+
+## [2026-11-16] ingest | 011-ui-architecture-foundation
+
+- Thêm features/011-ui-architecture-foundation.md (`draft`: còn T074, kèm mục "Việc còn lại") và concepts/web-ui.md
+- Cập nhật concepts/feature-status.md (011: 84/85, giao diện hiện có, thứ tự làm tiếp), concepts/ci-cd.md (cổng `check:web-rules`, `test:web-e2e`),
+  howto/run-tests.md (E2E web), open-questions.md (T074, kiểm thủ công, Figma, verify đỏ có sẵn), index.md
+- Lưu ý: wiki chưa ingest 010, 012 và trang 009 vẫn `draft` dù đã merge; không thuộc lần này

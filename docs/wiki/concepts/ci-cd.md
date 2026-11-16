@@ -32,9 +32,9 @@ related:
 **Đã hiện thực phần mã/tài liệu**; một số phần chờ môi trường thật (xem "Còn thiếu").
 
 - **Cổng**: `pnpm verify` là nguồn duy nhất; máy cá nhân và Jenkins chạy cùng danh sách. `--ci` không cho "bỏ qua"
-  (thiếu điều kiện = không đạt). Cổng: `build:shared`, `typecheck`, `lint`, `check:boundaries`, `check:secrets`,
+  (thiếu điều kiện = không đạt). Cổng: `build:shared`, `typecheck`, `lint`, `check:boundaries`, `check:web-rules` (011), `check:secrets`,
   `check:pipeline`, `check:release-source`, `test`, `check:web-bundle`, `db:lint-migrations`, `db:immutable`, `db:compat`,
-  `test:db`, `test:queue`... theo làn trong `ops/ci/gate-lanes.json`. Ngoại lệ có hạn: `docs/ci-cd/gate-exceptions.md`
+  `test:db`, `test:queue`, `test:web-e2e` (011; Playwright, thiếu Chromium thì bỏ qua)... theo làn trong `ops/ci/gate-lanes.json`. Ngoại lệ có hạn: `docs/ci-cd/gate-exceptions.md`
   (không cho ngoại lệ với `check:secrets`, `check:release-source`, `db:immutable`).
 - **Nhánh**: `impl/*`/`feature/*` -> PR -> `dev` (tự triển khai `staging`) -> PR phát hành -> `master` (`production`);
   `hotfix/*` tách từ `master`, Jenkins mở `backmerge/<sha12>` về `dev`. Kiểm tra bắt buộc duy nhất: `ci/gates`.

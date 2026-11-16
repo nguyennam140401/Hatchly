@@ -26,4 +26,9 @@ Tóm tắt mục 12 của `.specify/memory/architecture.md`; khi lint wiki phát
 | Q-D3/C6         | Đánh giá tác động chuyển dữ liệu xuyên biên giới                                                                          | Màn hình đồng ý, giảm thiểu dữ liệu | Trước ngày ra mắt               |
 | Meta App Review | Cần bản chạy luồng kết nối + đăng bài                                                                                     | Ưu tiên sớm                         | Càng sớm càng tốt               |
 
+| 011-T074 | Chuyển `ProfileForm`/`KeywordsInput` (006) sang `useAppForm`/`TagListField`; mới chuyển lớp giao diện, chưa thử RHF | Đồng nhất biểu mẫu | Tính năng sửa hồ sơ kế tiếp; chi tiết ở [011](features/011-ui-architecture-foundation.md) |
+| 011-kiểm thủ công | Chưa kiểm: `prefers-reduced-motion`, bộ đọc màn hình thật, đo cập nhật ≤ 1 giây; kiểm thử cũ 004/006/009 đã chỉnh khẳng định `aria-disabled` cần người review | Trợ năng, SC-011 | Trước ra mắt |
+| 011-Figma | Figma thiếu: "Đã hủy", trạng thái Field, khung chờ/hộp thoại/ngoại tuyến, 4 kênh `ChannelTabs`, Figma Variables; PO xác nhận điều hướng 7/5, điểm ngắt 1024 px, bảng màu teal | Giao diện | Người thiết kế + PO |
+| 011-verify-đỏ | `pnpm verify` đỏ có sẵn ở `dev`: `tooling/test/check-wiki.spec.ts` (typecheck), `tooling/infra` thiếu `kubeconfig.mjs` (test) | Cổng CI | Sửa ở tính năng sở hữu |
+
 Đã đóng: T7 (thư viện xác thực) — chốt ở tính năng 004, xem [004](features/004-minimal-auth-rbac.md).
