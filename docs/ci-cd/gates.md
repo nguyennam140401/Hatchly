@@ -15,25 +15,27 @@ Trạng thái mỗi bước: `passed` ✓ · `failed` ✗ · `skipped` (chỉ m�
 
 ## Danh sách cổng
 
-| Cổng                      | Làn    | Kiểm tra gì                                                                                                  | Cần                                          | Ngoại lệ  |
-| ------------------------- | ------ | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | --------- |
-| `build:shared`            | static | dựng gói `@app/shared`                                                                                       | —                                            | có        |
-| `typecheck`               | static | kiểu TypeScript nghiêm ngặt mọi gói                                                                          | —                                            | có        |
-| `lint`                    | static | ESLint                                                                                                       | —                                            | có        |
-| `check:boundaries`        | static | ranh giới module (không import nội bộ, không SQL sang schema khác)                                           | —                                            | có        |
-| `check:secrets`           | static | quét bí mật trong mã, `ops/**`, `infra/ci/**`, `.github/**`, `Jenkinsfile*`, `Dockerfile*`                   | —                                            | **không** |
-| `check:pipeline`          | static | định nghĩa quy trình: ảnh theo digest, `plugins.txt`, lược đồ môi trường, làn, ruleset, chart Helm, ngoại lệ | helm (bắt buộc trên CI)                      | có        |
-| `check:release-source`    | static | nguồn phát hành hợp lệ (chỉ khi đích là `master`; xem [branching-and-release.md](branching-and-release.md))  | biến `GATE_*`, `STAGING_DEPLOYED_SHA`        | **không** |
-| `test`                    | static | kiểm thử đơn vị                                                                                              | —                                            | có        |
-| `check:web-bundle`        | static | gói web không chứa thứ cấm                                                                                   | —                                            | có        |
-| `db:lint-migrations`      | static | migration mới tương thích ngược (xem [backward-compatible-migrations.md](backward-compatible-migrations.md)) | `MIGRATION_BASE_REF`                         | có        |
-| `db:immutable`            | static | migration đã có ở nhánh gốc không bị sửa; mốc `when` tăng dần                                                | `MIGRATION_BASE_REF`                         | **không** |
-| `test:db`                 | db     | CSDL thật: RLS, kiểm thử truy cập chéo mọi bảng khách hàng (kèm "đã phủ N / tổng M bảng"), quyền vai trò     | `TEST_DATABASE_ADMIN_URL`                    | **không** |
-| `test:queue`              | db     | hàng chờ pg-boss thật: không đăng trùng, chạy lại an toàn, loại việc lạ                                      | `TEST_DATABASE_ADMIN_URL`                    | có        |
-| `db:compat`               | db     | bản **đang chạy** ở môi trường vẫn chạy được trên cấu trúc mới (`pnpm test:compat` của bản đó)               | `TEST_DATABASE_ADMIN_URL`, `COMPAT_BASE_SHA` | có        |
-| `check:secrets:test-logs` | db     | quét bí mật trong nhật ký mẫu của kiểm thử                                                                   | chạy sau `test:db`                           | **không** |
-| `test:e2e`                | e2e    | kiểm thử end-to-end trên API + web thật                                                                      | `TEST_DATABASE_ADMIN_URL`, trình duyệt       | có        |
-| `check:image`             | image  | dựng ảnh, kiểm nội dung, chạy `migrate → api → worker`, phiên bản = SHA                                      | docker, `TEST_DATABASE_ADMIN_URL`            | có        |
+| Cổng                      | Làn    | Kiểm tra gì                                                                                                    | Cần                                          | Ngoại lệ  |
+| ------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------- |
+| `build:shared`            | static | dựng gói `@app/shared`                                                                                         | —                                            | có        |
+| `typecheck`               | static | kiểu TypeScript nghiêm ngặt mọi gói                                                                            | —                                            | có        |
+| `lint`                    | static | ESLint                                                                                                         | —                                            | có        |
+| `check:boundaries`        | static | ranh giới module (không import nội bộ, không SQL sang schema khác)                                             | —                                            | có        |
+| `check:web-rules`         | static | giao diện: không màu/cỡ chữ/khoảng cách viết cứng, không định dạng tiền ở khu vực khách hàng (011)             | —                                            | có        |
+| `check:secrets`           | static | quét bí mật trong mã, `ops/**`, `infra/ci/**`, `.github/**`, `Jenkinsfile*`, `Dockerfile*`                     | —                                            | **không** |
+| `check:pipeline`          | static | định nghĩa quy trình: ảnh theo digest, `plugins.txt`, lược đồ môi trường, làn, ruleset, chart Helm, ngoại lệ   | helm (bắt buộc trên CI)                      | có        |
+| `check:release-source`    | static | nguồn phát hành hợp lệ (chỉ khi đích là `master`; xem [branching-and-release.md](branching-and-release.md))    | biến `GATE_*`, `STAGING_DEPLOYED_SHA`        | **không** |
+| `test`                    | static | kiểm thử đơn vị                                                                                                | —                                            | có        |
+| `check:web-bundle`        | static | gói web không chứa thứ cấm                                                                                     | —                                            | có        |
+| `db:lint-migrations`      | static | migration mới tương thích ngược (xem [backward-compatible-migrations.md](backward-compatible-migrations.md))   | `MIGRATION_BASE_REF`                         | có        |
+| `db:immutable`            | static | migration đã có ở nhánh gốc không bị sửa; mốc `when` tăng dần                                                  | `MIGRATION_BASE_REF`                         | **không** |
+| `test:db`                 | db     | CSDL thật: RLS, kiểm thử truy cập chéo mọi bảng khách hàng (kèm "đã phủ N / tổng M bảng"), quyền vai trò       | `TEST_DATABASE_ADMIN_URL`                    | **không** |
+| `test:queue`              | db     | hàng chờ pg-boss thật: không đăng trùng, chạy lại an toàn, loại việc lạ                                        | `TEST_DATABASE_ADMIN_URL`                    | có        |
+| `db:compat`               | db     | bản **đang chạy** ở môi trường vẫn chạy được trên cấu trúc mới (`pnpm test:compat` của bản đó)                 | `TEST_DATABASE_ADMIN_URL`, `COMPAT_BASE_SHA` | có        |
+| `check:secrets:test-logs` | db     | quét bí mật trong nhật ký mẫu của kiểm thử                                                                     | chạy sau `test:db`                           | **không** |
+| `test:e2e`                | e2e    | kiểm thử end-to-end trên API + web thật                                                                        | `TEST_DATABASE_ADMIN_URL`, trình duyệt       | có        |
+| `test:web-e2e`            | e2e    | giao diện trên trình duyệt: danh mục ở 360/768/1280 px (axe 0 lỗi nghiêm trọng), khung theo vai trò, hết phiên | trình duyệt Chromium (thiếu → bỏ qua)        | có        |
+| `check:image`             | image  | dựng ảnh, kiểm nội dung, chạy `migrate → api → worker`, phiên bản = SHA                                        | docker, `TEST_DATABASE_ADMIN_URL`            | có        |
 
 **Không cho ngoại lệ**: `test:db` (gồm cô lập tenant), `check:secrets`, `check:secrets:test-logs`, `db:immutable`,
 `check:release-source` – đều là cổng an toàn dữ liệu / quy trình (hiến pháp nguyên tắc I, VII). `check:pipeline` báo lỗi

@@ -162,7 +162,8 @@ export class AccessGuard implements CanActivate, OnModuleInit {
     const actor = await this.safely(() => this.lookupCustomer(hashToken(token)));
     if (actor === null) {
       clearSessionCookie(res, CUSTOMER_SESSION_COOKIE);
-      throw unauthenticated('customer', 'session_invalid');
+      // Phiên có cookie nhưng không còn hiệu lực: hết hạn/thu hồi (lý do chi tiết cần tra CSDL – xem ghi chú 011).
+      throw unauthenticated('customer', 'session_invalid', 'expired');
     }
     bindActorToRequest(actor);
     bindAccountToRequest(actor.accountId);
