@@ -1,11 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { axe } from '../../../test/helpers/axe';
+import { toDisplayStatus } from '../../lib/catalogs/post-status';
 import { ChannelTag } from './ChannelTag';
 import { IdeaCard } from './IdeaCard';
 import { PostCard } from './PostCard';
 import { UsageMeter } from './UsageMeter';
-import { channelTagCatalog, ideaCardCatalog, postCardCatalog, usageMeterCatalog } from './cards.catalog';
+import {
+  channelTagCatalog,
+  ideaCardCatalog,
+  postCardCatalog,
+  usageMeterCatalog,
+} from './cards.catalog';
 
 describe('cards', () => {
   it('mọi biến thể trong catalog không vi phạm trợ năng', async () => {
@@ -39,7 +45,9 @@ describe('UsageMeter', () => {
     expect(screen.getByText('Đã hết')).toBeInTheDocument();
   });
   it('không nhận/hiển thị số tiền', () => {
-    const { container } = render(<UsageMeter label="Lượt AI" value={3} limit={10} level="normal" />);
+    const { container } = render(
+      <UsageMeter label="Lượt AI" value={3} limit={10} level="normal" />,
+    );
     expect(container.textContent).not.toMatch(/\$|USD|đ\b/);
   });
 });
@@ -79,5 +87,18 @@ describe('PostCard', () => {
     render(<PostCard post={post} onOpen={onOpen} />);
     fireEvent.click(screen.getByRole('button', { name: 'Tiêu đề bài' }));
     expect(onOpen).toHaveBeenCalledWith(post);
+  });
+});
+
+describe('PostCard – trạng thái lạ (US5)', () => {
+  it('trạng thái máy chủ không biết → nhãn trung tính "Đang cập nhật", không trắng trang', () => {
+    const status = toDisplayStatus('trang_thai_la_tu_may_chu');
+    expect(status).toBe('unknown');
+    render(
+      <PostCard
+        post={{ id: 'x', title: 'Bài lạ', excerpt: '…', status, channels: ['facebook'] }}
+      />,
+    );
+    expect(screen.getByText('Đang cập nhật')).toBeInTheDocument();
   });
 });

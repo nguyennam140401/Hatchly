@@ -168,10 +168,10 @@ Quy tắc chung mỗi thành phần (contracts/ui-components.md mục 1): thư m
 **Kiểm thử độc lập**: mỗi danh sách mẫu nhận lần lượt 5 tình huống từ máy chủ giả lập; mọi lỗi có ≥ 1 nút hành động; mã gốc chỉ trong "Chi tiết cho hỗ trợ".
 
 - [X] T062 [P] [US5] `web/ui/feedback/Skeleton.tsx` (hình dạng giống nội dung, không nhảy bố cục, `aria-busy`, chuyển động `motion-safe:`) và `EmptyState.tsx` (lời nhắn đời thường + một hành động) + catalog + spec.
-- [ ] T063 [US5] `web/lib/api/ErrorNotice.tsx` (`AppError → InlineAlert`: lời giải thích + nút hành động tra `lib/catalogs/error-explanations`; "Chi tiết cho hỗ trợ" thu gọn chứa `code` + `traceId`; luôn ≥ 1 hành động — nếu máy chủ không trả thì bổ sung "Thử lại"/"Về Tổng quan") + spec (SC-010).
-- [ ] T064 [US5] `web/app/AsyncBoundary.tsx` (`<AsyncBoundary query empty lockedBy partial>` nhận kết quả `useApiQuery`; đúng **một** trong 5 mẫu: `loading` (khung chờ + thông báo "Đang tải" cho bộ đọc màn hình), `empty`, `error` (`ErrorNotice` + "Thử lại"), `locked` (giải thích + ngày mở lại), `partial` ("Đã đăng: … · Cần bạn xử lý: …")) + spec 5 tình huống.
-- [ ] T065 [P] [US5] `web/catalog/fixtures/` + `web/catalog/msw/handlers.ts`: fixtures cho 5 tình huống (loading, empty, error, locked, partial) dùng chung bởi spec và danh mục.
-- [ ] T066 [P] [US5] `web/lib/format/relative-time.spec.ts` và rà mọi nơi hiển thị thời điểm dùng `lib/format/datetime` (UTC+7, định dạng thống nhất); kiểm thử "trạng thái bài lạ → nhãn trung tính, không trắng trang" trong `AsyncBoundary`/`PostCard`.
+- [X] T063 [US5] `web/lib/api/ErrorNotice.tsx` (`AppError → InlineAlert`: lời giải thích + nút hành động tra `lib/catalogs/error-explanations`; "Chi tiết cho hỗ trợ" thu gọn chứa `code` + `traceId`; luôn ≥ 1 hành động — nếu máy chủ không trả thì bổ sung "Thử lại"/"Về Tổng quan") + spec (SC-010).
+- [X] T064 [US5] `web/app/AsyncBoundary.tsx` (`<AsyncBoundary query empty lockedBy partial>` nhận kết quả `useApiQuery`; đúng **một** trong 5 mẫu: `loading` (khung chờ + thông báo "Đang tải" cho bộ đọc màn hình), `empty`, `error` (`ErrorNotice` + "Thử lại"), `locked` (giải thích + ngày mở lại), `partial` ("Đã đăng: … · Cần bạn xử lý: …")) + spec 5 tình huống.
+- [X] T065 [P] [US5] `web/catalog/fixtures/` + `web/catalog/msw/handlers.ts`: fixtures cho 5 tình huống (loading, empty, error, locked, partial) dùng chung bởi spec và danh mục.
+- [X] T066 [P] [US5] `web/lib/format/relative-time.spec.ts` và rà mọi nơi hiển thị thời điểm dùng `lib/format/datetime` (UTC+7, định dạng thống nhất); kiểm thử "trạng thái bài lạ → nhãn trung tính, không trắng trang" trong `AsyncBoundary`/`PostCard`.
 
 **Checkpoint**: US5 độc lập.
 
