@@ -38,6 +38,13 @@ Zalo OA và TikTok (mỗi nền tảng thêm sau chỉ bằng một bộ chuyể
 (012), màn hình tra cứu nội bộ của đội hỗ trợ (chỉ cung cấp dữ liệu và mã theo dõi), AI, thống kê tương tác sau đăng,
 dùng tính năng hẹn giờ của nền tảng.
 
+## Clarifications
+
+### Session 2026-11-16
+
+- Q: Nếu hệ thống ngừng/nghẽn rồi khôi phục, bài trễ bao lâu thì không tự đăng nữa? → A: Tự đăng nếu trễ ≤ 60 phút
+  (cấu hình); quá đó → "Cần bạn xử lý" (lý do quá giờ hẹn), người dùng chọn "Đăng lại".
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Bài đã lên lịch được đăng đúng giờ lên Facebook Page và Instagram (Priority: P1)
@@ -262,8 +269,11 @@ lúc Worker nhận việc → bị từ chối và giữ nguyên giờ cũ; sử
    "Chờ duyệt"; lượt đã bắt đầu đăng không bị ảnh hưởng và kênh đó không sửa được (theo 012).
 4. **Given** gói của tài khoản hết hạn sau khi bài được lên lịch, **When** đến giờ, **Then** bước 1 phát hiện và dừng ở
    "Cần bạn xử lý" với thông điệp "Gói dịch vụ đã hết hạn…"; bài được đăng khi người dùng bấm "Đăng lại" sau khi gia hạn.
-5. **Given** đến giờ mà Worker/hàng chờ ngưng một thời gian rồi khôi phục, **When** việc quá hạn được nhận, **Then** bài được
-   đăng muộn nhưng đúng một lần; có cảnh báo vận hành nếu việc đăng quá hạn > 5 phút.
+5. **Given** đến giờ mà Worker/hàng chờ ngưng một thời gian rồi khôi phục, **When** việc quá hạn được nhận, **Then** nếu trễ ≤ 60 phút (cấu hình)
+   bài được đăng muộn nhưng đúng một lần; có cảnh báo vận hành nếu việc đăng quá hạn > 5 phút.
+6. **Given** việc được nhận khi đã trễ quá 60 phút so với giờ hẹn, **When** bước 1 chạy, **Then** hệ thống không đăng; lượt
+   đăng chuyển "Cần bạn xử lý" với lý do "Bài đã quá giờ hẹn, chưa đăng" và nút "Đăng lại"; người dùng nhận thông báo
+   trong ứng dụng + email.
 
 ---
 
@@ -314,7 +324,8 @@ lúc Worker nhận việc → bị từ chối và giữ nguyên giờ cũ; sử
   việc bị giao hai lần MUST không gây gửi lặp hay trạng thái sai.
 - **FR-006**: "Đăng lại" (chủ hoặc cộng tác viên, quyền `post.republish`) MUST đưa lượt đăng từ "Cần người dùng" hoặc "Cần
   kiểm tra" về "Chờ đến giờ" với giờ = bây giờ **trên cùng lượt đăng đó** (không tạo lượt thứ hai), kiểm tra lại điều kiện
-  trước khi chạy và ghi nhật ký người thao tác; MUST từ chối khi lượt ở trạng thái khác.
+  trước khi chạy và ghi nhật ký người thao tác; MUST từ chối khi lượt ở trạng thái khác. "Đăng lại" áp dụng **theo từng kênh**: kênh đã "Đã đăng" MUST NOT có nút và
+  MUST từ chối thao tác này, nên đăng lại một kênh lỗi không bao giờ chạm tới kênh đã thành công.
 
 **Bộ hẹn giờ và thực thi**
 
@@ -324,7 +335,9 @@ lúc Worker nhận việc → bị từ chối và giữ nguyên giờ cũ; sử
   cao**, không mất khi khởi động lại; mỗi lượt đăng có khóa chống trùng việc; số lượt đăng đồng thời của mỗi tài khoản MUST có
   giới hạn riêng (mặc định ≤ 3) để một tài khoản không làm trễ tài khoản khác.
 - **FR-009**: Bài đã duyệt MUST được đăng với **độ lệch so với giờ hẹn ≤ 5 phút** trong điều kiện vận hành bình thường; việc
-  quá hạn > 5 phút MUST kích hoạt cảnh báo vận hành.
+  quá hạn > 5 phút MUST kích hoạt cảnh báo vận hành. Bài chưa được đăng khi đã trễ quá **60 phút** (cấu hình) MUST NOT tự
+  đăng: lượt đăng dừng ở "Cần người dùng" (lý do quá giờ hẹn) để người dùng chọn "Đăng lại"; áp dụng ở bước 1 cho cả việc
+  chạy lại sau sự cố, nhưng không áp dụng cho lượt thử lại đã bắt đầu từ trước giờ hẹn quá hạn (đã nằm trong FR-018).
 - **FR-010**: Đổi giờ (chủ hoặc cộng tác viên) MUST chỉ thành công khi **mọi** lượt đăng của bài còn ở "Chờ đến giờ"; giờ của
   lượt đăng và thời điểm chạy của việc MUST đổi trong cùng một giao dịch; kiểm tra lại hạn mức kênh ở giờ mới; không đổi
   trạng thái duyệt; ghi nhật ký người đổi. Sửa nội dung bài đã duyệt hoặc hủy lịch MUST hủy các lượt đăng đang "Chờ đến giờ".
@@ -342,6 +355,9 @@ lúc Worker nhận việc → bị từ chối và giữ nguyên giờ cũ; sử
 - **FR-014**: Bước 2 MUST lấy bản media đã chuẩn hóa và **đường dẫn công khai có hạn (≤ 24 giờ)** từ module Thư viện media
   qua giao diện công khai; MUST xử lý tự động khi có thể (chuyển định dạng) và chỉ báo lỗi khi không xử lý được. Bài không có
   media bỏ qua bước này (ghi "không áp dụng").
+- **FR-014a**: Mỗi bài MUST hỗ trợ các dạng nội dung: chỉ chữ, một hoặc nhiều ảnh, hoặc **một video** (dung lượng ≤ **1 GB**,
+  nếu quy tắc media của kênh cho phép; vượt quy tắc của kênh → báo ở bước 1–2 như lỗi cần người dùng). Reels/Stories nằm
+  ngoài phạm vi. Chờ xử lý video (bước 4) MUST có giới hạn thời gian; quá giới hạn → "Không xác định" (đối soát).
 - **FR-015**: Bước 3 MUST gửi nội dung phiên bản kênh đã duyệt qua bộ chuyển đổi của kênh, sau khi đã ghi dấu ở FR-004; bước 4
   MUST chờ/kiểm tra trạng thái xử lý với nền tảng bất đồng bộ (Instagram) và ghi "không áp dụng" với nền tảng đồng bộ
   (Facebook); bước 5 MUST xác nhận bài đã xuất bản và **lưu mã bài + đường dẫn bài trên nền tảng**.
@@ -465,6 +481,8 @@ lúc Worker nhận việc → bị từ chối và giữ nguyên giờ cũ; sử
   cấu hình, kênh nào chưa chắc → đi thẳng "Cần kiểm tra" theo hướng an toàn (ưu tiên không trùng hơn tự động hóa).
 - **Ánh xạ lỗi ban đầu** dựa trên bảng ví dụ của ADD Đăng bài mục 7 và sẽ được hoàn thiện bằng POC-2; mã lỗi chưa biết luôn
   đi nhánh "không xác định".
+- **Giới hạn video 1 GB** do PO chốt khi làm rõ 2026-11-16, lệch với đặc tả yêu cầu FR-03 (≤ 500 MB) và có thể vượt giới
+  hạn đăng của từng nền tảng; cần cập nhật đặc tả yêu cầu/tính năng thư viện media và kiểm chứng giới hạn thật trong POC-2.
 - **Thư viện media (FR-03) có thể chưa sẵn sàng**: khi chưa có, bước 2 dùng media giả lập của 005; bài chỉ chữ không phụ
   thuộc. Đường dẫn công khai ≤ 24 giờ do module media cấp.
 - **Hạn mức đăng của kênh** (Instagram số bài/24 giờ, Zalo theo gói) chỉ kiểm tra được khi nền tảng cho biết; khi không biết,
