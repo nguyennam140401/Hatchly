@@ -16,7 +16,14 @@ export interface TagListFieldProps {
 }
 
 /** Danh sách thẻ (từ khóa/hashtag): Enter hoặc dấu phẩy để thêm, nút × để bỏ; dùng được hoàn toàn bằng bàn phím. */
-export function TagListField({ name, label, help, max, placeholder, addLabel = 'Thêm' }: TagListFieldProps) {
+export function TagListField({
+  name,
+  label,
+  help,
+  max,
+  placeholder,
+  addLabel = 'Thêm',
+}: TagListFieldProps) {
   const { control } = useFormContext();
   const { error, readOnly } = useFieldMeta(name);
   const [draft, setDraft] = useState('');
@@ -69,7 +76,12 @@ export function TagListField({ name, label, help, max, placeholder, addLabel = '
                     {...(placeholder !== undefined ? { placeholder } : {})}
                   />
                   {!readOnly && (
-                    <Button variant="secondary" onClick={add} locked={full} lockedReason={full ? `Tối đa ${String(max)}` : undefined}>
+                    <Button
+                      variant="secondary"
+                      onClick={add}
+                      locked={full}
+                      lockedReason={full ? `Tối đa ${String(max)}` : undefined}
+                    >
                       {addLabel}
                     </Button>
                   )}

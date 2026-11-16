@@ -19,11 +19,25 @@ export interface TextFieldProps extends CommonProps {
   placeholder?: string;
 }
 
-export function TextField({ name, label, help, required, type = 'text', autoComplete, placeholder }: TextFieldProps) {
+export function TextField({
+  name,
+  label,
+  help,
+  required,
+  type = 'text',
+  autoComplete,
+  placeholder,
+}: TextFieldProps) {
   const { register } = useFormContext();
   const { error, readOnly } = useFieldMeta(name);
   return (
-    <Field label={label} {...(help !== undefined ? { help } : {})} error={error} {...(required !== undefined ? { required } : {})} state={readOnly ? 'readOnly' : 'default'}>
+    <Field
+      label={label}
+      {...(help !== undefined ? { help } : {})}
+      error={error}
+      {...(required !== undefined ? { required } : {})}
+      state={readOnly ? 'readOnly' : 'default'}
+    >
       {(c) => (
         <input
           {...register(name)}
@@ -45,7 +59,14 @@ export interface TextAreaFieldProps extends CommonProps {
   rows?: number;
 }
 
-export function TextAreaField({ name, label, help, required, maxChars, rows = 4 }: TextAreaFieldProps) {
+export function TextAreaField({
+  name,
+  label,
+  help,
+  required,
+  maxChars,
+  rows = 4,
+}: TextAreaFieldProps) {
   const { register, watch } = useFormContext();
   const { error, readOnly } = useFieldMeta(name);
   const value = watch(name) as unknown;
@@ -53,7 +74,13 @@ export function TextAreaField({ name, label, help, required, maxChars, rows = 4 
   const near = maxChars !== undefined && count >= maxChars * 0.9;
   return (
     <div className="flex flex-col gap-1">
-      <Field label={label} {...(help !== undefined ? { help } : {})} error={error} {...(required !== undefined ? { required } : {})} state={readOnly ? 'readOnly' : 'default'}>
+      <Field
+        label={label}
+        {...(help !== undefined ? { help } : {})}
+        error={error}
+        {...(required !== undefined ? { required } : {})}
+        state={readOnly ? 'readOnly' : 'default'}
+      >
         {(c) => (
           <textarea
             {...register(name)}
@@ -87,13 +114,31 @@ export interface SelectFieldProps extends CommonProps {
 }
 
 /** Dùng phần tử `<select>` gốc (tốt nhất cho bàn phím, bộ đọc màn hình và điện thoại). */
-export function SelectField({ name, label, help, required, options, placeholder }: SelectFieldProps) {
+export function SelectField({
+  name,
+  label,
+  help,
+  required,
+  options,
+  placeholder,
+}: SelectFieldProps) {
   const { register } = useFormContext();
   const { error, readOnly } = useFieldMeta(name);
   return (
-    <Field label={label} {...(help !== undefined ? { help } : {})} error={error} {...(required !== undefined ? { required } : {})} state={readOnly ? 'readOnly' : 'default'}>
+    <Field
+      label={label}
+      {...(help !== undefined ? { help } : {})}
+      error={error}
+      {...(required !== undefined ? { required } : {})}
+      state={readOnly ? 'readOnly' : 'default'}
+    >
       {(c) => (
-        <select {...register(name)} {...c} disabled={readOnly} aria-readonly={readOnly || undefined}>
+        <select
+          {...register(name)}
+          {...c}
+          disabled={readOnly}
+          aria-readonly={readOnly || undefined}
+        >
           {placeholder !== undefined && <option value="">{placeholder}</option>}
           {options.map((o) => (
             <option key={o.value} value={o.value}>
@@ -120,7 +165,13 @@ export function MultiSelectField({ name, label, help, required, options }: Multi
       {help !== undefined && <p className="text-caption text-ink-muted">{help}</p>}
       {options.map((o) => (
         <label key={o.value} className="flex min-h-touch items-center gap-3 text-body text-ink">
-          <input type="checkbox" value={o.value} disabled={readOnly} {...register(name)} className="size-6" />
+          <input
+            type="checkbox"
+            value={o.value}
+            disabled={readOnly}
+            {...register(name)}
+            className="size-6"
+          />
           {o.label}
         </label>
       ))}
@@ -144,7 +195,13 @@ export function DateTimeField({ name, label, help, required }: DateTimeFieldProp
       control={control}
       name={name}
       render={({ field }) => (
-        <Field label={label} {...(help !== undefined ? { help } : {})} error={error} {...(required !== undefined ? { required } : {})} state={readOnly ? 'readOnly' : 'default'}>
+        <Field
+          label={label}
+          {...(help !== undefined ? { help } : {})}
+          error={error}
+          {...(required !== undefined ? { required } : {})}
+          state={readOnly ? 'readOnly' : 'default'}
+        >
           {(c) => (
             <input
               {...c}
@@ -153,7 +210,11 @@ export function DateTimeField({ name, label, help, required }: DateTimeFieldProp
               ref={field.ref}
               onBlur={field.onBlur}
               readOnly={readOnly}
-              value={typeof field.value === 'string' && field.value !== '' ? toLocalInput(field.value) : ''}
+              value={
+                typeof field.value === 'string' && field.value !== ''
+                  ? toLocalInput(field.value)
+                  : ''
+              }
               onChange={(e) => {
                 field.onChange(e.target.value === '' ? '' : fromLocalInput(e.target.value));
               }}

@@ -57,7 +57,11 @@ export const MUTATIONS = {
   }),
   reschedule: define<IdVars, unknown, 'reschedule'>({
     operation: 'reschedule',
-    invalidates: ({ id }) => [queryKeys.posts.detail(id), queryKeys.posts.lists(), queryKeys.calendar.all()],
+    invalidates: ({ id }) => [
+      queryKeys.posts.detail(id),
+      queryKeys.posts.lists(),
+      queryKeys.calendar.all(),
+    ],
   }),
   editPostContent: define<IdVars, unknown, 'editPostContent'>({
     operation: 'editPostContent',
@@ -90,11 +94,19 @@ export const MUTATIONS = {
   }),
   connectChannel: define<unknown, unknown, 'connectChannel'>({
     operation: 'connectChannel',
-    invalidates: () => [queryKeys.channels.list(), queryKeys.overview.all(), queryKeys.posts.lists()],
+    invalidates: () => [
+      queryKeys.channels.list(),
+      queryKeys.overview.all(),
+      queryKeys.posts.lists(),
+    ],
   }),
   disconnectChannel: define<unknown, unknown, 'disconnectChannel'>({
     operation: 'disconnectChannel',
-    invalidates: () => [queryKeys.channels.list(), queryKeys.overview.all(), queryKeys.posts.lists()],
+    invalidates: () => [
+      queryKeys.channels.list(),
+      queryKeys.overview.all(),
+      queryKeys.posts.lists(),
+    ],
   }),
   uploadMedia: define<unknown, unknown, 'uploadMedia'>({
     operation: 'uploadMedia',

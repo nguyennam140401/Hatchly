@@ -21,7 +21,10 @@ export interface ChannelTabsProps {
 export function ChannelTabs({ channels, value, onChange, children, label }: ChannelTabsProps) {
   return (
     <Tabs.Root value={value} onValueChange={onChange}>
-      <Tabs.List aria-label={label ?? 'Kênh'} className="flex gap-1 overflow-x-auto border-b border-line">
+      <Tabs.List
+        aria-label={label ?? 'Kênh'}
+        className="flex gap-1 overflow-x-auto border-b border-line"
+      >
         {channels.map((channel) => (
           <Tabs.Trigger
             key={channel.id}

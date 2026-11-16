@@ -96,7 +96,7 @@ describe('BusinessProfilePage – chủ tài khoản', () => {
     fireEvent.change(screen.getByLabelText(/Giới thiệu/), { target: { value: 'Tiệm áo dài' } });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
     const saving = await screen.findByRole('button', { name: 'Đang lưu…' });
-    expect(saving).toBeDisabled();
+    expect(saving).toHaveAttribute('aria-disabled', 'true'); // đang lưu: khóa bằng aria-disabled (chuẩn 011)
     // Bấm lần nữa không gửi yêu cầu thứ hai.
     fireEvent.click(saving);
     release({ status: 200, body: { changed: true, profile: profileView(1) } });

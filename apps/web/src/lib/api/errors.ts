@@ -121,7 +121,9 @@ export function toAppError(err: LegacyApiErrorLike): AppError {
     code: err.code,
     message: body.message,
     actions: body.actions.length > 0 ? body.actions : (explain(err.code)?.actions ?? []),
-    fieldErrors: Object.fromEntries((body.fieldErrors ?? []).map((f) => [f.path.join('.'), f.message])),
+    fieldErrors: Object.fromEntries(
+      (body.fieldErrors ?? []).map((f) => [f.path.join('.'), f.message]),
+    ),
     ...(body.retryAfterSeconds !== undefined ? { retryAfterSeconds: body.retryAfterSeconds } : {}),
     support: body.support,
     ...(body.reason !== undefined ? { reason: body.reason } : {}),

@@ -122,7 +122,9 @@ async function execute<T>(
       code: e.code,
       message: e.message,
       actions: e.actions,
-      fieldErrors: Object.fromEntries((e.fieldErrors ?? []).map((f) => [f.path.join('.'), f.message])),
+      fieldErrors: Object.fromEntries(
+        (e.fieldErrors ?? []).map((f) => [f.path.join('.'), f.message]),
+      ),
       ...(e.retryAfterSeconds !== undefined ? { retryAfterSeconds: e.retryAfterSeconds } : {}),
       support: e.support,
       ...(e.reason !== undefined ? { reason: e.reason } : {}),
@@ -142,7 +144,8 @@ async function request<T>(
 ): Promise<T> {
   assertNoTenantIdentifier(path, options.body);
   // Khóa lạc quan: `version` đi trong thân dưới tên `expectedVersion` (cách thống nhất của 006, xem version.ts).
-  if (options.version !== undefined) options = { ...options, body: withVersion(options.body, options.version) };
+  if (options.version !== undefined)
+    options = { ...options, body: withVersion(options.body, options.version) };
   try {
     return await execute(method, path, options);
   } catch (err) {

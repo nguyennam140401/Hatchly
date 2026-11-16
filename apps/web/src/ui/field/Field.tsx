@@ -46,7 +46,16 @@ const CONTROL_STATE: Record<FieldState, string> = {
   readOnly: 'border-line bg-surface-100',
 };
 
-export function Field({ label, id, help, error, required = false, state, children, className }: FieldProps) {
+export function Field({
+  label,
+  id,
+  help,
+  error,
+  required = false,
+  state,
+  children,
+  className,
+}: FieldProps) {
   const autoId = useId();
   const fieldId = id ?? autoId;
   const helpId = `${fieldId}-help`;

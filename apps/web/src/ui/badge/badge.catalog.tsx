@@ -5,7 +5,8 @@ import { SuggestionTag } from './SuggestionTag';
 
 export const statusBadgeCatalog: CatalogEntry = {
   name: 'StatusBadge',
-  description: 'Huy hiệu trạng thái bài: 8 trạng thái (Đã hủy và "Đang cập nhật" chưa có trong Figma).',
+  description:
+    'Huy hiệu trạng thái bài: 8 trạng thái (Đã hủy và "Đang cập nhật" chưa có trong Figma).',
   a11yNotes: 'Luôn có chữ + biểu tượng; màu chỉ là phần phụ.',
   variants: [
     ...POST_DISPLAY_STATUSES.map((status) => ({

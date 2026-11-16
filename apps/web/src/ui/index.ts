@@ -14,6 +14,7 @@ export { Sidebar, type SidebarProps } from './nav/Sidebar';
 export { NavBar, type NavBarProps } from './nav/NavBar';
 export { TopBar, type TopBarProps } from './nav/TopBar';
 export { Logo } from './nav/Logo';
+export { TextLink, type TextLinkProps } from './nav/TextLink';
 export type { NavItemView } from './nav/nav-types';
 export { Chip, type ChipProps } from './chip-tabs/Chip';
 export { ChannelTabs, type ChannelTabItem, type ChannelTabsProps } from './chip-tabs/ChannelTabs';
@@ -24,7 +25,13 @@ export { CalendarItem, type CalendarItemProps } from './calendar/CalendarItem';
 export { ChannelRow, type ChannelRowProps } from './channel-row/ChannelRow';
 export { Page } from './layout/Page';
 export { PageHeader, type PageHeaderProps } from './layout/PageHeader';
-export { Field, type FieldControlProps, type FieldError, type FieldProps, type FieldState } from './field/Field';
+export {
+  Field,
+  type FieldControlProps,
+  type FieldError,
+  type FieldProps,
+  type FieldState,
+} from './field/Field';
 export { Tooltip } from './tooltip/Tooltip';
 export type { CatalogEntry, CatalogVariant } from './catalog-types';
 export { Skeleton, type SkeletonProps } from './feedback/Skeleton';
@@ -44,6 +51,7 @@ export {
   type Option,
 } from './form/fields/inputs';
 export { SwitchField } from './form/fields/SwitchField';
+export { CheckboxField, type CheckboxFieldProps } from './form/fields/CheckboxField';
 export { TagListField } from './form/fields/TagListField';
 export { IdeaListField, type IdeaListFieldProps } from './form/fields/IdeaListField';
 export { StaleNotice, type StaleNoticeProps } from './alert/StaleNotice';

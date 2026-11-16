@@ -17,7 +17,14 @@ export interface IdeaCardProps {
   onRemove?: (idea: Idea) => void;
 }
 
-export function IdeaCard({ idea, featured = false, selected = false, onSelect, onEdit, onRemove }: IdeaCardProps) {
+export function IdeaCard({
+  idea,
+  featured = false,
+  selected = false,
+  onSelect,
+  onEdit,
+  onRemove,
+}: IdeaCardProps) {
   return (
     <article
       className={cn(

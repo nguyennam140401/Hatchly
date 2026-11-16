@@ -1,4 +1,12 @@
-import { act, fireEvent, render, screen, waitFor, within, type RenderResult } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+  type RenderResult,
+} from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,7 +20,10 @@ import { SessionContext } from '../../../lib/session/context';
 // Biểu mẫu nào (mẫu của danh mục, ProfileForm, LoginForm, RegisterForm, mời thành viên…) cũng đăng ký vào đây bằng `testForm()`.
 
 export interface HarnessProps {
-  onSubmit: (values: Record<string, unknown>, ctx: { version: number | undefined }) => Promise<unknown>;
+  onSubmit: (
+    values: Record<string, unknown>,
+    ctx: { version: number | undefined },
+  ) => Promise<unknown>;
   loadLatest?: () => Promise<{ values: Record<string, unknown>; version: number }>;
   readOnly?: boolean;
   draftKey?: string;
@@ -67,7 +78,8 @@ export function mountForm(
   return Object.assign(view as RenderResult, { router });
 }
 
-const submitButton = (spec: FormContractSpec) => screen.getByRole('button', { name: spec.submitLabel });
+const submitButton = (spec: FormContractSpec) =>
+  screen.getByRole('button', { name: spec.submitLabel });
 
 const serverError = (spec: FormContractSpec) =>
   new AppError({
@@ -101,7 +113,9 @@ export function testForm(spec: FormContractSpec): void {
       await waitFor(() => {
         expect(labelInput(spec.serverField.label)).toHaveAttribute('aria-invalid', 'true');
       });
-      expect(labelInput(spec.serverField.label)).toHaveAccessibleDescription(new RegExp(escapeRe(spec.serverField.message)));
+      expect(labelInput(spec.serverField.label)).toHaveAccessibleDescription(
+        new RegExp(escapeRe(spec.serverField.message)),
+      );
       expect(labelInput(spec.serverField.label)).toHaveFocus();
     });
 
@@ -154,7 +168,9 @@ export function testForm(spec: FormContractSpec): void {
       await act(async () => {
         await router.navigate('/other');
       });
-      expect(await screen.findByRole('dialog', { name: 'Bỏ các thay đổi chưa lưu?' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('dialog', { name: 'Bỏ các thay đổi chưa lưu?' }),
+      ).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/form');
       fireEvent.click(screen.getByRole('button', { name: 'Ở lại' }));
       await waitFor(() => {
@@ -178,7 +194,9 @@ export function testForm(spec: FormContractSpec): void {
       fireEvent.click(submitButton(spec));
       expect(await screen.findByText('Nội dung đã được người khác thay đổi')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Tải bản mới nhất' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Giữ bản của tôi để xem lại' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Giữ bản của tôi để xem lại' }),
+      ).toBeInTheDocument();
       expect(onSubmit).toHaveBeenCalledTimes(1); // không tự gửi lại
       fireEvent.click(screen.getByRole('button', { name: 'Tải bản mới nhất' }));
       await waitFor(() => {
@@ -192,7 +210,9 @@ export function testForm(spec: FormContractSpec): void {
       mountForm(spec.Form, { onSubmit: vi.fn(), readOnly: true });
       expect(screen.queryByRole('button', { name: spec.submitLabel })).toBeNull();
       expect(screen.getByText('Chỉ chủ tài khoản mới sửa được')).toBeInTheDocument();
-      expect(labelInput(spec.serverField.label).readOnly || labelInput(spec.serverField.label).disabled).toBe(true);
+      expect(
+        labelInput(spec.serverField.label).readOnly || labelInput(spec.serverField.label).disabled,
+      ).toBe(true);
     });
 
     it('(8) giá trị nhạy cảm KHÔNG vào bản nháp hay bộ lưu cục bộ', async () => {
@@ -204,9 +224,12 @@ export function testForm(spec: FormContractSpec): void {
       const drafts = JSON.stringify(draftStore.snapshot());
       expect(drafts.length).toBeGreaterThan(2); // có lưu phần không nhạy cảm
       expect(drafts).not.toContain(spec.sensitive.value);
-      expect(JSON.stringify([Object.entries(window.localStorage), Object.entries(window.sessionStorage)])).not.toContain(
-        spec.sensitive.value,
-      );
+      expect(
+        JSON.stringify([
+          Object.entries(window.localStorage),
+          Object.entries(window.sessionStorage),
+        ]),
+      ).not.toContain(spec.sensitive.value);
     });
 
     it('(9) không vi phạm trợ năng (axe)', async () => {
@@ -216,7 +239,9 @@ export function testForm(spec: FormContractSpec): void {
 
     it('(10) chỉ thao tác bằng bàn phím: mọi điều khiển tới được, có nút gửi trong <form>', () => {
       const { container } = mountForm(spec.Form, { onSubmit: vi.fn() });
-      const controls = container.querySelectorAll<HTMLElement>('button, input, select, textarea, a[href]');
+      const controls = container.querySelectorAll<HTMLElement>(
+        'button, input, select, textarea, a[href]',
+      );
       for (const el of controls) {
         if (el.classList.contains('sr-only')) continue; // ô chọn tệp ẩn: đã có nút kích hoạt bằng bàn phím
         expect(el.tabIndex, el.outerHTML.slice(0, 80)).toBeGreaterThanOrEqual(0);

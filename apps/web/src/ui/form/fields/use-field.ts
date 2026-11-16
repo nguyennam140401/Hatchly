@@ -10,7 +10,10 @@ export function useFieldMeta(name: string): { error: FieldError | undefined; rea
   const { readOnly } = useFormUi();
   const entry: unknown = get(errors, name);
   const message =
-    typeof entry === 'object' && entry !== null && 'message' in entry && typeof entry.message === 'string'
+    typeof entry === 'object' &&
+    entry !== null &&
+    'message' in entry &&
+    typeof entry.message === 'string'
       ? entry.message
       : undefined;
   return { error: message !== undefined ? { message } : undefined, readOnly };

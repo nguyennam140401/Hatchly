@@ -3,7 +3,13 @@
 
 export type QueryKey = readonly unknown[];
 
-export type PostFilter = Readonly<{ status?: string; channel?: string; from?: string; to?: string; q?: string }>;
+export type PostFilter = Readonly<{
+  status?: string;
+  channel?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+}>;
 export type MediaFilter = Readonly<{ kind?: string; q?: string }>;
 
 export const queryKeys = {
@@ -34,5 +40,8 @@ export const queryKeys = {
   jobs: { detail: (jobId: string) => ['jobs', 'detail', jobId] as const },
   counters: { pendingReview: () => ['counters', 'pendingReview'] as const },
   overview: { all: () => ['overview'] as const, summary: () => ['overview', 'summary'] as const },
-  calendar: { all: () => ['calendar'] as const, range: (from: string, to: string) => ['calendar', from, to] as const },
+  calendar: {
+    all: () => ['calendar'] as const,
+    range: (from: string, to: string) => ['calendar', from, to] as const,
+  },
 } as const;

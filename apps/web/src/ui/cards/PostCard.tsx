@@ -26,7 +26,12 @@ export interface PostCardProps {
 export function PostCard({ post, onOpen, actions, className }: PostCardProps) {
   const title = <span className="block min-w-0 truncate text-heading text-ink">{post.title}</span>;
   return (
-    <article className={cn('flex flex-col gap-3 rounded-lg border border-line bg-surface-0 p-4', className)}>
+    <article
+      className={cn(
+        'flex flex-col gap-3 rounded-lg border border-line bg-surface-0 p-4',
+        className,
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <Tooltip content={post.title}>

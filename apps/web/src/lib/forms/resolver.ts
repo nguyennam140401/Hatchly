@@ -22,7 +22,7 @@ export function schemaResolver<T extends FieldValues>(schema: FormSchema<T>): Re
     for (const issue of result.error.issues) {
       const path = issue.path.map(String).join('.');
       // Mỗi ô chỉ giữ lỗi ĐẦU TIÊN.
-      if (path === '' || (errors[path]) !== undefined) continue;
+      if (path === '' || errors[path] !== undefined) continue;
       set(errors, path, { type: 'validation', message: issue.message });
     }
     return { values: {}, errors: errors as FieldErrors<T> };

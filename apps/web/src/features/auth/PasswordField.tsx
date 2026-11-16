@@ -1,63 +1,53 @@
-import { useId, useState } from 'react';
-import { styles, visuallyHidden, type FieldProps } from './ui';
+import { useState } from 'react';
+import { useFormContext } from 'react-hook-form';
+import { Button } from '../../ui/button/Button';
+import { Field } from '../../ui/field/Field';
+import { useFieldMeta } from '../../ui/form/fields/use-field';
 
 /** Ô mật khẩu có nút hiện/ẩn (aria-pressed); `autoComplete` do trang truyền (current/new-password). */
 export function PasswordField({
+  name,
   label,
-  value,
-  onChange,
-  error,
   autoComplete,
-  hint,
-}: Omit<FieldProps, 'type'> & { autoComplete: 'current-password' | 'new-password' }) {
-  const id = useId();
+  help,
+}: {
+  name: string;
+  label: string;
+  autoComplete: 'current-password' | 'new-password';
+  help?: string;
+}) {
+  const { register } = useFormContext();
+  const { error, readOnly } = useFieldMeta(name);
   const [visible, setVisible] = useState(false);
-  const describedBy = [
-    hint !== undefined ? `${id}-hint` : '',
-    error !== undefined ? `${id}-err` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
   return (
-    <div style={styles.field}>
-      <label htmlFor={id}>{label}</label>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          id={id}
-          type={visible ? 'text' : 'password'}
-          style={{ ...styles.input, flex: 1, minWidth: 0 }}
-          value={value}
-          autoComplete={autoComplete}
-          onChange={(e) => {
-            onChange(e.target.value);
-          }}
-          aria-invalid={error !== undefined}
-          {...(describedBy !== '' ? { 'aria-describedby': describedBy } : {})}
-        />
-        <button
-          type="button"
-          style={styles.secondary}
-          aria-pressed={visible}
-          aria-controls={id}
-          onClick={() => {
-            setVisible((v) => !v);
-          }}
-        >
-          {visible ? 'Ẩn' : 'Hiện'}
-          <span style={visuallyHidden}> mật khẩu</span>
-        </button>
-      </div>
-      {hint !== undefined && (
-        <p id={`${id}-hint`} style={{ margin: 0, fontSize: 14, color: '#4b5563' }}>
-          {hint}
-        </p>
+    <Field
+      label={label}
+      {...(help !== undefined ? { help } : {})}
+      error={error}
+      state={readOnly ? 'readOnly' : 'default'}
+    >
+      {(c) => (
+        <div className="flex gap-2">
+          <input
+            {...register(name)}
+            {...c}
+            type={visible ? 'text' : 'password'}
+            autoComplete={autoComplete}
+            className={`${c.className} flex-1`}
+          />
+          <Button
+            variant="secondary"
+            aria-pressed={visible}
+            aria-controls={c.id}
+            aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            onClick={() => {
+              setVisible((v) => !v);
+            }}
+          >
+            {visible ? 'Ẩn' : 'Hiện'}
+          </Button>
+        </div>
       )}
-      {error !== undefined && (
-        <p id={`${id}-err`} style={styles.error}>
-          <span aria-hidden="true">⚠ </span>
-          {error}
-        </p>
-      )}
-    </div>
+    </Field>
   );
 }

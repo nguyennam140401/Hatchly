@@ -30,7 +30,12 @@ export interface SessionIdentity {
 }
 
 /** Lý do làm phiên KẾT THÚC hẳn – không có "tiếp tục". `expired`/thiếu lý do = có thể đăng nhập lại tại chỗ. */
-const TERMINAL_REASONS: readonly SessionEndReason[] = ['password_changed', 'removed', 'locked', 'revoked'];
+const TERMINAL_REASONS: readonly SessionEndReason[] = [
+  'password_changed',
+  'removed',
+  'locked',
+  'revoked',
+];
 
 export interface AuthGateOptions {
   /** Lần đầu chưa có phiên nào được tải: chuyển /login?next=… (không có gì để giữ). */

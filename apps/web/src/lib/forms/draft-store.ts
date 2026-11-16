@@ -33,7 +33,12 @@ export function stripSensitive(
 }
 
 export const draftStore = {
-  save(subject: string, formKey: string, value: Record<string, unknown>, sensitive: readonly string[] = []): void {
+  save(
+    subject: string,
+    formKey: string,
+    value: Record<string, unknown>,
+    sensitive: readonly string[] = [],
+  ): void {
     drafts.set(keyOf(subject, formKey), {
       formKey,
       value: stripSensitive(value, sensitive),

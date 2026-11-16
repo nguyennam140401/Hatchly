@@ -1,14 +1,20 @@
 import type { InvitationPreviewResponse, MeResponse } from '@app/shared/auth';
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { authApi, socialApi, takeFragmentToken } from '../../lib/api/endpoints/auth';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import { isChecked, minChars, objectSchema, required } from '../../lib/forms/rules';
+import { useAppForm } from '../../lib/forms/useAppForm';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Button } from '../../ui/button/Button';
+import { Form } from '../../ui/form/Form';
+import { TextField } from '../../ui/form/fields/inputs';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from '../auth/AuthLayout';
-import { authApi, takeFragmentToken } from '../auth/auth-api';
-import { TermsCheckbox } from '../auth/ConsentNotice';
+import { TermsField } from '../auth/ConsentNotice';
 import { PasswordField } from '../auth/PasswordField';
 import { ProviderButtons } from '../auth/ProviderButtons';
-import { socialApi } from '../auth/social-api';
-import { ErrorNotice, styles, TextField } from '../auth/ui';
 
 // Trang mở từ liên kết trong thư mời (009 – US3, US4). Mã nằm sau `#token=`, được xóa khỏi thanh địa
 // chỉ ngay và chỉ giữ trong bộ nhớ của trang. Hiển thị theo `mode` của lời mời và theo việc người mở
@@ -16,7 +22,7 @@ import { ErrorNotice, styles, TextField } from '../auth/ui';
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'invalid'; error: ApiError | null }
+  | { kind: 'invalid'; error: AppError | null }
   | { kind: 'ready'; token: string; preview: InvitationPreviewResponse; me: MeResponse | null };
 
 export function JoinPage() {
@@ -39,7 +45,7 @@ export function JoinPage() {
         const me = await authApi.me({ silentAuth: true }).catch(() => null);
         setState({ kind: 'ready', token, preview, me });
       } catch (err) {
-        if (err instanceof ApiError) setState({ kind: 'invalid', error: err });
+        if (err instanceof AppError) setState({ kind: 'invalid', error: err });
         else throw err;
       }
     })();
@@ -55,17 +61,14 @@ export function JoinPage() {
   if (state.kind === 'invalid') {
     return (
       <AuthLayout title="Lời mời không còn hiệu lực">
-        <p role="alert">
-          <span role="img" aria-label="Cảnh báo">
-            ⚠
-          </span>{' '}
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về đăng nhập', href: '/login' }]}
+        >
           {state.error?.message ??
             'Lời mời không còn hiệu lực. Hãy nhờ chủ tài khoản gửi lại lời mời.'}
-        </p>
+        </InlineAlert>
         <p>Liên kết mời chỉ dùng được một lần và có hạn 7 ngày. Hãy nhờ chủ tài khoản gửi lại.</p>
-        <Link to="/login" style={styles.link}>
-          Về đăng nhập
-        </Link>
       </AuthLayout>
     );
   }
@@ -78,18 +81,19 @@ export function JoinPage() {
     </p>
   );
   const logoutAndReopen = (
-    <button
-      type="button"
-      style={styles.secondary}
-      onClick={() => {
-        // Giữ mã trong #fragment để mở lại đúng lời mời sau khi đăng xuất.
-        void authApi.logout().finally(() => {
-          window.location.assign(`/join#token=${token}`);
-        });
-      }}
-    >
-      Đăng xuất rồi mở lại liên kết
-    </button>
+    <div>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          // Giữ mã trong #fragment để mở lại đúng lời mời sau khi đăng xuất.
+          void authApi.logout().finally(() => {
+            window.location.assign(`/join#token=${token}`);
+          });
+        }}
+      >
+        Đăng xuất rồi mở lại liên kết
+      </Button>
+    </div>
   );
 
   // ----- Người đang đăng nhập mở liên kết -----
@@ -97,20 +101,15 @@ export function JoinPage() {
     return (
       <AuthLayout title="Bạn đang thuộc một tài khoản khác">
         {intro}
-        <p role="alert">
-          <span role="img" aria-label="Cảnh báo">
-            ⚠
-          </span>{' '}
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về trang chính', href: '/' }]}
+        >
           Bạn đang đăng nhập bằng {me.user.email} và đang thuộc một tài khoản khác. Mỗi người chỉ
           thuộc một tài khoản.
-        </p>
+        </InlineAlert>
         <p>Để nhận lời mời, hãy đăng xuất rồi mở lại liên kết bằng email được mời.</p>
         {logoutAndReopen}
-        <p>
-          <Link to="/" style={styles.link}>
-            Về trang chính
-          </Link>
-        </p>
       </AuthLayout>
     );
   }
@@ -123,12 +122,12 @@ export function JoinPage() {
           <AcceptExisting token={token} label={preview.accountLabel} />
         ) : (
           <>
-            <p role="alert">
-              <span role="img" aria-label="Cảnh báo">
-                ⚠
-              </span>{' '}
+            <InlineAlert
+              tone="warning"
+              actions={[{ kind: 'navigate', label: 'Về trang chính', href: '/' }]}
+            >
               Bạn đang đăng nhập bằng {me.user.email}, khác với email được mời.
-            </p>
+            </InlineAlert>
             {logoutAndReopen}
           </>
         )}
@@ -141,16 +140,13 @@ export function JoinPage() {
     return (
       <AuthLayout title="Chưa tham gia được">
         {intro}
-        <p role="alert">
-          <span role="img" aria-label="Cảnh báo">
-            ⚠
-          </span>{' '}
+        <InlineAlert
+          tone="error"
+          actions={[{ kind: 'navigate', label: 'Về đăng nhập', href: '/login' }]}
+        >
           Email này đang dùng cho một tài khoản khác nên chưa tham gia được.
-        </p>
+        </InlineAlert>
         <p>Hãy nhờ {preview.inviterName} mời bạn bằng một email khác.</p>
-        <Link to="/login" style={styles.link}>
-          Về đăng nhập
-        </Link>
       </AuthLayout>
     );
   }
@@ -159,9 +155,7 @@ export function JoinPage() {
       <AuthLayout title="Hãy đăng nhập để tham gia">
         {intro}
         <p>Email này đã có tài khoản đăng nhập. Hãy đăng nhập rồi mở lại liên kết trong thư mời.</p>
-        <a href={`/login?next=${encodeURIComponent('/no-account')}`} style={styles.link}>
-          Đăng nhập
-        </a>
+        <TextLink to={`/login?next=${encodeURIComponent('/no-account')}`}>Đăng nhập</TextLink>
       </AuthLayout>
     );
   }
@@ -175,93 +169,79 @@ export function JoinPage() {
 
 function AcceptExisting({ token, label }: { token: string; label: string }) {
   const navigate = useNavigate();
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const [busy, setBusy] = useState(false);
   return (
     <>
       {error !== null && <ErrorNotice error={error} />}
-      <button
-        type="button"
-        style={styles.primary}
-        disabled={busy}
-        onClick={() => {
-          setError(null);
-          setBusy(true);
-          socialApi
-            .acceptExistingInvitation({ token })
-            .then(
-              () => void navigate('/', { replace: true }),
-              (err: unknown) => {
-                if (err instanceof ApiError) setError(err);
-              },
-            )
-            .finally(() => {
-              setBusy(false);
-            });
-        }}
-      >
-        Tham gia {label}
-      </button>
+      <div>
+        <Button
+          loading={busy}
+          onClick={() => {
+            setError(null);
+            setBusy(true);
+            socialApi
+              .acceptExistingInvitation({ token })
+              .then(
+                () => void navigate('/', { replace: true }),
+                (err: unknown) => {
+                  if (err instanceof AppError) setError(err);
+                },
+              )
+              .finally(() => {
+                setBusy(false);
+              });
+          }}
+        >
+          Tham gia {label}
+        </Button>
+      </div>
     </>
   );
 }
 
+interface JoinValues extends Record<string, unknown> {
+  displayName: string;
+  password: string;
+  acceptTerms: boolean;
+}
+
+const joinSchema = objectSchema<JoinValues>({
+  displayName: required('Vui lòng nhập tên hiển thị.'),
+  password: minChars(8, 'Mật khẩu cần ít nhất 8 ký tự.'),
+  acceptTerms: isChecked('Bạn cần đồng ý điều khoản để tham gia.'),
+});
+
 /** `new_user`: đặt tên + mật khẩu, hoặc Google/Facebook (chỉ bấm được sau khi tích ô đồng ý). */
 function NewUserForm({ token, onDone }: { token: string; onDone: () => void }) {
-  const [displayName, setDisplayName] = useState('');
-  const [password, setPassword] = useState('');
-  const [accepted, setAccepted] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<ApiError | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: SyntheticEvent) {
-    e.preventDefault();
-    const local: Record<string, string> = {};
-    if (displayName.trim() === '') local.displayName = 'Vui lòng nhập tên hiển thị.';
-    if (password.length < 8) local.password = 'Mật khẩu cần ít nhất 8 ký tự.';
-    if (!accepted) local.acceptTerms = 'Bạn cần đồng ý điều khoản để tham gia.';
-    setFieldErrors(local);
-    setError(null);
-    if (Object.keys(local).length > 0) return;
-    setBusy(true);
-    try {
-      await socialApi.invitationAccept({ token, displayName, password });
+  const form = useAppForm<JoinValues>({
+    schema: joinSchema,
+    defaultValues: { displayName: '', password: '', acceptTerms: false },
+    fieldOrder: ['acceptTerms', 'displayName', 'password'],
+    onSubmit: async (values) => {
+      await socialApi.invitationAccept({
+        token,
+        displayName: values.displayName,
+        password: values.password,
+      });
       onDone();
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setFieldErrors(err.fieldErrors());
-      setError(err);
-    } finally {
-      setBusy(false);
-    }
-  }
+    },
+  });
+  const accepted = form.methods.watch('acceptTerms');
 
   return (
     <>
-      {error !== null && Object.keys(fieldErrors).length === 0 && <ErrorNotice error={error} />}
-      <form onSubmit={(e) => void submit(e)} noValidate>
-        <TermsCheckbox checked={accepted} onChange={setAccepted} error={fieldErrors.acceptTerms} />
-        <TextField
-          label="Tên hiển thị"
-          value={displayName}
-          onChange={setDisplayName}
-          autoComplete="name"
-          error={fieldErrors.displayName}
-        />
+      <Form form={form} submitLabel="Tham gia">
+        <TermsField />
+        <TextField name="displayName" label="Tên hiển thị" autoComplete="name" />
         <PasswordField
+          name="password"
           label="Đặt mật khẩu"
-          value={password}
-          onChange={setPassword}
           autoComplete="new-password"
-          hint="Ít nhất 8 ký tự. Tránh mật khẩu dễ đoán như 12345678."
-          error={fieldErrors.password}
+          help="Ít nhất 8 ký tự. Tránh mật khẩu dễ đoán như 12345678."
         />
-        <button type="submit" style={styles.primary} disabled={busy}>
-          {busy ? 'Đang tham gia…' : 'Tham gia'}
-        </button>
-      </form>
-      <p style={{ textAlign: 'center', color: '#4b5563' }}>hoặc</p>
+      </Form>
+      <p className="text-center text-ink-muted">hoặc</p>
       <ProviderButtons
         disabled={!accepted}
         disabledHint="Hãy tích ô đồng ý ở trên trước khi tiếp tục với Google hoặc Facebook."

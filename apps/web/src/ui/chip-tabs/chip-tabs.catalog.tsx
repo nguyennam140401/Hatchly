@@ -15,7 +15,10 @@ export const chipCatalog: CatalogEntry = {
   a11yNotes: 'aria-pressed; chip đã chọn có dấu ✓ (không chỉ màu).',
   variants: [
     { label: 'chưa chọn', render: () => <Chip label="Khuyến mãi" onClick={() => undefined} /> },
-    { label: 'đã chọn', render: () => <Chip label="Khuyến mãi" selected onClick={() => undefined} /> },
+    {
+      label: 'đã chọn',
+      render: () => <Chip label="Khuyến mãi" selected onClick={() => undefined} />,
+    },
     { label: 'có nút bỏ', render: () => <Chip label="#giamgia" onRemove={() => undefined} /> },
   ],
 };
@@ -25,7 +28,12 @@ export const channelTabsCatalog: CatalogEntry = {
   description: 'Tab kênh (nhận mọi kênh). Instagram/Zalo chưa có thiết kế Figma.',
   a11yNotes: 'Radix Tabs: role=tablist, mũi tên chuyển tab.',
   variants: [
-    { label: '2 kênh (Figma)', render: () => <TabsDemo channels={CHANNELS.filter((c) => c.id === 'facebook' || c.id === 'tiktok')} /> },
+    {
+      label: '2 kênh (Figma)',
+      render: () => (
+        <TabsDemo channels={CHANNELS.filter((c) => c.id === 'facebook' || c.id === 'tiktok')} />
+      ),
+    },
     { label: '4 kênh', render: () => <TabsDemo channels={CHANNELS} /> },
   ],
 };

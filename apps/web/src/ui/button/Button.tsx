@@ -25,7 +25,8 @@ const button = cva(
 );
 
 export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'>,
+  extends
+    Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'>,
     Pick<VariantProps<typeof button>, 'variant' | 'fullWidth'> {
   /** Đang lưu: hiện "Đang lưu…", `aria-busy`, không nhận bấm thêm (chống gửi trùng). */
   loading?: boolean | undefined;

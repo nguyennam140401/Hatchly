@@ -20,7 +20,9 @@ export function ChannelTag({ channel, manualPublish = false, className }: Channe
       )}
     >
       <span>{channelLabel(channel)}</span>
-      {manualPublish && <span className="text-caption text-ink-muted">· {t('common.manualPublish')}</span>}
+      {manualPublish && (
+        <span className="text-caption text-ink-muted">· {t('common.manualPublish')}</span>
+      )}
     </span>
   );
 }

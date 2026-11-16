@@ -1,7 +1,7 @@
 import type { HealthResponse } from '@app/shared/core';
 import { useCallback, useContext, useEffect, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { authApi } from '../features/auth/auth-api';
+import { authApi } from '../lib/api/endpoints/auth';
 import { SessionContext } from '../features/auth/session';
 import { getHealth } from '../lib/api-client';
 

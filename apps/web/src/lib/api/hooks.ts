@@ -68,9 +68,7 @@ export function useApiMutation<V, R, Op extends string>(
   const optimistic = options.optimistic as Optimistic<V> | undefined;
   return useMutation<R, AppError, V>({
     mutationFn: options.fn,
-    ...(optimistic !== undefined
-      ? { onMutate: (vars: V) => optimistic.apply(client, vars) }
-      : {}),
+    ...(optimistic !== undefined ? { onMutate: (vars: V) => optimistic.apply(client, vars) } : {}),
     onError: (_error, vars, snapshot) => {
       if (optimistic !== undefined) optimistic.rollback(client, vars, snapshot);
     },

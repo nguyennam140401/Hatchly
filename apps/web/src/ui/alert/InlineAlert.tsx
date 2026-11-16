@@ -61,10 +61,16 @@ export function InlineAlert(props: InlineAlertProps) {
         {actions.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {actions.map((action) =>
-              action.kind === 'navigate' && action.href !== undefined && onAction === undefined ? (
+              action.kind === 'navigate' && action.href !== undefined ? (
                 <a
                   key={action.label}
                   href={action.href}
+                  onClick={(event) => {
+                    // Có `onAction` thì để nơi gọi điều hướng trong SPA (không tải lại trang).
+                    if (onAction === undefined) return;
+                    event.preventDefault();
+                    onAction(action);
+                  }}
                   className="inline-flex min-h-touch min-w-touch items-center rounded-md border border-line-strong bg-surface-0 px-4 text-label text-brand focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   {action.label}

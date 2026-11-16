@@ -12,7 +12,14 @@ export interface DayCellProps {
   onSelect?: () => void;
 }
 
-export function DayCell({ weekday, day, today = false, selected = false, count = 0, onSelect }: DayCellProps) {
+export function DayCell({
+  weekday,
+  day,
+  today = false,
+  selected = false,
+  count = 0,
+  onSelect,
+}: DayCellProps) {
   return (
     <button
       type="button"

@@ -19,7 +19,13 @@ const Value = {
       : { success: false as const },
 };
 
-function Providers({ client, children }: { client: ReturnType<typeof createQueryClient>; children: ReactNode }) {
+function Providers({
+  client,
+  children,
+}: {
+  client: ReturnType<typeof createQueryClient>;
+  children: ReactNode;
+}) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -39,25 +45,43 @@ afterEach(() => {
 describe('dữ liệu cũ / mới (FR-023, FR-024)', () => {
   it('lớp volatile không giữ cache: rời màn là bộ nhớ sạch (gcTime 0)', async () => {
     let n = 0;
-    server.use(http.get('http://localhost/api/thing', () => HttpResponse.json({ v: `lần ${String(++n)}` })));
+    server.use(
+      http.get('http://localhost/api/thing', () => HttpResponse.json({ v: `lần ${String(++n)}` })),
+    );
     const client = createQueryClient();
-    const { unmount } = render(<Providers client={client}><Screen freshness="volatile" /></Providers>);
+    const { unmount } = render(
+      <Providers client={client}>
+        <Screen freshness="volatile" />
+      </Providers>,
+    );
     expect(await screen.findByText('lần 1')).toBeInTheDocument();
     unmount();
     await waitFor(() => {
-      expect(client.getQueryCache().find({ queryKey: queryKeys.posts.detail('p1') })).toBeUndefined();
+      expect(
+        client.getQueryCache().find({ queryKey: queryKeys.posts.detail('p1') }),
+      ).toBeUndefined();
     });
   });
 
   it('quay lại màn: hiện dữ liệu cũ TỨC THÌ rồi cập nhật khi đã cũ', async () => {
     let n = 0;
-    server.use(http.get('http://localhost/api/thing', () => HttpResponse.json({ v: `bản ${String(++n)}` })));
+    server.use(
+      http.get('http://localhost/api/thing', () => HttpResponse.json({ v: `bản ${String(++n)}` })),
+    );
     const client = createQueryClient();
-    const first = render(<Providers client={client}><Screen freshness="entity" /></Providers>);
+    const first = render(
+      <Providers client={client}>
+        <Screen freshness="entity" />
+      </Providers>,
+    );
     expect(await screen.findByText('bản 1')).toBeInTheDocument();
     first.unmount();
     await client.invalidateQueries({ queryKey: queryKeys.posts.detail('p1'), refetchType: 'none' }); // đánh dấu cũ
-    render(<Providers client={client}><Screen freshness="entity" /></Providers>);
+    render(
+      <Providers client={client}>
+        <Screen freshness="entity" />
+      </Providers>,
+    );
     expect(screen.getByText('bản 1')).toBeInTheDocument(); // tức thì, không "đang tải"
     expect(await screen.findByText('bản 2')).toBeInTheDocument(); // rồi cập nhật
   });
@@ -90,13 +114,21 @@ describe('dữ liệu cũ / mới (FR-023, FR-024)', () => {
       const [error, setError] = useStateError();
       return (
         <>
-          <input aria-label="Nội dung" value={text} onChange={(e) => { setText(e.target.value); }} />
+          <input
+            aria-label="Nội dung"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+            }}
+          />
           <button
             type="button"
             onClick={() => {
-              apiClient.request('POST', 'http://localhost/api/save', { body: { text } }).catch((e: unknown) => {
-                if (e instanceof AppError) setError(e);
-              });
+              apiClient
+                .request('POST', 'http://localhost/api/save', { body: { text } })
+                .catch((e: unknown) => {
+                  if (e instanceof AppError) setError(e);
+                });
             }}
           >
             Gửi
@@ -125,13 +157,21 @@ describe('dữ liệu cũ / mới (FR-023, FR-024)', () => {
       }),
     );
     const client = createQueryClient();
-    const a = render(<Providers client={client}><Screen freshness="entity" /></Providers>);
+    const a = render(
+      <Providers client={client}>
+        <Screen freshness="entity" />
+      </Providers>,
+    );
     expect(screen.getByText('đang tải')).toBeInTheDocument();
     await waitFor(() => {
       expect(started).toBe(true);
     });
     a.unmount(); // rời màn A khi lời gọi chưa xong
-    const b = render(<Providers client={client}><p>Màn khác</p></Providers>);
+    const b = render(
+      <Providers client={client}>
+        <p>Màn khác</p>
+      </Providers>,
+    );
     release();
     await waitFor(() => {
       expect(client.getQueryData(queryKeys.posts.detail('p1'))).toBe('đến muộn');

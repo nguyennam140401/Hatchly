@@ -25,12 +25,16 @@ export const NAVBAR_SAMPLE: NavItemView[] = [
 // Mục đang chọn do đường dẫn hiện tại quyết định: catalog dựng trong MemoryRouter ở đúng mục.
 export const navCatalog: CatalogEntry = {
   name: 'Navigation',
-  description: 'Thanh bên (7 mục), thanh dưới (5 ô, "Tạo bài" nổi bật), thanh trên (logo/quay lại).',
+  description:
+    'Thanh bên (7 mục), thanh dưới (5 ô, "Tạo bài" nổi bật), thanh trên (logo/quay lại).',
   a11yNotes: 'Mục hiện tại: aria-current="page" + chữ đậm; huy hiệu đếm có chữ số.',
   variants: [
     { label: 'Sidebar', render: () => <Sidebar items={SIDEBAR_SAMPLE} appName="Ứng dụng" /> },
     { label: 'NavBar', render: () => <NavBar items={NAVBAR_SAMPLE} /> },
     { label: 'TopBar – logo', render: () => <TopBar kind="logo" title="Tổng quan" /> },
-    { label: 'TopBar – quay lại', render: () => <TopBar kind="back" title="Soạn bài" onBack={() => undefined} /> },
+    {
+      label: 'TopBar – quay lại',
+      render: () => <TopBar kind="back" title="Soạn bài" onBack={() => undefined} />,
+    },
   ],
 };

@@ -20,7 +20,9 @@ const errorBody = (code: string, extra: Record<string, unknown> = {}) => ({
   },
 });
 
-afterEach(() => { setAuthGate(null); });
+afterEach(() => {
+  setAuthGate(null);
+});
 
 describe('apiClient.request', () => {
   it('2xx: trả dữ liệu đã kiểm theo lược đồ; gửi cookie cùng nguồn', async () => {
@@ -73,7 +75,9 @@ describe('apiClient.request', () => {
     await expect(
       apiClient.request('POST', '/api/x', { body: { nested: { accountId: 'a' } } }),
     ).rejects.toThrow(/mã tài khoản/);
-    await expect(apiClient.request('POST', '/api/x', { body: { TenantId: 't' } })).rejects.toThrow();
+    await expect(
+      apiClient.request('POST', '/api/x', { body: { TenantId: 't' } }),
+    ).rejects.toThrow();
     await expect(apiClient.request('GET', '/api/x?accountId=1')).rejects.toThrow();
   });
 
@@ -83,7 +87,9 @@ describe('apiClient.request', () => {
     it('GET: sau khi đăng nhập lại (resumed) được phát lại đúng một lần', async () => {
       let calls = 0;
       server.use(
-        http.get('http://localhost/api/x', () => (calls++ === 0 ? unauth() : HttpResponse.json({ id: 'ok' }))),
+        http.get('http://localhost/api/x', () =>
+          calls++ === 0 ? unauth() : HttpResponse.json({ id: 'ok' }),
+        ),
       );
       const onUnauthenticated = vi.fn().mockResolvedValue('resumed');
       setAuthGate({ onUnauthenticated, onEmailNotVerified: vi.fn() });
@@ -101,8 +107,13 @@ describe('apiClient.request', () => {
           return unauth();
         }),
       );
-      setAuthGate({ onUnauthenticated: () => Promise.resolve('resumed'), onEmailNotVerified: vi.fn() });
-      await expect(apiClient.request('POST', 'http://localhost/api/x', { body: {} })).rejects.toMatchObject({
+      setAuthGate({
+        onUnauthenticated: () => Promise.resolve('resumed'),
+        onEmailNotVerified: vi.fn(),
+      });
+      await expect(
+        apiClient.request('POST', 'http://localhost/api/x', { body: {} }),
+      ).rejects.toMatchObject({
         kind: 'session_expired',
       });
       expect(calls).toBe(1);
@@ -120,7 +131,10 @@ describe('apiClient.request', () => {
 
     it('ended/switched: không phát lại, ném lỗi gốc', async () => {
       server.use(http.get('http://localhost/api/x', unauth));
-      setAuthGate({ onUnauthenticated: () => Promise.resolve('ended'), onEmailNotVerified: vi.fn() });
+      setAuthGate({
+        onUnauthenticated: () => Promise.resolve('ended'),
+        onEmailNotVerified: vi.fn(),
+      });
       await expect(apiClient.request('GET', 'http://localhost/api/x')).rejects.toMatchObject({
         kind: 'session_expired',
       });

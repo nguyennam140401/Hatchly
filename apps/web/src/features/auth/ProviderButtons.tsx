@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ApiError } from '../../lib/api-client';
-import { browser, PROVIDER_LABELS, socialApi, type Provider } from './social-api';
-import { ErrorNotice, styles } from './ui';
+import { browser, PROVIDER_LABELS, socialApi, type Provider } from '../../lib/api/endpoints/auth';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import { Button } from '../../ui/button/Button';
 
 // Hai nút "Tiếp tục với Google / Facebook" (009 – US1). Bấm → hỏi máy chủ địa chỉ của nhà cung cấp rồi
 // chuyển trình duyệt sang đó. Vùng chạm ≥ 44 × 44 px; có chữ + biểu tượng (không chỉ dựa vào màu).
@@ -26,7 +27,7 @@ export function ProviderButtons({
   disabledHint?: string;
 }) {
   const [busy, setBusy] = useState<Provider | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
 
   async function go(provider: Provider) {
     setError(null);
@@ -36,40 +37,32 @@ export function ProviderButtons({
       browser.assign(authorizationUrl);
     } catch (err) {
       setBusy(null);
-      if (!(err instanceof ApiError)) throw err;
+      if (!(err instanceof AppError)) throw err;
       setError(err);
     }
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-2">
       {error !== null && <ErrorNotice error={error} />}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="flex flex-col gap-2">
         {PROVIDERS.filter((p) => only === undefined || only.includes(p)).map((provider) => (
-          <button
+          <Button
             key={provider}
-            type="button"
-            style={{
-              ...styles.secondary,
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              ...(disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {}),
-            }}
-            disabled={disabled || busy !== null}
+            variant="secondary"
+            fullWidth
+            locked={disabled || busy !== null}
             onClick={() => void go(provider)}
           >
-            <span aria-hidden="true" style={{ fontWeight: 700 }}>
+            <span aria-hidden="true" className="font-semibold">
               {MARKS[provider]}
             </span>
             {busy === provider ? 'Đang chuyển…' : label(PROVIDER_LABELS[provider])}
-          </button>
+          </Button>
         ))}
       </div>
       {disabled && disabledHint !== undefined && (
-        <p style={{ margin: '8px 0 0', fontSize: 14, color: '#4b5563' }}>{disabledHint}</p>
+        <p className="text-body-sm text-ink-muted">{disabledHint}</p>
       )}
     </div>
   );

@@ -1,15 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { useNavigate } from 'react-router';
+import { socialApi, takeFragmentToken } from '../../lib/api/endpoints/auth';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import type { ErrorActionView } from '../../lib/catalogs/error-explanations';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { takeFragmentToken } from './auth-api';
-import { socialApi } from './social-api';
-import { ErrorNotice, styles } from './ui';
 
 // Mở liên kết trong thư "hoàn tất đăng ký" / "xác nhận liên kết" (009 – US1, US2). Mã nằm sau `#token=`
 // và được XÓA khỏi thanh địa chỉ trước khi gọi API. Dùng được trên thiết bị khác với thiết bị bắt đầu.
 
-type State = { kind: 'working' } | { kind: 'missing' } | { kind: 'invalid'; error: ApiError };
+type State = { kind: 'working' } | { kind: 'missing' } | { kind: 'invalid'; error: AppError };
+
+// Bắt đầu lại ở trang đăng nhập sẽ gửi thư mới (liên kết cũ chỉ dùng một lần).
+const RESTART: ErrorActionView[] = [
+  { kind: 'navigate', label: 'Gửi lại', href: '/login' },
+  { kind: 'navigate', label: 'Về đăng nhập', href: '/login' },
+];
 
 export function OAuthConfirmPage() {
   const navigate = useNavigate();
@@ -28,7 +35,7 @@ export function OAuthConfirmPage() {
     socialApi.oauthConfirm(token).then(
       () => void navigate('/', { replace: true }),
       (err: unknown) => {
-        if (err instanceof ApiError) setState({ kind: 'invalid', error: err });
+        if (err instanceof AppError) setState({ kind: 'invalid', error: err });
       },
     );
   }, [navigate]);
@@ -43,29 +50,14 @@ export function OAuthConfirmPage() {
   return (
     <AuthLayout title="Liên kết không dùng được">
       {state.kind === 'invalid' ? (
-        <ErrorNotice error={state.error}>
-          <Actions />
-        </ErrorNotice>
+        <ErrorNotice error={state.error} actions={RESTART} />
       ) : (
         <>
           <p>Hãy mở lại liên kết trong thư gần nhất, hoặc bắt đầu đăng nhập lại để nhận thư mới.</p>
-          <Actions />
+          <TextLink to="/login">Gửi lại</TextLink>
+          <TextLink to="/login">Về đăng nhập</TextLink>
         </>
       )}
     </AuthLayout>
-  );
-}
-
-function Actions() {
-  return (
-    <>
-      {/* Bắt đầu lại ở trang đăng nhập sẽ gửi thư mới (liên kết cũ chỉ dùng một lần). */}
-      <Link to="/login" style={styles.link}>
-        Gửi lại
-      </Link>
-      <Link to="/login" style={styles.link}>
-        Về đăng nhập
-      </Link>
-    </>
   );
 }

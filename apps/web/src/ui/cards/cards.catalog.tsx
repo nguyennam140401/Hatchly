@@ -20,25 +20,60 @@ export const channelTagCatalog: CatalogEntry = {
 export const usageMeterCatalog: CatalogEntry = {
   name: 'UsageMeter',
   description: 'Thanh mức sử dụng: bình thường / cảnh báo / hết. Chỉ số đếm hoặc %, không số tiền.',
-  a11yNotes: 'role="progressbar" có aria-valuenow; mức cảnh báo/hết có chữ + biểu tượng, không chỉ màu.',
+  a11yNotes:
+    'role="progressbar" có aria-valuenow; mức cảnh báo/hết có chữ + biểu tượng, không chỉ màu.',
   variants: [
-    { label: 'bình thường', render: () => <UsageMeter label="Bài đăng" value={20} limit={100} level="normal" /> },
-    { label: 'cảnh báo', render: () => <UsageMeter label="Bài đăng" value={85} limit={100} level="warning" /> },
-    { label: 'hết', render: () => <UsageMeter label="Bài đăng" value={100} limit={100} level="exhausted" /> },
-    { label: 'phần trăm', render: () => <UsageMeter label="Lượt AI" value={50} limit={100} level="normal" unit="percent" /> },
+    {
+      label: 'bình thường',
+      render: () => <UsageMeter label="Bài đăng" value={20} limit={100} level="normal" />,
+    },
+    {
+      label: 'cảnh báo',
+      render: () => <UsageMeter label="Bài đăng" value={85} limit={100} level="warning" />,
+    },
+    {
+      label: 'hết',
+      render: () => <UsageMeter label="Bài đăng" value={100} limit={100} level="exhausted" />,
+    },
+    {
+      label: 'phần trăm',
+      render: () => (
+        <UsageMeter label="Lượt AI" value={50} limit={100} level="normal" unit="percent" />
+      ),
+    },
   ],
 };
 
-const idea = { id: 'i1', title: 'Khuyến mãi cuối tuần', reason: 'Khách thường mua nhiều vào thứ Bảy.' };
+const idea = {
+  id: 'i1',
+  title: 'Khuyến mãi cuối tuần',
+  reason: 'Khách thường mua nhiều vào thứ Bảy.',
+};
 
 export const ideaCardCatalog: CatalogEntry = {
   name: 'IdeaCard',
   description: 'Thẻ chủ đề đề xuất: nổi bật có/không.',
   a11yNotes: 'Nút chọn/sửa/bỏ có nhãn riêng; chọn dùng aria-pressed.',
   variants: [
-    { label: 'thường', render: () => <IdeaCard idea={idea} onSelect={() => undefined} onEdit={() => undefined} onRemove={() => undefined} /> },
-    { label: 'nổi bật', render: () => <IdeaCard idea={idea} featured onSelect={() => undefined} /> },
-    { label: 'đang chọn', render: () => <IdeaCard idea={idea} selected onSelect={() => undefined} /> },
+    {
+      label: 'thường',
+      render: () => (
+        <IdeaCard
+          idea={idea}
+          onSelect={() => undefined}
+          onEdit={() => undefined}
+          onRemove={() => undefined}
+        />
+      ),
+    },
+    {
+      label: 'nổi bật',
+      render: () => <IdeaCard idea={idea} featured onSelect={() => undefined} />,
+    },
+    {
+      label: 'đang chọn',
+      render: () => <IdeaCard idea={idea} selected onSelect={() => undefined} />,
+    },
   ],
 };
 
@@ -69,7 +104,8 @@ export const postCardCatalog: CatalogEntry = {
         <PostCard
           post={{
             id: 'p2',
-            title: 'Một tiêu đề rất rất dài để kiểm tra việc cắt gọn trên màn hình điện thoại 360 px không bị tràn',
+            title:
+              'Một tiêu đề rất rất dài để kiểm tra việc cắt gọn trên màn hình điện thoại 360 px không bị tràn',
             excerpt: 'Nội dung ngắn.',
             status: 'attention',
             channels: ['tiktok'],

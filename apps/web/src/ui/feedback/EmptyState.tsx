@@ -13,7 +13,12 @@ export interface EmptyStateProps {
 
 export function EmptyState({ message, action, icon = 'info', className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center gap-3 rounded-lg border border-dashed border-line-strong p-8 text-center', className)}>
+    <div
+      className={cn(
+        'flex flex-col items-center gap-3 rounded-lg border border-dashed border-line-strong p-8 text-center',
+        className,
+      )}
+    >
       <Icon name={icon} className="text-ink-muted" />
       <p className="text-body text-ink">{message}</p>
       {action}

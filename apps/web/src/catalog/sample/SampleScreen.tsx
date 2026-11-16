@@ -121,7 +121,7 @@ function IdeaForm() {
 }
 
 export function SampleScreen() {
-  const client = useMemo(createQueryClient, []);
+  const [client] = useState(createQueryClient);
   const [scenario, setScenario] = useState<Scenario>('ok');
   const session = useMemo(() => ({ me: CATALOG_ME, refresh: () => Promise.resolve() }), []);
   return (

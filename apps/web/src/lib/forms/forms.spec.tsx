@@ -18,7 +18,12 @@ describe('draftStore', () => {
     expect(draftStore.load('u-2', 'profile')).toBeUndefined();
   });
   it('trường nhạy cảm (theo tên hoặc khai báo) không bao giờ vào bản nháp', () => {
-    expect(stripSensitive({ password: 'a', token: 'b', otpCode: 'c', file: 'd', intro: 'ok', custom: 'x' }, ['custom'])).toEqual({
+    expect(
+      stripSensitive(
+        { password: 'a', token: 'b', otpCode: 'c', file: 'd', intro: 'ok', custom: 'x' },
+        ['custom'],
+      ),
+    ).toEqual({
       intro: 'ok',
     });
   });
@@ -34,16 +39,30 @@ describe('schemaResolver', () => {
     safeParse: (v) => {
       const a = (v as { a?: string }).a;
       return a === undefined || a === ''
-        ? { success: false, error: { issues: [{ path: ['a'], message: 'Thiếu a' }, { path: ['a'], message: 'Lỗi thứ hai' }] } }
+        ? {
+            success: false,
+            error: {
+              issues: [
+                { path: ['a'], message: 'Thiếu a' },
+                { path: ['a'], message: 'Lỗi thứ hai' },
+              ],
+            },
+          }
         : { success: true, data: { a } };
     },
   };
   it('chỉ giữ lỗi đầu tiên của mỗi ô', async () => {
-    const result = await schemaResolver(schema)({ a: '' }, undefined, { fields: {}, shouldUseNativeValidation: false });
+    const result = await schemaResolver(schema)({ a: '' }, undefined, {
+      fields: {},
+      shouldUseNativeValidation: false,
+    });
     expect((result.errors as { a?: { message?: string } }).a?.message).toBe('Thiếu a');
   });
   it('hợp lệ → trả dữ liệu đã kiểm', async () => {
-    const result = await schemaResolver(schema)({ a: 'x' }, undefined, { fields: {}, shouldUseNativeValidation: false });
+    const result = await schemaResolver(schema)({ a: 'x' }, undefined, {
+      fields: {},
+      shouldUseNativeValidation: false,
+    });
     expect(result.values).toEqual({ a: 'x' });
   });
 });
@@ -66,7 +85,11 @@ const steps: WizardStep<W>[] = [
 const whole: FormSchema<W> = { safeParse: (v) => ({ success: true, data: v as W }) };
 
 function useBoth() {
-  const form = useAppForm<W>({ schema: whole, defaultValues: { a: '', b: '' }, onSubmit: () => Promise.resolve() });
+  const form = useAppForm<W>({
+    schema: whole,
+    defaultValues: { a: '', b: '' },
+    onSubmit: () => Promise.resolve(),
+  });
   const wizard = useWizard(form, steps);
   return { form, wizard };
 }
@@ -136,10 +159,21 @@ describe('useAppForm – chỉ xem', () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     let form: ReturnType<typeof useAppForm<W>> | undefined;
     function Probe() {
-      form = useAppForm<W>({ schema: whole, defaultValues: { a: '', b: '' }, readOnly: true, onSubmit });
-      return <button type="button" onClick={() => void form?.submit()}>go</button>;
+      form = useAppForm<W>({
+        schema: whole,
+        defaultValues: { a: '', b: '' },
+        readOnly: true,
+        onSubmit,
+      });
+      return (
+        <button type="button" onClick={() => void form?.submit()}>
+          go
+        </button>
+      );
     }
-    const router = createMemoryRouter([{ path: '/', element: <Probe /> }], { initialEntries: ['/'] });
+    const router = createMemoryRouter([{ path: '/', element: <Probe /> }], {
+      initialEntries: ['/'],
+    });
     render(
       <SessionContext.Provider value={{ me: fakeMe('owner'), refresh: () => Promise.resolve() }}>
         <RouterProvider router={router} />

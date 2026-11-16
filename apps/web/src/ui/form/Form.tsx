@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { FormProvider, type FieldValues } from 'react-hook-form';
+import { useNavigate } from 'react-router';
+import type { AppError } from '../../lib/api/errors';
+import type { ErrorActionView } from '../../lib/catalogs/error-explanations';
 import type { AppForm } from '../../lib/forms/useAppForm';
 import { t } from '../../lib/i18n/t';
 import { ConfirmDialog } from '../alert/ConfirmDialog';
@@ -18,6 +21,10 @@ export interface FormProps<T extends FieldValues> {
   readOnlyReason?: string;
   /** Dựng khung "Bản của bạn" khi xung đột; mặc định liệt kê giá trị đơn giản. */
   renderMine?: (mine: T) => ReactNode;
+  /** Hành động khắc phục của lỗi chung (mặc định: "Thử lại"); vd đăng nhập sai → "Quên mật khẩu". Luôn ≥ 1. */
+  /** Khóa nút Gửi kèm lý do hiện dưới nút (vd chưa tích ô đồng ý). Nút vẫn focus được để đọc lý do. */
+  submitLocked?: string;
+  errorActions?: (error: AppError) => [ErrorActionView, ...ErrorActionView[]];
   children: ReactNode;
 }
 
@@ -46,9 +53,12 @@ export function Form<T extends FieldValues>({
   cancelLabel,
   readOnlyReason,
   renderMine,
+  errorActions,
+  submitLocked,
   children,
 }: FormProps<T>) {
   const { blocker } = form;
+  const navigate = useNavigate();
   return (
     <FormProvider {...form.methods}>
       <FormUiContext.Provider value={{ readOnly: form.readOnly }}>
@@ -69,9 +79,13 @@ export function Form<T extends FieldValues>({
           {form.submitError !== null && (
             <InlineAlert
               tone="error"
-              actions={[{ kind: 'retry', label: t('common.retry') }]}
-              onAction={() => {
-                void form.retry();
+              actions={
+                errorActions?.(form.submitError) ?? [{ kind: 'retry', label: t('common.retry') }]
+              }
+              onAction={(action) => {
+                if (action.kind === 'navigate' && action.href !== undefined)
+                  void navigate(action.href);
+                else void form.retry();
               }}
               support={{ traceId: form.submitError.support.traceId, code: form.submitError.code }}
             >
@@ -97,15 +111,19 @@ export function Form<T extends FieldValues>({
             />
           )}
 
-          {form.stale && (
-            <InlineAlert tone="warning">{t('form.conflict.keep')}</InlineAlert>
-          )}
+          {form.stale && <InlineAlert tone="warning">{t('form.conflict.keep')}</InlineAlert>}
 
           {children}
 
           {!form.readOnly && (
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" loading={form.submitting}>
+              <Button
+                type="submit"
+                loading={form.submitting}
+                {...(submitLocked !== undefined
+                  ? { locked: true, lockedReason: submitLocked }
+                  : {})}
+              >
                 {submitLabel}
               </Button>
               {onCancel !== undefined && (

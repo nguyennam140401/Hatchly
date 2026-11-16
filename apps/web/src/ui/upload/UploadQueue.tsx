@@ -29,7 +29,10 @@ export function UploadQueue({ items, onCancel, onRetry, freeUpHref }: UploadQueu
       {items.map((item) => {
         const full = item.errorKind === 'storage_full';
         return (
-          <li key={item.id} className="flex flex-col gap-2 rounded-md border border-line bg-surface-0 p-3">
+          <li
+            key={item.id}
+            className="flex flex-col gap-2 rounded-md border border-line bg-surface-0 p-3"
+          >
             <div className="flex items-center justify-between gap-2">
               <Tooltip content={item.name}>
                 <span className="min-w-0 truncate text-body-sm text-ink">{item.name}</span>
@@ -47,7 +50,10 @@ export function UploadQueue({ items, onCancel, onRetry, freeUpHref }: UploadQueu
                 className="h-2 flex-1 overflow-hidden rounded-pill bg-surface-200"
               >
                 <div
-                  className={cn('h-full w-(--progress) rounded-pill', item.status === 'error' ? 'bg-danger' : 'bg-brand')}
+                  className={cn(
+                    'h-full w-(--progress) rounded-pill',
+                    item.status === 'error' ? 'bg-danger' : 'bg-brand',
+                  )}
                   style={{ '--progress': `${String(item.progress)}%` } as React.CSSProperties}
                 />
               </div>
@@ -55,17 +61,33 @@ export function UploadQueue({ items, onCancel, onRetry, freeUpHref }: UploadQueu
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="flex items-center gap-1 text-caption text-ink-muted">
-                <Icon name={item.status === 'done' ? 'check' : item.status === 'error' ? 'alert' : 'clock'} className="size-4" />
+                <Icon
+                  name={
+                    item.status === 'done' ? 'check' : item.status === 'error' ? 'alert' : 'clock'
+                  }
+                  className="size-4"
+                />
                 {STATUS_TEXT[item.status]}
               </span>
               <span className="flex flex-wrap gap-2">
                 {(item.status === 'uploading' || item.status === 'queued') && (
-                  <Button variant="ghost" onClick={() => { onCancel(item.id); }}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      onCancel(item.id);
+                    }}
+                  >
                     {t('upload.cancel')}
                   </Button>
                 )}
-                {(item.status === 'canceled' || (item.status === 'error' && item.errorKind !== 'invalid' && !full)) && (
-                  <Button variant="secondary" onClick={() => { onRetry(item.id); }}>
+                {(item.status === 'canceled' ||
+                  (item.status === 'error' && item.errorKind !== 'invalid' && !full)) && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      onRetry(item.id);
+                    }}
+                  >
                     {t('upload.retry')}
                   </Button>
                 )}

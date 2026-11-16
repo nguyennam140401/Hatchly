@@ -27,7 +27,10 @@ describe('steps', () => {
   });
   it('ProgressRow: aria-valuenow và chữ số', () => {
     render(<ProgressRow label="Tạo bài" done={3} total={10} />);
-    expect(screen.getByRole('progressbar', { name: 'Tạo bài' })).toHaveAttribute('aria-valuenow', '3');
+    expect(screen.getByRole('progressbar', { name: 'Tạo bài' })).toHaveAttribute(
+      'aria-valuenow',
+      '3',
+    );
     expect(screen.getByText('3/10 (30%)')).toBeInTheDocument();
   });
 });

@@ -13,21 +13,41 @@ export interface ErrorNoticeProps {
   onRetry?: () => void;
   /** Ghi đè xử lý hành động (mặc định: `retry` → onRetry, `navigate` → chuyển trang trong ứng dụng). */
   onAction?: (action: ErrorActionView) => void;
+  /** Ghi đè hành động của máy chủ (vd đăng nhập sai → "Quên mật khẩu"). Rỗng/không có → dùng hành động của máy chủ. */
+  actions?: readonly ErrorActionView[];
   className?: string;
 }
 
-function withRetry(actions: readonly ErrorActionView[], error: AppError, hasRetry: boolean): [ErrorActionView, ...ErrorActionView[]] {
+function withRetry(
+  actions: readonly ErrorActionView[],
+  error: AppError,
+  hasRetry: boolean,
+): [ErrorActionView, ...ErrorActionView[]] {
   const list: ErrorActionView[] = [...actions];
-  const wantsRetry = hasRetry && (error.kind === 'network' || error.kind === 'server' || error.kind === 'invalid_response');
-  if (wantsRetry && !list.some((a) => a.kind === 'retry')) list.unshift({ kind: 'retry', label: t('common.retry') });
+  const wantsRetry =
+    hasRetry &&
+    (error.kind === 'network' || error.kind === 'server' || error.kind === 'invalid_response');
+  if (wantsRetry && !list.some((a) => a.kind === 'retry'))
+    list.unshift({ kind: 'retry', label: t('common.retry') });
   const [first, ...rest] = list.length > 0 ? list : FALLBACK_ACTIONS;
   return [first ?? FALLBACK_ACTIONS[0], ...rest];
 }
 
-export function ErrorNotice({ error, onRetry, onAction, className }: ErrorNoticeProps) {
+export function ErrorNotice({
+  error,
+  onRetry,
+  onAction,
+  actions: override,
+  className,
+}: ErrorNoticeProps) {
   const navigate = useNavigate();
-  const message = error.message !== '' ? error.message : (explain(error.code)?.message ?? t('errors.page.body'));
-  const actions = withRetry(error.actions, error, onRetry !== undefined);
+  const message =
+    error.message !== '' ? error.message : (explain(error.code)?.message ?? t('errors.page.body'));
+  const actions = withRetry(
+    override !== undefined && override.length > 0 ? override : error.actions,
+    error,
+    onRetry !== undefined,
+  );
 
   const handle = (action: ErrorActionView) => {
     if (onAction !== undefined) {

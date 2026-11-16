@@ -20,7 +20,14 @@ const BAR: Record<UsageMeterProps['level'], string> = {
   exhausted: 'bg-danger',
 };
 
-export function UsageMeter({ label, value, limit, level, unit = 'count', className }: UsageMeterProps) {
+export function UsageMeter({
+  label,
+  value,
+  limit,
+  level,
+  unit = 'count',
+  className,
+}: UsageMeterProps) {
   const percent = limit > 0 ? Math.min(100, Math.max(0, (value / limit) * 100)) : 0;
   const text =
     unit === 'percent' ? `${Math.round(percent)}%` : `${formatCount(value)}/${formatCount(limit)}`;

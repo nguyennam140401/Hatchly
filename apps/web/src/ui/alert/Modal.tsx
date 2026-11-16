@@ -8,16 +8,27 @@ export interface ModalProps {
   description?: ReactNode;
   /** `false`: không đóng được bằng Esc/bấm ra ngoài (hộp thoại hết phiên bắt buộc xử lý). */
   dismissible?: boolean;
+  /** `alertdialog` cho hộp xác nhận cần người dùng quyết định (mặc định `dialog`). */
+  role?: 'dialog' | 'alertdialog';
   children?: ReactNode;
 }
 
 /** Lớp bọc Radix Dialog (FR-038): giữ tiêu điểm trong hộp, tiêu đề + mô tả cho bộ đọc màn hình. */
-export function Modal({ open, onOpenChange, title, description, dismissible = true, children }: ModalProps) {
+export function Modal({
+  open,
+  onOpenChange,
+  title,
+  description,
+  dismissible = true,
+  role = 'dialog',
+  children,
+}: ModalProps) {
   return (
     <Dialog.Root open={open} {...(onOpenChange !== undefined ? { onOpenChange } : {})}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-ink opacity-40" />
         <Dialog.Content
+          role={role}
           onEscapeKeyDown={(event) => {
             if (!dismissible) event.preventDefault();
           }}

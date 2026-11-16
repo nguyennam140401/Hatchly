@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { browser } from '../../src/features/auth/social-api';
+import { browser } from '../../src/lib/api/endpoints/auth';
 import { apiError, fakeApi, keyboardReachable, me, renderAt } from './helpers';
 
 // T073 (009 – US5): Cài đặt → Cách đăng nhập.

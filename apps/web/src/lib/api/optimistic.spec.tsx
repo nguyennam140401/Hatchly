@@ -16,7 +16,13 @@ const fail = () =>
     actions: [{ kind: 'retry', label: 'Thử lại' }],
   });
 
-function Providers({ client, children }: { client: ReturnType<typeof createQueryClient>; children: ReactNode }) {
+function Providers({
+  client,
+  children,
+}: {
+  client: ReturnType<typeof createQueryClient>;
+  children: ReactNode;
+}) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
@@ -41,12 +47,21 @@ describe('cập nhật lạc quan an toàn', () => {
         },
       });
       return (
-        <button type="button" onClick={() => { m.mutate('10:00'); }}>
+        <button
+          type="button"
+          onClick={() => {
+            m.mutate('10:00');
+          }}
+        >
           đổi
         </button>
       );
     }
-    render(<Providers client={client}><Probe /></Providers>);
+    render(
+      <Providers client={client}>
+        <Probe />
+      </Providers>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'đổi' }));
     expect(client.getQueryData(['slot'])).toBe('10:00'); // hiện ngay
     await waitFor(() => {
@@ -73,12 +88,21 @@ describe('cập nhật lạc quan an toàn', () => {
         },
       });
       return (
-        <button type="button" onClick={() => { m.mutate('n1'); }}>
+        <button
+          type="button"
+          onClick={() => {
+            m.mutate('n1');
+          }}
+        >
           đọc
         </button>
       );
     }
-    render(<Providers client={client}><Probe /></Providers>);
+    render(
+      <Providers client={client}>
+        <Probe />
+      </Providers>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'đọc' }));
     await waitFor(() => {
       expect(client.getQueryData(['unread'])).toBe(2);
@@ -88,7 +112,11 @@ describe('cập nhật lạc quan an toàn', () => {
 
 describe('thao tác destructive (xóa/ngắt kết nối/hủy lịch)', () => {
   function Probe({ run }: { run: () => Promise<string> }) {
-    const mutation = useApiMutation({ operation: 'deleteMedia', fn: () => run(), invalidates: () => [] });
+    const mutation = useApiMutation({
+      operation: 'deleteMedia',
+      fn: () => run(),
+      invalidates: () => [],
+    });
     const { ask, dialog } = useDestructiveAction({
       mutation,
       title: 'Xóa ảnh này?',
@@ -97,7 +125,12 @@ describe('thao tác destructive (xóa/ngắt kết nối/hủy lịch)', () => {
     });
     return (
       <>
-        <button type="button" onClick={() => { ask('m1'); }}>
+        <button
+          type="button"
+          onClick={() => {
+            ask('m1');
+          }}
+        >
           mở
         </button>
         {dialog}
@@ -109,7 +142,12 @@ describe('thao tác destructive (xóa/ngắt kết nối/hủy lịch)', () => {
     let calls = 0;
     render(
       <Providers client={createQueryClient()}>
-        <Probe run={() => { calls += 1; return Promise.resolve('ok'); }} />
+        <Probe
+          run={() => {
+            calls += 1;
+            return Promise.resolve('ok');
+          }}
+        />
       </Providers>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'mở' }));

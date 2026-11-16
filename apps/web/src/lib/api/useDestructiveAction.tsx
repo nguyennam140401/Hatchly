@@ -14,7 +14,9 @@ export interface DestructiveActionOptions<V, R> {
   confirmLabel: string;
 }
 
-export function useDestructiveAction<V, R>(options: DestructiveActionOptions<V, R>): {
+export function useDestructiveAction<V, R>(
+  options: DestructiveActionOptions<V, R>,
+): {
   /** Mở hộp xác nhận cho `vars`. */
   ask: (vars: V) => void;
   dialog: ReactElement;

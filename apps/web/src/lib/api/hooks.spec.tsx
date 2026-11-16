@@ -22,8 +22,12 @@ describe('useApiQuery', () => {
       () => useApiQuery(queryKeys.usage.current(), fn, { freshness: 'volatile' }),
       { wrapper },
     );
-    await waitFor(() => { expect(result.current.data).toEqual({ n: 1 }); });
-    expect(client.getQueryCache().find({ queryKey: queryKeys.usage.current() })?.isStale()).toBe(true);
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ n: 1 });
+    });
+    expect(client.getQueryCache().find({ queryKey: queryKeys.usage.current() })?.isStale()).toBe(
+      true,
+    );
   });
 });
 

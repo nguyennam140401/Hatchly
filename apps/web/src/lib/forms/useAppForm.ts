@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import {
   useForm,
   type DefaultValues,
@@ -8,7 +8,7 @@ import {
 } from 'react-hook-form';
 import type { Blocker } from 'react-router';
 import { AppError } from '../api/errors';
-import { useSession } from '../session/context';
+import { SessionContext } from '../session/context';
 import { draftStore } from './draft-store';
 import { schemaResolver, type FormSchema } from './resolver';
 import { useUnsavedChangesGuard } from './useUnsavedChangesGuard';
@@ -32,6 +32,8 @@ export interface UseAppFormOptions<T extends FieldValues> {
   fieldOrder?: readonly string[] | undefined;
   /** Gửi biểu mẫu; ném `AppError` khi lỗi. KHÔNG báo thành công khi chưa có 2xx. */
   onSubmit: (values: T, ctx: { version: number | undefined }) => Promise<unknown>;
+  /** Biểu mẫu "tạo mới" (mời thành viên…): sau khi gửi thành công trả các ô về giá trị ban đầu thay vì giữ giá trị vừa gửi. */
+  clearOnSuccess?: boolean | undefined;
   /** Tải bản mới nhất của bản ghi (cho xử lý xung đột phiên bản). */
   loadLatest?: (() => Promise<{ values: T; version: number }>) | undefined;
 }
@@ -59,8 +61,8 @@ export interface AppForm<T extends FieldValues> {
 }
 
 export function useAppForm<T extends FieldValues>(options: UseAppFormOptions<T>): AppForm<T> {
-  const { me } = useSession();
-  const subject = me.user.id;
+  // Trang công khai (đăng nhập, đăng ký…) chưa có phiên: dùng chủ thể 'anonymous' và các biểu mẫu đó không đặt `draftKey`.
+  const subject = useContext(SessionContext)?.me.user.id ?? 'anonymous';
   const {
     schema,
     defaultValues,
@@ -68,6 +70,7 @@ export function useAppForm<T extends FieldValues>(options: UseAppFormOptions<T>)
     sensitiveFields,
     fieldOrder,
     readOnly = false,
+    clearOnSuccess = false,
     onSubmit,
     loadLatest: loadLatestOption,
   } = options;
@@ -99,7 +102,9 @@ export function useAppForm<T extends FieldValues>(options: UseAppFormOptions<T>)
     restored.current = true;
     const draft = draftStore.load(subject, draftKey);
     if (draft !== undefined) {
-      reset({ ...(defaultValues as object), ...draft.value } as DefaultValues<T>, { keepDefaultValues: true });
+      reset({ ...(defaultValues as object), ...draft.value } as DefaultValues<T>, {
+        keepDefaultValues: true,
+      });
     }
     // Chỉ chạy khi mở biểu mẫu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,7 +126,9 @@ export function useAppForm<T extends FieldValues>(options: UseAppFormOptions<T>)
     };
   }, [watch, draftKey, subject, readOnly, sensitiveFields]);
 
-  const guard = useUnsavedChangesGuard(methods.formState.isDirty && !readOnly);
+  // Đang gửi thì không chặn: thành công thường chuyển trang ngay trong `onSubmit` (đăng nhập, tạo mới…).
+  const sendingRef = useRef(false);
+  const guard = useUnsavedChangesGuard(methods.formState.isDirty && !readOnly, sendingRef);
 
   const handleServerError = useCallback(
     (error: AppError) => {
@@ -150,20 +157,32 @@ export function useAppForm<T extends FieldValues>(options: UseAppFormOptions<T>)
     () =>
       methods.handleSubmit(async (values) => {
         setSubmitError(null);
+        sendingRef.current = true;
         setSubmitting(true);
         try {
           await onSubmit(values, { version });
           if (draftKey !== undefined) draftStore.clear(subject, draftKey);
           setStale(false);
-          reset(values);
+          reset(clearOnSuccess ? (defaultValues as T) : values);
         } catch (error) {
           if (error instanceof AppError) handleServerError(error);
           else throw error;
         } finally {
+          sendingRef.current = false;
           setSubmitting(false);
         }
       })(),
-    [methods, onSubmit, version, draftKey, subject, reset, handleServerError],
+    [
+      methods,
+      onSubmit,
+      version,
+      draftKey,
+      subject,
+      reset,
+      handleServerError,
+      clearOnSuccess,
+      defaultValues,
+    ],
   );
 
   // Chống gửi trùng: lần gửi thứ hai khi lần đầu chưa xong dùng lại cùng một lời hứa (đúng MỘT lời gọi).

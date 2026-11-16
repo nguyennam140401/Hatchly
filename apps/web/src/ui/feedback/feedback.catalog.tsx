@@ -21,7 +21,9 @@ export const emptyStateCatalog: CatalogEntry = {
   variants: [
     {
       label: 'có hành động',
-      render: () => <EmptyState message="Bạn chưa có bài nào." action={<Button>Tạo bài đầu tiên</Button>} />,
+      render: () => (
+        <EmptyState message="Bạn chưa có bài nào." action={<Button>Tạo bài đầu tiên</Button>} />
+      ),
     },
     { label: 'không hành động', render: () => <EmptyState message="Chưa có thông báo." /> },
   ],

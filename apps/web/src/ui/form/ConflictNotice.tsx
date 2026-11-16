@@ -16,7 +16,13 @@ export interface ConflictNoticeProps {
  * Xung đột phiên bản (FR-018): người khác vừa sửa cùng bản ghi. KHÔNG tự ghi đè, KHÔNG tự gửi lại.
  * Hai lựa chọn: "Tải bản mới nhất" (giữ bản của tôi trong khung đối chiếu) hoặc "Giữ bản của tôi để xem lại".
  */
-export function ConflictNotice({ loaded, mine, onLoadLatest, onKeepMine, onDismiss }: ConflictNoticeProps) {
+export function ConflictNotice({
+  loaded,
+  mine,
+  onLoadLatest,
+  onKeepMine,
+  onDismiss,
+}: ConflictNoticeProps) {
   return (
     <div className="flex flex-col gap-3">
       <InlineAlert
@@ -36,7 +42,10 @@ export function ConflictNotice({ loaded, mine, onLoadLatest, onKeepMine, onDismi
           else onKeepMine();
         }}
       />
-      <section aria-label={t('form.conflict.mine')} className="rounded-md border border-line bg-surface-100 p-4">
+      <section
+        aria-label={t('form.conflict.mine')}
+        className="rounded-md border border-line bg-surface-100 p-4"
+      >
         <h3 className="pb-2 text-label text-ink">{t('form.conflict.mine')}</h3>
         <div className="text-body-sm text-ink-muted">{mine}</div>
       </section>

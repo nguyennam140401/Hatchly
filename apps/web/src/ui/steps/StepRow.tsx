@@ -19,7 +19,14 @@ const META: Record<StepRowProps['state'], { icon: IconName; tone: string }> = {
   pending: { icon: 'clock', tone: 'bg-surface-200 text-ink-muted' },
 };
 
-export function StepRow({ state, running = false, title, time, explanation, remedy }: StepRowProps) {
+export function StepRow({
+  state,
+  running = false,
+  title,
+  time,
+  explanation,
+  remedy,
+}: StepRowProps) {
   const meta = META[state];
   const stateText =
     running && state === 'pending' ? t('step.running') : t(`step.${state}` as 'step.done');

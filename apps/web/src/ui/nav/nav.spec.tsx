@@ -14,7 +14,9 @@ describe('Sidebar', () => {
   it('mỗi trong 7 mục có thể là mục hiện tại: aria-current="page"', () => {
     for (const item of SIDEBAR_SAMPLE) {
       const { unmount } = at(item.href, <Sidebar items={SIDEBAR_SAMPLE} appName="App" />);
-      const current = screen.getAllByRole('link').filter((l) => l.getAttribute('aria-current') === 'page');
+      const current = screen
+        .getAllByRole('link')
+        .filter((l) => l.getAttribute('aria-current') === 'page');
       expect(current, item.id).toHaveLength(1);
       expect(current[0]).toHaveTextContent(item.label);
       unmount();
@@ -22,7 +24,9 @@ describe('Sidebar', () => {
   });
   it('huy hiệu đếm có chữ số', () => {
     at('/', <Sidebar items={SIDEBAR_SAMPLE} appName="App" />);
-    expect(within(screen.getByRole('link', { name: /Bài viết/ })).getByText('3')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('link', { name: /Bài viết/ })).getByText('3'),
+    ).toBeInTheDocument();
   });
 });
 

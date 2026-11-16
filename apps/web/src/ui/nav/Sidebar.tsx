@@ -17,7 +17,10 @@ export function Sidebar({ items, appName, className }: SidebarProps) {
   return (
     <nav
       aria-label={t('common.mainNav')}
-      className={cn('flex w-sidebar shrink-0 flex-col gap-2 border-r border-line bg-surface-0 p-4', className)}
+      className={cn(
+        'flex w-sidebar shrink-0 flex-col gap-2 border-r border-line bg-surface-0 p-4',
+        className,
+      )}
     >
       <div className="flex items-center gap-2 px-2 pb-4">
         <Logo />

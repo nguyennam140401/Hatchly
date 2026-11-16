@@ -36,7 +36,10 @@ export function IdeaListField({ name, label, addLabel = 'Thêm chủ đề' }: I
         const idea = rowAt(index);
         if (editing === index) {
           return (
-            <div key={row.id} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-0 p-4">
+            <div
+              key={row.id}
+              className="flex flex-col gap-2 rounded-lg border border-line bg-surface-0 p-4"
+            >
               <Field label="Tên chủ đề">
                 {(c) => (
                   <input
@@ -73,13 +76,19 @@ export function IdeaListField({ name, label, addLabel = 'Thêm chủ đề' }: I
         return (
           <IdeaCard
             key={row.id}
-            idea={{ id: idea.id, title: idea.title, ...(idea.reason !== undefined ? { reason: idea.reason } : {}) }}
+            idea={{
+              id: idea.id,
+              title: idea.title,
+              ...(idea.reason !== undefined ? { reason: idea.reason } : {}),
+            }}
             selected={idea.selected}
             {...(readOnly
               ? {}
               : {
                   onSelect: () => {
-                    setValue(`${name}.${String(index)}.selected`, !idea.selected, { shouldDirty: true });
+                    setValue(`${name}.${String(index)}.selected`, !idea.selected, {
+                      shouldDirty: true,
+                    });
                   },
                   onEdit: () => {
                     setEditing(index);
@@ -108,7 +117,11 @@ export function IdeaListField({ name, label, addLabel = 'Thêm chủ đề' }: I
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       if (draft.trim() !== '') {
-                        append({ id: `n${String(Date.now())}`, title: draft.trim(), selected: true });
+                        append({
+                          id: `n${String(Date.now())}`,
+                          title: draft.trim(),
+                          selected: true,
+                        });
                         setDraft('');
                       }
                     }

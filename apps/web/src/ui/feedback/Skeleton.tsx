@@ -10,7 +10,12 @@ export interface SkeletonProps {
 }
 
 function Block({ className }: { className: string }) {
-  return <div aria-hidden="true" className={cn('rounded-md bg-surface-200 motion-safe:animate-pulse', className)} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={cn('rounded-md bg-surface-200 motion-safe:animate-pulse', className)}
+    />
+  );
 }
 
 /** Khung chờ: `aria-busy` + thông báo "Đang tải" cho bộ đọc màn hình; chuyển động chỉ khi `motion-safe`. */

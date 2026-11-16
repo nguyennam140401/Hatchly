@@ -5,7 +5,8 @@ import { StepRow } from './StepRow';
 export const stepRowCatalog: CatalogEntry = {
   name: 'StepRow',
   description: 'Dòng bước của một lượt đăng: xong / lỗi / chờ (đang xử lý).',
-  a11yNotes: 'Trạng thái bằng chữ + biểu tượng; nhấp nháy chỉ khi motion-safe, giảm chuyển động vẫn có chữ "Đang xử lý".',
+  a11yNotes:
+    'Trạng thái bằng chữ + biểu tượng; nhấp nháy chỉ khi motion-safe, giảm chuyển động vẫn có chữ "Đang xử lý".',
   variants: [
     { label: 'xong', render: () => <StepRow state="done" title="Kiểm tra trước" time="09:00" /> },
     {
@@ -29,5 +30,7 @@ export const progressRowCatalog: CatalogEntry = {
   name: 'ProgressRow',
   description: 'Dòng tiến độ done/total (chưa có trong Figma).',
   a11yNotes: 'role="progressbar" có aria-valuenow và chữ số.',
-  variants: [{ label: '3/10', render: () => <ProgressRow label="Đang tạo bài" done={3} total={10} /> }],
+  variants: [
+    { label: '3/10', render: () => <ProgressRow label="Đang tạo bài" done={3} total={10} /> },
+  ],
 };

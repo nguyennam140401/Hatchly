@@ -57,7 +57,12 @@ describe('AuthGate – bảng chuyển trạng thái', () => {
     const off = registerAccountDataCleaner(cleaner);
     const p = gate.onUnauthenticated(expired());
     const other = fakeMe('owner', {
-      user: { id: 'u-2', displayName: 'Người khác', email: 'khac@example.test', emailVerified: true },
+      user: {
+        id: 'u-2',
+        displayName: 'Người khác',
+        email: 'khac@example.test',
+        emailVerified: true,
+      },
     });
     expect(gate.completeReauth(other)).toBe('switched');
     expect(await p).toBe('switched');

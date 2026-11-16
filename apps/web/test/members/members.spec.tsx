@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { browser } from '../../src/features/auth/social-api';
+import { browser } from '../../src/lib/api/endpoints/auth';
 import { apiError, fakeApi, healthy, keyboardReachable, me, renderAt } from '../auth/helpers';
 
 // T050 + T064 (009 – US3, US4): Cài đặt → Thành viên và trang mở từ thư mời.
@@ -48,7 +48,7 @@ describe('MembersPage', () => {
     expect(screen.getByText(/Chủ tài khoản · lan@example\.vn/)).toBeInTheDocument();
     expect(screen.getByText(/Cộng tác viên · minh@example\.vn/)).toBeInTheDocument();
     expect(screen.getByText(/Đang chờ · hết hạn/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mời' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Mời' })).toHaveAttribute('aria-disabled', 'true'); // khóa kèm lý do (chuẩn 011)
     expect(screen.getByText(/Đã đủ 2 cộng tác viên/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Gửi lại' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Hủy lời mời' })).toBeInTheDocument();
@@ -203,7 +203,7 @@ describe('JoinPage', () => {
     const checkbox = screen.getByRole('checkbox');
     const google = screen.getByRole('button', { name: 'Tiếp tục với Google' });
     expect(checkbox).not.toBeChecked();
-    expect(google).toBeDisabled();
+    expect(google).toHaveAttribute('aria-disabled', 'true'); // khóa kèm lý do (chuẩn 011)
     expect(screen.getByText(/Google và Meta sẽ gửi cho chúng tôi/)).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
 
@@ -215,7 +215,7 @@ describe('JoinPage', () => {
     expect(api.calls.some((c) => c.path === '/api/v1/invitations/accept')).toBe(false);
 
     fireEvent.click(checkbox);
-    expect(google).toBeEnabled();
+    expect(google).not.toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(google);
     await waitFor(() => {
       expect(assign).toHaveBeenCalledWith('https://accounts.example/a');

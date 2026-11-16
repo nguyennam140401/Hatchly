@@ -24,7 +24,16 @@ export const FIGMA_VARIANTS: readonly VariantRow[] = [
   {
     component: 'StatusBadge',
     props: {
-      status: ['draft', 'review', 'scheduled', 'publishing', 'published', 'attention', 'cancelled', 'unknown'],
+      status: [
+        'draft',
+        'review',
+        'scheduled',
+        'publishing',
+        'published',
+        'attention',
+        'cancelled',
+        'unknown',
+      ],
     },
     figmaCombinations: 6,
     pendingCombinations: 2, // cancelled, unknown
@@ -42,39 +51,77 @@ export const FIGMA_VARIANTS: readonly VariantRow[] = [
     figmaCombinations: 3,
     pendingCombinations: 0,
   },
-  { component: 'IdeaCard', props: { featured: [true, false] }, figmaCombinations: 2, pendingCombinations: 0 },
+  {
+    component: 'IdeaCard',
+    props: { featured: [true, false] },
+    figmaCombinations: 2,
+    pendingCombinations: 0,
+  },
   { component: 'PostCard', props: {}, figmaCombinations: 1, pendingCombinations: 0 },
-  { component: 'NavBar', props: { active: ['overview', 'calendar', 'posts', 'more', 'create-post'] }, figmaCombinations: 5, pendingCombinations: 0 },
+  {
+    component: 'NavBar',
+    props: { active: ['overview', 'calendar', 'posts', 'more', 'create-post'] },
+    figmaCombinations: 5,
+    pendingCombinations: 0,
+  },
   {
     component: 'Sidebar',
     props: {
-      active: ['overview', 'calendar', 'posts', 'media', 'business-profile', 'channels-plan', 'settings'],
+      active: [
+        'overview',
+        'calendar',
+        'posts',
+        'media',
+        'business-profile',
+        'channels-plan',
+        'settings',
+      ],
     },
     figmaCombinations: 7,
     pendingCombinations: 0,
   },
-  { component: 'TopBar', props: { kind: ['logo', 'back'] }, figmaCombinations: 2, pendingCombinations: 0 },
+  {
+    component: 'TopBar',
+    props: { kind: ['logo', 'back'] },
+    figmaCombinations: 2,
+    pendingCombinations: 0,
+  },
   {
     component: 'InlineAlert',
     props: { tone: ['info', 'warning', 'error'] },
     figmaCombinations: 3,
     pendingCombinations: 0,
   },
-  { component: 'Chip', props: { selected: [true, false] }, figmaCombinations: 2, pendingCombinations: 0 },
+  {
+    component: 'Chip',
+    props: { selected: [true, false] },
+    figmaCombinations: 2,
+    pendingCombinations: 0,
+  },
   {
     component: 'ChannelTabs',
     props: { selected: ['facebook', 'tiktok', 'instagram', 'zalo'] },
     figmaCombinations: 2,
     pendingCombinations: 2, // Instagram, Zalo
   },
-  { component: 'StepRow', props: { state: ['done', 'error', 'pending'] }, figmaCombinations: 3, pendingCombinations: 0 },
+  {
+    component: 'StepRow',
+    props: { state: ['done', 'error', 'pending'] },
+    figmaCombinations: 3,
+    pendingCombinations: 0,
+  },
   {
     component: 'ChannelRow',
     props: { state: ['connected', 'expiring', 'disconnected', 'manual'] },
     figmaCombinations: 4,
     pendingCombinations: 0,
   },
-  { component: 'DayCell', props: { selected: [true, false] }, figmaCombinations: 2, pendingCombinations: 0 },
+  {
+    component: 'DayCell',
+    props: { selected: [true, false] },
+    figmaCombinations: 2,
+    pendingCombinations: 0,
+  },
   {
     component: 'CalendarItem',
     props: { status: ['review', 'scheduled', 'attention', 'published'] },
@@ -89,11 +136,41 @@ export const FIGMA_VARIANTS: readonly VariantRow[] = [
   },
   { component: 'Logo', props: {}, figmaCombinations: 1, pendingCombinations: 0 },
   // Dựng chỉ bằng token, không có trong Figma.
-  { component: 'ConfirmDialog', props: { tone: ['default', 'danger'] }, figmaCombinations: 0, pendingCombinations: 2, designPending: true },
-  { component: 'Skeleton', props: {}, figmaCombinations: 0, pendingCombinations: 1, designPending: true },
-  { component: 'EmptyState', props: {}, figmaCombinations: 0, pendingCombinations: 1, designPending: true },
-  { component: 'ProgressRow', props: {}, figmaCombinations: 0, pendingCombinations: 1, designPending: true },
-  { component: 'PageHeader', props: {}, figmaCombinations: 0, pendingCombinations: 1, designPending: true },
+  {
+    component: 'ConfirmDialog',
+    props: { tone: ['default', 'danger'] },
+    figmaCombinations: 0,
+    pendingCombinations: 2,
+    designPending: true,
+  },
+  {
+    component: 'Skeleton',
+    props: {},
+    figmaCombinations: 0,
+    pendingCombinations: 1,
+    designPending: true,
+  },
+  {
+    component: 'EmptyState',
+    props: {},
+    figmaCombinations: 0,
+    pendingCombinations: 1,
+    designPending: true,
+  },
+  {
+    component: 'ProgressRow',
+    props: {},
+    figmaCombinations: 0,
+    pendingCombinations: 1,
+    designPending: true,
+  },
+  {
+    component: 'PageHeader',
+    props: {},
+    figmaCombinations: 0,
+    pendingCombinations: 1,
+    designPending: true,
+  },
 ];
 
 /** Tổng số tổ hợp đã có thiết kế (mẫu số của SC-001). */

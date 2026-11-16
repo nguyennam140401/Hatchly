@@ -4,10 +4,12 @@ import { queryKeys } from './query-keys';
 
 const sample = { id: 'p1', jobId: 'j1' };
 const keys = (name: keyof typeof MUTATIONS) =>
-  (MUTATIONS[name].invalidates as unknown as (v: unknown, r: unknown) => readonly (readonly unknown[])[])(
-    sample,
-    sample,
-  ).map((k) => JSON.stringify(k));
+  (
+    MUTATIONS[name].invalidates as unknown as (
+      v: unknown,
+      r: unknown,
+    ) => readonly (readonly unknown[])[]
+  )(sample, sample).map((k) => JSON.stringify(k));
 
 describe('MUTATIONS (ma trận vô hiệu hóa)', () => {
   it('mọi thao tác có `invalidates` không rỗng', () => {
@@ -38,13 +40,22 @@ describe('MUTATIONS (ma trận vô hiệu hóa)', () => {
     );
     expect(keys('reschedule')).toContain(JSON.stringify(queryKeys.calendar.all()));
     expect(keys('uploadMedia')).toEqual(
-      expect.arrayContaining([JSON.stringify(queryKeys.media.lists()), JSON.stringify(queryKeys.usage.current())]),
+      expect.arrayContaining([
+        JSON.stringify(queryKeys.media.lists()),
+        JSON.stringify(queryKeys.usage.current()),
+      ]),
     );
     expect(keys('saveProfile')).toEqual(
-      expect.arrayContaining([JSON.stringify(queryKeys.profile.current()), JSON.stringify(queryKeys.profile.versions())]),
+      expect.arrayContaining([
+        JSON.stringify(queryKeys.profile.current()),
+        JSON.stringify(queryKeys.profile.versions()),
+      ]),
     );
     expect(keys('inviteMember')).toEqual(
-      expect.arrayContaining([JSON.stringify(queryKeys.members.list()), JSON.stringify(queryKeys.session.me())]),
+      expect.arrayContaining([
+        JSON.stringify(queryKeys.members.list()),
+        JSON.stringify(queryKeys.session.me()),
+      ]),
     );
     expect(keys('bulkCreatePosts')).toContain(JSON.stringify(queryKeys.jobs.detail('j1')));
   });
