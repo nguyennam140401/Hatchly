@@ -1,5 +1,20 @@
 # Tasks: Nền tảng kiến trúc giao diện (011)
 
+> ## ⚠ CÒN VIỆC CHƯA LÀM (cập nhật 2026-11-16) – ĐỪNG BỎ SÓT
+>
+> **84/85 việc xong, còn 1: `T074`** (US6) – chuyển `ProfileForm`/`KeywordsInput` của 006 sang `useAppForm`/`TagListField`.
+> Mới chuyển lớp giao diện; máy trạng thái 006 (reducer, xung đột, bộ đếm ký tự) giữ nguyên. Lý do và phương án: `plan.md` →
+> Complexity Tracking #3. Nhánh `impl/011-ui-architecture-foundation` và worktree được **giữ lại** để làm tiếp:
+> `/speckit-implement 011`. Làm xong thì tích `T074`, bỏ banner này, cập nhật `docs/wiki/features/011-*.md`.
+>
+> **Cần người xem lại (ngoài T074):**
+> - SC-011 nói không sửa kỳ vọng kiểm thử cũ; thực tế có **chỉnh khẳng định** (hành vi không đổi): nút khóa kiểm `aria-disabled` thay
+>   `disabled` (`no-account`, `oauth-result`, `members`, `BusinessProfilePage` spec), thêm `waitFor` ở `register.spec`, vùng chạm ở
+>   `StartPage.spec` kiểm lớp `min-h-touch`. Xem `quickstart.md` mục 6.
+> - Chưa kiểm thủ công: giảm chuyển động (kịch bản 12), bộ đọc màn hình thật (13), đo cập nhật ≤ 1 giây (9).
+> - `pnpm verify` còn đỏ do nguyên nhân có sẵn ở `dev`/Windows: `check-wiki.spec.ts` (typecheck), `tooling/infra` thiếu `kubeconfig.mjs`
+>   (test), prettier báo CRLF (lint).
+
 **Input**: `specs/011-ui-architecture-foundation/` – plan.md, spec.md, research.md, data-model.md, figma-extract.md, contracts/ (4 tệp), quickstart.md
 
 **Prerequisites**: plan.md, spec.md (đã có). Worktree `impl/011-ui-architecture-foundation`, nhánh gốc `dev`.
