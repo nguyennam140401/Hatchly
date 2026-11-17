@@ -3,7 +3,7 @@
 // KHÔNG trường nào nhận mã tài khoản (nguyên tắc I – mã tài khoản chỉ lấy từ phiên).
 import { z } from 'zod';
 import { Id, UtcDateTime } from '../../core/primitives.js';
-import { ALLOWED_CONTENT_TYPES, MEDIA_LIMITS } from './limits.js';
+import { MEDIA_LIMITS } from './limits.js';
 
 export const MEDIA_KINDS = ['image', 'video'] as const;
 export const MediaKindSchema = z.enum(MEDIA_KINDS);
@@ -32,7 +32,8 @@ export const FINGERPRINT_PATTERN = /^[0-9a-f]{64}$/;
 export const StartUploadBody = z.strictObject({
   fileName: z.string().min(1).max(255),
   sizeBytes: z.int().positive(),
-  contentType: z.enum(ALLOWED_CONTENT_TYPES),
+  // Chuỗi (không z.enum): loại không nhận trả `MEDIA_TYPE_UNSUPPORTED` kèm cách khắc phục, không phải lỗi khuôn chung.
+  contentType: z.string().min(1).max(100),
   fingerprint: z.string().regex(FINGERPRINT_PATTERN),
 });
 export type StartUploadBody = z.infer<typeof StartUploadBody>;
@@ -53,7 +54,9 @@ export const ListQuery = z.strictObject({
 export type ListQuery = z.infer<typeof ListQuery>;
 
 export const MediaIdParam = z.strictObject({ mediaId: Id });
+export type MediaIdParam = z.infer<typeof MediaIdParam>;
 export const UploadIdParam = z.strictObject({ uploadId: Id });
+export type UploadIdParam = z.infer<typeof UploadIdParam>;
 
 export const DeleteQuery = z.strictObject({
   confirm: z

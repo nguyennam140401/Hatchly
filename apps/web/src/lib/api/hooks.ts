@@ -97,6 +97,14 @@ export function useApiMutation<V, R, Op extends string>(
   });
 }
 
+/** Làm mới các truy vấn theo tiền tố khóa (vd `queryKeys.media.lists()` khi một tệp tải xong). */
+export function useInvalidate(): (key: QueryKey) => void {
+  const client = useQueryClient();
+  return (key) => {
+    void client.invalidateQueries({ queryKey: key });
+  };
+}
+
 /** Làm mới mọi dữ liệu đang hiển thị (nút "Thử lại" của biểu ngữ mất mạng). */
 export function useRefreshAll(): () => void {
   const client = useQueryClient();

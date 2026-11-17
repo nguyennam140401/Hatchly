@@ -37,9 +37,10 @@ describe('StartUploadBody (FR-003)', () => {
     }
   });
 
-  it('từ chối loại không nhận, dung lượng ≤ 0, tên rỗng/quá dài', () => {
-    expect(StartUploadBody.safeParse({ ...ok, contentType: 'image/gif' }).success).toBe(false);
-    expect(StartUploadBody.safeParse({ ...ok, contentType: 'image/svg+xml' }).success).toBe(false);
+  it('từ chối loại rỗng, dung lượng ≤ 0, tên rỗng/quá dài', () => {
+    // Loại không nhận KHÔNG bị lược đồ chặn: dịch vụ trả MEDIA_TYPE_UNSUPPORTED (kèm cách khắc phục).
+    expect(StartUploadBody.safeParse({ ...ok, contentType: 'image/gif' }).success).toBe(true);
+    expect(StartUploadBody.safeParse({ ...ok, contentType: '' }).success).toBe(false);
     expect(StartUploadBody.safeParse({ ...ok, sizeBytes: 0 }).success).toBe(false);
     expect(StartUploadBody.safeParse({ ...ok, sizeBytes: 1.5 }).success).toBe(false);
     expect(StartUploadBody.safeParse({ ...ok, fileName: '' }).success).toBe(false);

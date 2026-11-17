@@ -174,6 +174,49 @@ export const ERROR_EXPLANATIONS: Record<keyof typeof ERROR_CODES, ErrorExplanati
     message: 'Không tìm thấy lượt đăng này.',
     actions: [{ kind: 'navigate', label: 'Về danh sách bài viết', href: '/posts' }],
   },
+  // ----- Thư viện media (014) – thông điệp khớp @app/shared/media MEDIA_ERRORS -----
+  MEDIA_TYPE_UNSUPPORTED: {
+    message: 'Loại tệp này chưa được hỗ trợ. Dùng ảnh JPEG, PNG, WebP, HEIC hoặc video MP4, MOV.',
+    actions: [{ kind: 'fix_input', label: 'Chọn tệp khác' }],
+  },
+  MEDIA_TOO_LARGE: {
+    message:
+      'Tệp quá lớn. Ảnh tối đa 20 MB, video tối đa 500 MB – hãy giảm kích thước rồi tải lại.',
+    actions: [{ kind: 'fix_input', label: 'Chọn tệp khác' }],
+  },
+  MEDIA_QUOTA_EXCEEDED: {
+    message: 'Thư viện đã đầy. Hãy xóa bớt ảnh/video cũ rồi tải lại.',
+    actions: [{ kind: 'navigate', label: 'Xem danh sách để xóa', href: '/media' }],
+  },
+  MEDIA_PLAN_EXPIRED: {
+    message: 'Gói của bạn đã hết hạn nên chưa tải thêm được. Bạn vẫn xem và xóa được ảnh/video.',
+    actions: [{ kind: 'navigate', label: 'Gia hạn gói', href: '/settings' }],
+  },
+  UPLOAD_INCOMPLETE: {
+    message: 'Tệp chưa lên đủ. Hãy thử tải lại.',
+    actions: [RETRY],
+  },
+  UPLOAD_REJECTED: {
+    message: 'Tệp bị lỗi khi tải hoặc không đúng loại đã chọn. Hãy tải lại tệp này.',
+    actions: [{ kind: 'retry', label: 'Tải lại' }],
+  },
+  MEDIA_IN_USE: {
+    message: 'Ảnh/video này đang dùng trong bài đã duyệt hoặc đã lên lịch nên chưa xóa được.',
+    actions: [{ kind: 'navigate', label: 'Mở bài để đổi media', href: '/posts' }],
+  },
+  MEDIA_USED_CONFIRM_REQUIRED: {
+    message: 'Ảnh/video này đang dùng trong một số bài. Hãy xác nhận nếu vẫn muốn xóa.',
+    actions: [{ kind: 'retry', label: 'Xác nhận xóa' }],
+  },
+  MEDIA_DELETE_NOT_OWNER: {
+    message:
+      'Bạn chỉ xóa được ảnh/video do chính mình tải lên. Nhờ chủ tài khoản hoặc người đã tải xóa giúp.',
+    actions: [{ kind: 'contact_owner', label: 'Nhờ chủ tài khoản' }],
+  },
+  STORAGE_UNAVAILABLE: {
+    message: 'Kho lưu trữ đang bận. Hãy thử lại sau ít phút.',
+    actions: [RETRY],
+  },
 };
 
 /** Hành động dự phòng khi máy chủ không trả hành động nào. */

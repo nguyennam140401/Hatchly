@@ -1,4 +1,8 @@
 import { type DynamicModule, Module } from '@nestjs/common';
+import { LibraryController } from './internal/library.controller';
+import { LibraryService } from './internal/library.service';
+import { UploadController } from './internal/upload.controller';
+import { UploadService } from './internal/upload.service';
 import { defaultUploadGate, UPLOAD_GATE } from './internal/upload-gate';
 import { MEDIA_PUBLIC_API, type MediaPublicApi } from './public-api';
 
@@ -30,14 +34,15 @@ const placeholderApi: MediaPublicApi = {
  */
 @Module({})
 export class MediaModule {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dùng khi nối controller (API) và bộ xử lý việc (Worker)
   static forUnit(unit: 'api' | 'worker'): DynamicModule {
     return {
       module: MediaModule,
       global: true,
+      controllers: unit === 'api' ? [UploadController, LibraryController] : [],
       providers: [
         { provide: MEDIA_PUBLIC_API, useValue: placeholderApi },
         { provide: UPLOAD_GATE, useValue: defaultUploadGate },
+        ...(unit === 'api' ? [UploadService, LibraryService] : []),
       ],
       exports: [MEDIA_PUBLIC_API],
     };
