@@ -22,6 +22,66 @@ interface IdVars {
 }
 
 export const MUTATIONS = {
+  // 012: soạn bài tay, gửi duyệt, rút lại.
+  createPost: define<unknown, unknown, 'createPost'>({
+    operation: 'createPost',
+    invalidates: () => [
+      queryKeys.posts.lists(),
+      queryKeys.calendar.all(),
+      queryKeys.overview.all(),
+    ],
+  }),
+  submitPosts: define<unknown, unknown, 'submitPosts'>({
+    operation: 'submitPosts',
+    changes: ['pendingReview'],
+    invalidates: () => [
+      queryKeys.posts.all(),
+      queryKeys.calendar.all(),
+      queryKeys.counters.pendingReview(),
+      queryKeys.overview.all(),
+    ],
+  }),
+  withdrawPost: define<IdVars, unknown, 'withdrawPost'>({
+    operation: 'withdrawPost',
+    changes: ['pendingReview'],
+    invalidates: ({ id }) => [
+      queryKeys.posts.detail(id),
+      queryKeys.posts.lists(),
+      queryKeys.counters.pendingReview(),
+    ],
+  }),
+  deleteDraft: define<IdVars, unknown, 'deleteDraft'>({
+    operation: 'deleteDraft',
+    invalidates: ({ id }) => [
+      queryKeys.posts.detail(id),
+      queryKeys.posts.lists(),
+      queryKeys.calendar.all(),
+      queryKeys.overview.all(),
+    ],
+  }),
+  approvePosts: define<unknown, unknown, 'approvePosts'>({
+    operation: 'approvePosts',
+    changes: ['pendingReview', 'unread'],
+    invalidates: () => [
+      queryKeys.approvals.pending(),
+      queryKeys.posts.all(),
+      queryKeys.calendar.all(),
+      queryKeys.counters.pendingReview(),
+      queryKeys.overview.all(),
+      queryKeys.notifications.unread(),
+    ],
+  }),
+  returnPosts: define<unknown, unknown, 'returnPosts'>({
+    operation: 'returnPosts',
+    changes: ['pendingReview', 'unread'],
+    invalidates: () => [
+      queryKeys.approvals.pending(),
+      queryKeys.posts.all(),
+      queryKeys.counters.pendingReview(),
+      queryKeys.overview.all(),
+      queryKeys.notifications.unread(),
+    ],
+  }),
   approvePost: define<IdVars, unknown, 'approvePost'>({
     operation: 'approvePost',
     changes: ['pendingReview', 'unread'],
@@ -76,6 +136,7 @@ export const MUTATIONS = {
     operation: 'republishPost',
     changes: ['usage', 'unread'],
     invalidates: ({ id }) => [
+      queryKeys.publishing.progress(id),
       queryKeys.posts.detail(id),
       queryKeys.posts.lists(),
       queryKeys.usage.current(),
@@ -86,6 +147,7 @@ export const MUTATIONS = {
     operation: 'markPostPublished',
     changes: ['usage', 'unread'],
     invalidates: ({ id }) => [
+      queryKeys.publishing.progress(id),
       queryKeys.posts.detail(id),
       queryKeys.posts.lists(),
       queryKeys.usage.current(),

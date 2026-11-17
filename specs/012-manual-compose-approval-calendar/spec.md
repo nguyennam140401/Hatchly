@@ -39,6 +39,12 @@ xử lý lỗi (FR-07…FR-09), màn hình Tiến trình đăng, màn hình Tổ
 
 ### Session 2026-11-15
 
+- Q: Khi bài nhiều kênh có một kênh không lên lịch được (kênh hỏng, hết hạn mức), duyệt xử lý thế nào? → A: **Tất cả
+  hoặc không** theo cả bài; người dùng bỏ kênh lỗi khỏi bài (hoặc kết nối lại / chọn giờ khác) rồi duyệt lại. Bài chỉ
+  có một trạng thái duyệt, không có trạng thái duyệt riêng từng kênh.
+- Q: Khi bài Chờ duyệt có giờ dự kiến đã qua lúc chủ mở duyệt thì làm gì? → A: Bài hiện nhãn "Giờ đã qua"; chủ **phải
+  chọn giờ mới** (mặc định gợi ý giờ hợp lệ gần nhất) rồi mới duyệt được; khi duyệt nhiều bài có ô "Dời tất cả bài quá
+  giờ về giờ gợi ý". Hệ thống không tự dời giờ âm thầm.
 - Q: Bài soạn tay có bị trừ hạn mức 100 bài/chu kỳ không? → A: **Không.** Hạn mức 100 bài chỉ tính các bài có dùng
   tính năng liên quan đến AI (AI viết bài, dùng bài/chủ đề AI gợi ý…). Bài soạn hoàn toàn bằng tay không trừ hạn mức,
   nên tính năng này không trừ, không hoàn trả và không chặn theo hạn mức bài. Việc trừ hạn mức thuộc tính năng AI
@@ -106,10 +112,11 @@ cộng tác viên gọi thao tác duyệt trực tiếp qua API bị từ chối
 2. **Given** giờ đăng đã qua hoặc quá sát (dưới 5 phút kể từ bây giờ), **When** duyệt, **Then** bị từ chối với thông
    báo "Chọn giờ đăng ở tương lai" và đề xuất giờ gần nhất hợp lệ.
 3. **Given** một kênh của bài đã hết hạn mức đăng ở khung giờ đó (ví dụ Instagram đủ số bài 24 giờ, gói Zalo OA hết
-   lượt), **When** duyệt, **Then** không lên lịch bài đó cho kênh ấy; người dùng được báo rõ kênh nào, vì sao, và gợi ý
-   chọn giờ khác; có thể bỏ kênh đó khỏi bài để duyệt các kênh còn lại.
-4. **Given** một kênh của bài không còn hoạt động (ngắt kết nối, quyền hết hạn), **When** duyệt, **Then** thao tác
-   bị chặn cho kênh đó kèm nút "Kết nối lại"; không có mục lịch đăng nào được tạo cho kênh đó.
+   lượt), **When** duyệt, **Then** **cả bài không được duyệt** (tất cả hoặc không), không có mục lịch đăng nào được
+   tạo cho kênh nào; người dùng được báo rõ kênh nào, vì sao, kèm các hành động "Chọn giờ khác" và "Bỏ kênh này khỏi
+   bài"; sau khi bỏ kênh (không tính là sửa sau duyệt vì bài chưa được duyệt) có thể duyệt lại các kênh còn lại.
+4. **Given** một kênh của bài không còn hoạt động (ngắt kết nối, quyền hết hạn), **When** duyệt, **Then** cả bài
+   không được duyệt, kèm nút "Kết nối lại" và "Bỏ kênh này khỏi bài"; không có mục lịch đăng nào được tạo.
 5. **Given** người dùng bấm "Duyệt và lên lịch" hai lần liên tiếp hoặc ở hai tab/hai thiết bị cùng lúc, **When** cả
    hai yêu cầu đến máy chủ, **Then** chỉ một yêu cầu thành công; yêu cầu còn lại nhận thông báo "Bài này đã được
    duyệt" và không tạo thêm mục lịch đăng nào (mỗi cặp bài–kênh tối đa một mục hiệu lực).
@@ -155,12 +162,16 @@ cộng tác viên thấy ghi chú; chỉ có một email "bài chờ duyệt" ch
    quay về Nháp với cùng ghi chú; từng bài vẫn có thể được trả lại riêng với ghi chú riêng.
 6. **Given** cộng tác viên đã gửi duyệt nhiều bài trong một lần, **When** gửi, **Then** chủ nhận **một** thông báo
    trong ứng dụng và **một** email liệt kê các bài (không phải một email cho mỗi bài).
-7. **Given** không có bài chờ duyệt, **When** chủ mở Chờ duyệt, **Then** thấy "Không có bài chờ duyệt" kèm đường dẫn
+7. **Given** bài chờ duyệt có giờ đăng dự kiến đã qua (hoặc cách bây giờ dưới 5 phút), **When** chủ mở hoặc duyệt, **Then**
+   bài hiện nhãn "Giờ đã qua" và nút Duyệt yêu cầu chọn giờ mới (đã điền sẵn giờ hợp lệ gần nhất để xác nhận một chạm);
+   trong duyệt nhiều bài có ô "Dời tất cả bài quá giờ về giờ gợi ý" (mỗi bài nhận giờ gợi ý khác nhau, không dồn cùng một
+   giờ); hệ thống không tự dời giờ khi chủ chưa xác nhận.
+8. **Given** không có bài chờ duyệt, **When** chủ mở Chờ duyệt, **Then** thấy "Không có bài chờ duyệt" kèm đường dẫn
    tới Lịch hoặc "Thêm bài".
-8. **Given** một bài vừa được người khác (chủ ở thiết bị khác, hoặc cộng tác viên sửa) thay đổi sau khi chủ mở danh
+9. **Given** một bài vừa được người khác (chủ ở thiết bị khác, hoặc cộng tác viên sửa) thay đổi sau khi chủ mở danh
    sách, **When** chủ bấm duyệt trên phiên bản cũ, **Then** thao tác bị từ chối với "Bài vừa được cập nhật, vui lòng
    xem lại" và hiện nội dung mới; không bao giờ duyệt nhầm nội dung chủ chưa xem.
-9. **Given** cộng tác viên, **When** truy cập màn hình Chờ duyệt, **Then** màn hình dành cho chủ không hiển thị mục
+10. **Given** cộng tác viên, **When** truy cập màn hình Chờ duyệt, **Then** màn hình dành cho chủ không hiển thị mục
    điều hướng cho cộng tác viên, và truy cập trực tiếp bị từ chối; cộng tác viên chỉ thấy trạng thái các bài mình đã
    gửi trong danh sách bài.
 
@@ -285,8 +296,8 @@ tác viên thấy bài của cả nhóm nhưng không có thao tác duyệt.
 
 ### Edge Cases
 
-- **Bài chọn nhiều kênh, một kênh hỏng**: duyệt bị chặn hoặc cho "duyệt các kênh còn lại" (User Story 2, kịch bản 3–4);
-  không bao giờ tạo mục lịch đăng một phần mà người dùng không biết.
+- **Bài chọn nhiều kênh, một kênh hỏng**: duyệt theo cả bài, tất cả hoặc không (User Story 2, kịch bản 3–4, FR-011);
+  không bao giờ tạo mục lịch đăng một phần. Trong duyệt hàng loạt, bài như vậy nằm trong danh sách "chưa duyệt được".
 - **Giờ đăng tại ranh giới**: giờ đúng 5 phút kể từ bây giờ chấp nhận được; giờ trong 5 phút tới bị từ chối; đổi giờ
   khi Worker vừa nhận việc bị từ chối (không đổi được nếu đã rời trạng thái chờ đến giờ).
 - **Chuyển múi giờ**: mọi giờ lưu UTC, hiển thị UTC+7; bài ở sát nửa đêm hiện đúng ngày UTC+7 trên Lịch.
@@ -346,8 +357,8 @@ tác viên thấy bài của cả nhóm nhưng không có thao tác duyệt.
   chậm) MUST không tạo thêm mục lịch đăng hay việc (idempotent).
 - **FR-011**: Duyệt MUST kiểm tra tại thời điểm duyệt: kênh còn hoạt động; nội dung đạt giới hạn kênh; giờ đăng ở tương
   lai **tối thiểu 5 phút**; hạn mức đăng của kênh ở giờ đó (như Instagram số bài/24 giờ, Zalo OA theo gói) khi nền tảng
-  cho biết; tài khoản đang trong thời hạn gói. Không đạt MUST từ chối với lý do bằng lời thường và ít nhất một cách
-  khắc phục (Hiến pháp VI).
+  cho biết; tài khoản đang trong thời hạn gói. Không đạt MUST từ chối **cả bài** (không duyệt từng phần theo kênh; bài
+  chỉ có một trạng thái duyệt) với lý do bằng lời thường và ít nhất một cách khắc phục (Hiến pháp VI).
 - **FR-012**: Duyệt MUST gắn với phiên bản bài mà người duyệt đã **thấy**; nếu bài đã đổi sau đó MUST từ chối và hiện
   nội dung mới, để không duyệt nhầm nội dung chưa xem (FR-006).
 - **FR-013**: "Trả lại" MUST yêu cầu ghi chú không rỗng (tối đa 500 ký tự), đưa bài về Nháp với nhãn "Bị trả lại" kèm
@@ -377,7 +388,7 @@ tác viên thấy bài của cả nhóm nhưng không có thao tác duyệt.
 - **FR-020**: "Hủy lịch" (chỉ chủ, `post.approve`) MUST hủy các mục lịch đăng chờ giờ và đưa bài về Nháp mà không xóa nội
   dung; MUST NOT áp dụng được cho bài đã bắt đầu đăng.
 - **FR-021**: Quyền sửa bài: chủ sửa mọi bài; cộng tác viên sửa bài Nháp (kể cả bài mình hay chủ tạo, bài bị trả lại)
-  nhưng không sửa bài đang Chờ duyệt (FR-015). Bài đã bắt đầu đăng/đã đăng ở kênh nào thì kênh đó MUST NOT sửa được từ
+  và bài đã lên lịch (khi đó áp dụng FR-018: bài về Chờ duyệt), nhưng không sửa bài đang Chờ duyệt (FR-015). Bài đã bắt đầu đăng/đã đăng ở kênh nào thì kênh đó MUST NOT sửa được từ
   đây.
 - **FR-022**: Tính năng này MUST giao việc đăng cho module Đăng bài qua **giao diện công khai** (tạo mục lịch đăng, hủy,
   đổi giờ, đọc trạng thái); MUST NOT đọc/ghi bảng của module khác; tham chiếu bài/phiên bản kênh phía Đăng bài là mã
@@ -387,7 +398,8 @@ tác viên thấy bài của cả nhóm nhưng không có thao tác duyệt.
 **Màn hình**
 
 - **FR-023**: **Chờ duyệt** (chỉ chủ): danh sách bài chờ duyệt với người soạn, kênh, giờ đăng dự kiến, nhãn "Đã sửa sau
-  khi duyệt"/"Bị trả lại"; xem trước theo kênh; Duyệt, Duyệt nhiều bài (ô chọn + "Chọn tất cả"), Trả lại kèm ghi chú
+  khi duyệt"/"Bị trả lại"/"Giờ đã qua"; bài quá giờ buộc chọn giờ mới khi duyệt, có "Dời tất cả bài quá giờ về giờ
+  gợi ý" khi duyệt nhiều bài (không tự dời khi chủ chưa xác nhận); xem trước theo kênh; Duyệt, Duyệt nhiều bài (ô chọn + "Chọn tất cả"), Trả lại kèm ghi chú
   (từng bài và nhiều bài); chuyển bài kế tiếp sau khi xử lý; trạng thái rỗng; số bài chờ duyệt hiển thị trên điều
   hướng. Dùng được trọn vẹn từ 360 px, vùng chạm ≥ 44 × 44 px.
 - **FR-024**: **Lịch** (chủ, cộng tác viên): chế độ tuần và tháng; mỗi bài một thẻ (tiêu đề ngắn, giờ, biểu tượng kênh,

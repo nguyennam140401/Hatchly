@@ -21,6 +21,13 @@ export const queryKeys = {
     list: (filter: PostFilter = {}) => ['posts', 'list', filter] as const,
     detail: (id: string) => ['posts', 'detail', id] as const,
   },
+  /** 013: Tiến trình đăng của một bài (theo kênh, 5 bước). */
+  publishing: {
+    progress: (postId: string) => ['publishing', 'progress', postId] as const,
+    support: (attemptId: string) => ['publishing', 'support', attemptId] as const,
+  },
+  /** 012: danh sách Chờ duyệt của chủ tài khoản. */
+  approvals: { pending: () => ['approvals', 'pending'] as const },
   plan: { current: () => ['plan'] as const },
   channels: { list: () => ['channels', 'list'] as const },
   media: {

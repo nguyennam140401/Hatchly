@@ -134,6 +134,32 @@ export const AUTH_ERROR_MESSAGES = {
 } as const;
 export type AuthErrorCode = keyof typeof AUTH_ERROR_MESSAGES;
 
+/**
+ * Thông điệp mặc định của mã lỗi bài viết/duyệt/lịch (012, contracts/http-api.md mục 4). Mỗi mã có
+ * hành động khắc phục đi kèm ở máy chủ (`post-errors.ts`) và web.
+ */
+export const POST_ERROR_MESSAGES = {
+  NO_ACTIVE_CHANNEL: 'Bạn chưa có kênh nào đang hoạt động. Hãy kết nối kênh để bắt đầu soạn bài.',
+  POST_NOT_EDITABLE: 'Bài này không sửa được ở trạng thái hiện tại.',
+  POST_ALREADY_APPROVED: 'Bài này đã được xử lý trước đó.',
+  POST_CONTENT_INVALID: 'Nội dung bài chưa phù hợp với kênh đã chọn. Hãy sửa rồi thử lại.',
+  TIME_IN_PAST: 'Giờ đăng đã qua hoặc quá gần. Hãy chọn giờ muộn hơn ít nhất 5 phút.',
+  CHANNEL_INACTIVE: 'Có kênh đã ngắt kết nối hoặc hết hạn quyền, nên chưa lên lịch được.',
+  CHANNEL_QUOTA_EXCEEDED: 'Kênh này đã hết số bài được đăng trong khung giờ đó.',
+  CHANNEL_ALREADY_PUBLISHING: 'Bài này đã bắt đầu được đăng lên kênh nên không thay đổi được nữa.',
+  PLAN_EXPIRED: 'Gói dịch vụ của bạn đã hết hạn. Hãy gia hạn để duyệt và lên lịch bài.',
+  RETURN_NOTE_REQUIRED:
+    'Hãy nhập ghi chú trả lại (tối đa 500 ký tự) để người soạn biết cần sửa gì.',
+  BULK_LIMIT_EXCEEDED: 'Bạn đã chọn quá nhiều bài cho một lần. Hãy chia nhỏ lựa chọn.',
+  PUBLISH_NOT_REPUBLISHABLE:
+    'Lượt đăng này không đăng lại được ở trạng thái hiện tại. Hãy tải lại trang.',
+  PUBLISH_NOT_CHECKABLE:
+    'Chỉ xác nhận "Đã đăng" được khi bài đang ở trạng thái "Cần kiểm tra". Hãy tải lại trang.',
+  PUBLISH_VERSION_CONFLICT: 'Lượt đăng vừa có thay đổi. Hãy tải lại trang rồi thử lại.',
+  PUBLISH_ATTEMPT_NOT_FOUND: 'Không tìm thấy lượt đăng này.',
+} as const;
+export type PostErrorCode = keyof typeof POST_ERROR_MESSAGES;
+
 /** Thông điệp `LOGIN_THROTTLED` với số phút còn lại (làm tròn lên, tối thiểu 1). */
 export function loginThrottledMessage(retryAfterSeconds: number): string {
   const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));

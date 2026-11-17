@@ -18,6 +18,8 @@ import type { DecryptedCredential } from '../vault/credential-vault';
 /** Ngữ cảnh mỗi lời gọi bộ chuyển đổi (mã kết nối – để ghi nhật ký/tra trạng thái phía nền tảng). */
 export interface AdapterCallContext {
   connectionId: string;
+  /** Mã Page/tài khoản trên nền tảng (013 – bộ chuyển đổi thật gọi `/{externalId}/…`). */
+  externalId?: string | undefined;
 }
 
 export interface AdapterSubmit {
@@ -26,12 +28,15 @@ export interface AdapterSubmit {
   contentHash: string;
   /** Mã kết nối (bản giả lập ghi bài theo kết nối). */
   connectionId: string;
+  /** Mã Page/tài khoản trên nền tảng. */
+  externalId?: string | undefined;
   /** Hủy khi tầng cổng hết thời gian chờ. */
   signal: AbortSignal;
 }
 
 export interface AdapterReconcile {
   connectionId: string;
+  externalId?: string | undefined;
   contentHash: string;
   from: Date;
   to: Date;

@@ -121,6 +121,11 @@ if (require.main === module) {
         console.log(
           `  Nội bộ: ${SEED_EMAILS.support}, ${SEED_EMAILS.admin} → http://localhost:5173/internal/login`,
         );
+        // 012: kênh giả lập để thử soạn/duyệt/lịch – kho kết nối là nội bộ của Cổng nền tảng nên KHÔNG seed
+        // trực tiếp; kết nối bằng đường thật (OAuth giả): `POST /api/v1/channels/connect` rồi chọn Page.
+        console.log(
+          '  Kênh giả lập (012): đăng nhập chủ tiệm → Kênh kết nối → kết nối Facebook Page và Instagram (OAuth giả, không ra ngoài).',
+        );
       }
       process.exit(0);
     },

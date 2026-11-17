@@ -19,7 +19,17 @@ export interface ActiveMember {
   displayName: string;
 }
 
+/** Điều kiện để tài khoản được đăng bài (013, ADR-12). */
+export interface PublishingEligibility {
+  /** Gói còn hiệu lực. */
+  planActive: boolean;
+  /** Tài khoản đang trong luồng xóa. */
+  deletionRequested: boolean;
+}
+
 export interface AccountPublicApi {
+  /** Gói còn hạn và tài khoản không bị xóa? Không cache; chạy trong ngữ cảnh tài khoản (API và Worker). */
+  getPublishingEligibility(): Promise<PublishingEligibility>;
   /**
    * Thành viên đang hoạt động (chủ + cộng tác viên) của tài khoản trong ngữ cảnh – đọc qua tenantTx,
    * không nhận mã tài khoản (nguyên tắc I). Thành viên đã gỡ/khóa không có trong danh sách. Có ở cả API

@@ -22,7 +22,8 @@ export interface QueueSettings {
 
 /** Giá trị khởi tạo (trùng migration 0006) – dùng khi chưa đọc được CSDL lần nào. */
 export const DEFAULT_SETTINGS: Readonly<Record<QueueName, QueueSettings>> = {
-  publish: s('publish', 10, 3, 120, 'handler', 5, [60], 1000),
+  // 013: tối đa 20 (trần của CSDL) – mỗi `retryAfter` (thử lại lỗi tạm thời, chờ xử lý, đối soát) tính một lượt.
+  publish: s('publish', 10, 3, 120, 'handler', 20, [60], 1000),
   media: s('media', 2, 1, 900, 'schedule', 3, [60, 300, 900], 5000),
   ai_batch: s('ai_batch', 5, 3, 180, 'schedule', 2, [30, 120], 2000),
   trends: s('trends', 2, 1, 600, 'schedule', 3, [3600, 14400], 5000),

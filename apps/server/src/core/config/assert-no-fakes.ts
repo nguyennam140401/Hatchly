@@ -72,6 +72,10 @@ export function fakeSelections(config: AppConfig): string[] {
   if (config.NOTIFICATIONS_DRIVER === 'fake') found.push('NOTIFICATIONS_DRIVER=fake');
   if (config.STORAGE_DRIVER === 'memory') found.push('STORAGE_DRIVER=memory');
   if (config.MAIL_TRANSPORT === 'memory') found.push('MAIL_TRANSPORT=memory');
+  // 012: bộ thực thi tạm của việc đăng bài – cùng cơ chế ngoại lệ thử nghiệm như ba cổng.
+  if (config.PUBLISH_EXECUTOR === 'fake') found.push('PUBLISH_EXECUTOR=fake');
+  // 013: bộ chuyển đổi nền tảng giả (đăng lên nền tảng "giả") – không bao giờ ở production.
+  if (config.PLATFORM_ADAPTER_MODE === 'fake') found.push('PLATFORM_ADAPTER_MODE=fake');
   // 009: bản giả lập cho phép đăng nhập bằng danh tính tùy ý → KHÔNG nằm trong ngoại lệ thử nghiệm.
   if (config.OAUTH_DRIVER === 'fake') found.push('OAUTH_DRIVER=fake');
   if (config.FAKE_STATE_STORE !== undefined) {
@@ -86,6 +90,8 @@ const STAGING_ALLOWED_FAKES = new Set([
   'AI_GATEWAY_DRIVER=fake',
   'NOTIFICATIONS_DRIVER=fake',
   'FAKE_STATE_STORE=sandbox',
+  'PUBLISH_EXECUTOR=fake',
+  'PLATFORM_ADAPTER_MODE=fake',
 ]);
 
 /**

@@ -26,6 +26,8 @@ export interface AppErrorInit {
   retryAfterSeconds?: number;
   support?: { traceId: string; detail?: string | undefined };
   reason?: SessionEndReason;
+  /** 012: dữ liệu kèm theo lỗi nghiệp vụ (kênh vướng, giờ gợi ý, bài mới nhất). */
+  extra?: Record<string, unknown> | undefined;
 }
 
 export class AppError extends Error {
@@ -39,6 +41,7 @@ export class AppError extends Error {
   readonly retryAfterSeconds: number | undefined;
   readonly support: { traceId: string; detail?: string | undefined };
   readonly reason: SessionEndReason | undefined;
+  readonly extra: Record<string, unknown> | undefined;
 
   constructor(init: AppErrorInit) {
     super(init.message);
@@ -53,6 +56,7 @@ export class AppError extends Error {
     this.retryAfterSeconds = init.retryAfterSeconds;
     this.support = init.support ?? { traceId: '' };
     this.reason = init.reason;
+    this.extra = init.extra;
   }
 }
 

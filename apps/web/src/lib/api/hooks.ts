@@ -15,15 +15,20 @@ import type { QueryKey } from './query-keys';
 export type ApiQueryResult<T> = UseQueryResult<T, AppError>;
 export type ApiMutationResult<V, R> = UseMutationResult<R, AppError, V>;
 
-export interface QueryOptions {
+export interface QueryOptions<T = unknown> {
   freshness: FreshnessClass;
   enabled?: boolean;
+  /**
+   * Thăm dò định kỳ (ms) hoặc hàm quyết định theo dữ liệu mới nhất; `false` = dừng. Chỉ chạy khi tab đang hiện
+   * (`refetchIntervalInBackground` mặc định tắt). Dùng cho màn hình theo dõi như Tiến trình đăng (013 – không SSE).
+   */
+  refetchInterval?: number | false | ((data: T | undefined, updateCount: number) => number | false);
 }
 
 export function useApiQuery<T>(
   key: QueryKey,
   fn: (ctx: { signal: AbortSignal }) => Promise<T>,
-  options: QueryOptions,
+  options: QueryOptions<T>,
 ): ApiQueryResult<T> {
   const { staleTime, gcTime } = FRESHNESS[options.freshness];
   return useQuery<T, AppError>({
@@ -39,6 +44,18 @@ export function useApiQuery<T>(
     staleTime,
     gcTime,
     ...(options.enabled !== undefined ? { enabled: options.enabled } : {}),
+    ...(options.refetchInterval !== undefined
+      ? {
+          refetchInterval:
+            typeof options.refetchInterval === 'function'
+              ? (query: { state: { data: T | undefined; dataUpdateCount: number } }) =>
+                  (options.refetchInterval as (d: T | undefined, n: number) => number | false)(
+                    query.state.data,
+                    query.state.dataUpdateCount,
+                  )
+              : options.refetchInterval,
+        }
+      : {}),
   });
 }
 

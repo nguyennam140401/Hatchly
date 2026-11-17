@@ -70,9 +70,48 @@ export const appRoutes: RouteObject[] = [
             errorElement: <ErrorPage />,
             children: [
               { path: '/', element: <StartPage /> },
-              { path: '/calendar', element: comingSoon(t('nav.calendar')) },
-              { path: '/posts', element: comingSoon(t('nav.posts')) },
-              { path: '/posts/new', element: comingSoon(t('nav.createPost')) },
+              // 012: Lịch tuần/tháng (tải lười).
+              {
+                path: '/calendar',
+                lazy: async () => ({
+                  Component: (await import('../features/calendar/CalendarPage')).CalendarPage,
+                }),
+              },
+              // 012: danh sách Bài viết (tải lười).
+              {
+                path: '/posts',
+                lazy: async () => ({
+                  Component: (await import('../features/posts/PostsListPage')).PostsListPage,
+                }),
+              },
+              // 012: soạn / xem bài (tải lười).
+              {
+                path: '/posts/new',
+                lazy: async () => ({
+                  Component: (await import('../features/posts/ComposePage')).ComposePage,
+                }),
+              },
+              // 012: Chờ duyệt (chỉ chủ – trang tự chặn theo quyền, API vẫn chặn).
+              {
+                path: '/approvals',
+                lazy: async () => ({
+                  Component: (await import('../features/approvals/PendingPage')).PendingPage,
+                }),
+              },
+              // 013: Tiến trình đăng của một bài (5 bước theo kênh).
+              {
+                path: '/posts/:id/progress',
+                lazy: async () => ({
+                  Component: (await import('../features/publish-progress/PublishProgressPage'))
+                    .PublishProgressPage,
+                }),
+              },
+              {
+                path: '/posts/:id',
+                lazy: async () => ({
+                  Component: (await import('../features/posts/ComposePage')).ComposePage,
+                }),
+              },
               { path: '/media', element: comingSoon(t('nav.media')) },
               { path: '/channels', element: comingSoon(t('nav.channelsPlan')) },
               { path: '/settings', element: comingSoon(t('nav.settings')) },
