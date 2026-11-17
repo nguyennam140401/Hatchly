@@ -331,8 +331,9 @@ báo "đã có" dẫn tới ô hiện có. Tài khoản B tải đúng ảnh đ�
 - **FR-013**: Media MUST dùng được (đính vào bài, đăng) ngay khi xử lý xong, **không phụ thuộc** gán nhãn AI hay ngân
   sách AI (tính năng này không gọi AI). Trong lúc "Đang xử lý", media hiển thị trong thư viện nhưng chưa chọn được để
   đính vào bài, kèm lời giải thích.
-- **FR-014**: Mỗi tài khoản MUST có giới hạn số việc media chạy đồng thời (mặc định ≤ 2), để một tài khoản tải số lượng
-  lớn không làm chậm việc của tài khoản khác hay làm trễ việc đăng bài.
+- **FR-014**: Mỗi tài khoản MUST có giới hạn số việc media chạy đồng thời (mặc định theo cấu hình hàng chờ `media`,
+  hiện **1 việc/tài khoản**; chỉnh được không cần phát hành), để một tài khoản tải số lượng lớn không làm chậm việc của
+  tài khoản khác hay làm trễ việc đăng bài.
 
 **Đường dẫn công khai có hạn (ADR-07a, FR-07)**
 
@@ -415,8 +416,8 @@ báo "đã có" dẫn tới ô hiện có. Tài khoản B tải đúng ảnh đ�
 - **SC-002**: Khi một lần tải video bị ngắt (mất mạng/đóng tab) rồi tiếp tục, **không quá 5%** dung lượng tệp phải tải
   lại (đo trên video 300 MB ngắt ở nhiều thời điểm khác nhau); 95% lần tiếp tục thành công không cần người dùng chọn
   lại ngoài việc chọn đúng tệp.
-- **SC-003**: 95% ảnh có bản JPEG chuẩn và ảnh thu nhỏ **≤ 30 giây** sau khi tải xong; 95% video có ảnh thu nhỏ **≤ 2
-  phút**.
+- **SC-003**: Với lô **≤ 10 tệp**, 95% ảnh có bản JPEG chuẩn và ảnh thu nhỏ **≤ 30 giây** sau khi tải xong; 95% video có
+  ảnh thu nhỏ **≤ 2 phút**. (Lô lớn hơn xử lý nối đuôi theo giới hạn ở FR-014 nên thời gian chờ tăng theo số tệp.)
 - **SC-004**: **100%** ảnh hợp lệ (JPEG, PNG, WebP, HEIC) sau xử lý được Instagram chấp nhận về mặt định dạng; **0** ảnh
   hiển thị sai chiều trong bộ kiểm tra ảnh chụp bằng điện thoại.
 - **SC-005**: **0 trường hợp** tổng dung lượng của một tài khoản vượt 5 GB trong kiểm thử tải đồng thời (≥ 20 yêu cầu
@@ -443,7 +444,8 @@ báo "đã có" dẫn tới ô hiện có. Tài khoản B tải đúng ảnh đ�
   của thư viện xử lý ảnh/video đã chọn; thay đổi danh sách không đổi hành vi của đặc tả.
 - **Giới hạn bổ sung (mặc định, cấu hình được)**: ảnh tối đa **20 MB** (đã làm rõ; FR-03 gốc ghi 10 MB – xem mục Clarifications) và tối đa **~50 triệu điểm ảnh** mỗi ảnh; video tối
   đa 500 MB; chưa giới hạn thời lượng video (khớp FR-03: video dài vẫn tải được); tối đa 3 tệp tải song song mỗi trình
-  duyệt; ≤ 2 việc `media` đồng thời mỗi tài khoản (kiến trúc triển khai mục 6).
+  duyệt; việc `media` đồng thời mỗi tài khoản theo `infra.queue_settings` (hiện 1 – đối chiếu ở plan, kiến trúc triển
+  khai mục 6).
 - **Video không chuyển mã** trong tính năng này: chuẩn hóa video theo quy tắc từng kênh (nếu cần) thuộc bộ chuyển đổi
   nền tảng/tính năng Đăng bài; thư viện chỉ cung cấp tệp gốc, thuộc tính (thời lượng, kích thước) và ảnh thu nhỏ.
 - **Hạn mức tính theo tệp gốc** người dùng tải lên; bản chuẩn hóa và ảnh thu nhỏ do hệ thống tạo là chi phí lưu trữ
@@ -456,8 +458,8 @@ báo "đã có" dẫn tới ô hiện có. Tài khoản B tải đúng ảnh đ�
   yêu cầu ghi "sửa nhãn, xóa tệp chốt ở WBS 2.6" nên cần cập nhật bảng phân quyền (thêm mã quyền xóa media, ghi
   điều kiện "chỉ tệp của mình" cho cộng tác viên) khi lập kế hoạch.
 - **Thời hạn mặc định**: phiên tải dở giữ **24 giờ** (kiến trúc dữ liệu nêu bản ghi "Đang tải" quá 1 giờ bị dọn – ở
-  đây phiên **có thể tiếp tục** giữ lâu hơn để tiếp tục tải; hai con số được đối chiếu khi lập kế hoạch và sửa tài liệu
-  kiến trúc nếu thay đổi); quyền tải ký sẵn ≤ 15 phút mỗi lần cấp (tự cấp lại); đường dẫn xem trong giao diện ≤ 1
+  đây phiên **có thể tiếp tục** giữ lâu hơn để tiếp tục tải; **đã đối chiếu ở plan: giữ 24 giờ**, và sửa Kiến trúc dữ liệu 8.1/Kiến trúc triển khai
+  mục 6 theo – plan.md mục "Sửa tài liệu gốc", D4–D5); quyền tải ký sẵn ≤ 15 phút mỗi lần cấp (tự cấp lại); đường dẫn xem trong giao diện ≤ 1
   giờ; đường dẫn công khai cho nền tảng 24 giờ.
 - **Tính năng 012 và 013 hiện dùng media giả lập (005)** cho tới khi thư viện này sẵn sàng; khi có thư viện thật,
   việc nối là thay bản giả lập bằng giao diện công khai của module (đính media, cấp đường dẫn công khai, kiểm tra
