@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ErrorResponse } from '@app/shared/core';
 import type { StartUploadResponse } from '@app/shared/media';
+import type { Response as TestResponse } from 'supertest';
 import { expect } from 'vitest';
 import { OBJECT_STORAGE } from '../../src/core/storage';
 import { MemoryObjectStorage } from '../../src/core/storage/memory/memory-storage';
@@ -62,7 +63,11 @@ export function startBody(f: FileSpec, over: Record<string, unknown> = {}) {
   };
 }
 
-export async function startUpload(agent: Agent, f: FileSpec, over: Record<string, unknown> = {}) {
+export async function startUpload(
+  agent: Agent,
+  f: FileSpec,
+  over: Record<string, unknown> = {},
+): Promise<TestResponse> {
   return agent.post(UPLOADS, startBody(f, over));
 }
 

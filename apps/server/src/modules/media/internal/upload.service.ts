@@ -59,7 +59,7 @@ function isActiveSessionConflict(err: unknown): boolean {
 
 /** 4,9 GB kiểu Việt Nam (cơ số 1024, một chữ số thập phân). */
 export function formatGib(bytes: number): string {
-  return (bytes / 1024 ** 3).toFixed(1).replace('.', ',');
+  return (bytes / 1024 ** 3).toFixed(1).replace('.', ',').replace(/,0$/, '');
 }
 
 @Injectable()

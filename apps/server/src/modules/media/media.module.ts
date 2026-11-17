@@ -1,29 +1,76 @@
-import { type DynamicModule, Module } from '@nestjs/common';
+import {
+  type DynamicModule,
+  Inject,
+  Injectable,
+  Logger,
+  Module,
+  type OnModuleInit,
+} from '@nestjs/common';
+import { APP_CONFIG, type AppConfig } from '../../core';
+import { OBJECT_STORAGE, type ObjectStorage } from '../../core/storage';
+import { registerJobHandler } from '../queue';
+import {
+  cleanupMedia,
+  defineMediaSchedules,
+  processMedia,
+  purgeMediaFiles,
+  sweepMedia,
+} from './jobs';
+import { createCleanupHandler } from './internal/cleanup.handler';
+import { createProcessMediaHandler } from './internal/process.handler';
+import { createPurgeFilesHandler } from './internal/purge.handler';
+import { runMediaSweep } from './internal/sweep';
+import { QuotaStore } from './internal/quota.store';
 import { LibraryController } from './internal/library.controller';
 import { LibraryService } from './internal/library.service';
 import { UploadController } from './internal/upload.controller';
 import { UploadService } from './internal/upload.service';
 import { defaultUploadGate, UPLOAD_GATE } from './internal/upload-gate';
-import { MEDIA_PUBLIC_API, type MediaPublicApi } from './public-api';
+import { MediaPublicApiImpl } from './internal/public-api.impl';
+import { MEDIA_PUBLIC_API } from './public-api';
 
-/**
- * Bản giữ chỗ cho tới khi `public-api.impl.ts` (US5) được nối: không có media → ok rỗng; có mã media → `unavailable`.
- * KHÔNG bịa đường dẫn: 013 báo người dùng chọn ảnh khác thay vì đăng nhầm.
- */
-const placeholderApi: MediaPublicApi = {
-  describe: (mediaIds) => Promise.resolve(mediaIds.map(() => ({ kind: 'not_found' as const }))),
-  assertAttachable: (mediaIds) =>
-    Promise.resolve(mediaIds.map((mediaId) => ({ kind: 'not_found' as const, mediaId }))),
-  getPreviewUrls: (mediaIds) =>
-    Promise.resolve(mediaIds.map((mediaId) => ({ mediaId, thumbUrl: null, expiresAt: null }))),
-  issuePublicUrl: () => Promise.resolve({ kind: 'not_found' }),
-  getPublishableMedia: (mediaIds) =>
-    Promise.resolve(
-      mediaIds.length === 0
-        ? { kind: 'ok', items: [] }
-        : { kind: 'unavailable', mediaIds: [...mediaIds] },
-    ),
-};
+/** Đăng ký bộ xử lý việc của module – CHỈ ở Worker, trước khi QueueRuntime bắt đầu lấy việc. */
+let handlersRegistered = false;
+
+@Injectable()
+class MediaWorkerHandlers implements OnModuleInit {
+  private readonly logger = new Logger('media');
+
+  constructor(
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage | null,
+  ) {}
+
+  onModuleInit(): void {
+    if (handlersRegistered) return;
+    handlersRegistered = true;
+    const storage = this.storage;
+    if (storage === null) {
+      this.logger.warn({ msg: 'media.worker.no_storage' });
+      return;
+    }
+    const quota = new QuotaStore(this.config.MEDIA_QUOTA_BYTES);
+    const log = {
+      info: (entry: Record<string, unknown>) => {
+        this.logger.log(entry);
+      },
+      warn: (entry: Record<string, unknown>) => {
+        this.logger.warn(entry);
+      },
+    };
+    const process = createProcessMediaHandler({ storage, quota, log });
+    registerJobHandler(processMedia, process.handler, { onFinalFailure: process.onFinalFailure });
+    registerJobHandler(purgeMediaFiles, createPurgeFilesHandler({ storage, log }));
+    const cleanup = createCleanupHandler({ storage, quota, log });
+    registerJobHandler(cleanupMedia, async (payload) => {
+      await cleanup(payload);
+    });
+    registerJobHandler(sweepMedia, async () => {
+      await runMediaSweep();
+    });
+    defineMediaSchedules();
+  }
+}
 
 /**
  * Module Thư viện media (`media`).
@@ -40,9 +87,10 @@ export class MediaModule {
       global: true,
       controllers: unit === 'api' ? [UploadController, LibraryController] : [],
       providers: [
-        { provide: MEDIA_PUBLIC_API, useValue: placeholderApi },
+        MediaPublicApiImpl,
+        { provide: MEDIA_PUBLIC_API, useExisting: MediaPublicApiImpl },
         { provide: UPLOAD_GATE, useValue: defaultUploadGate },
-        ...(unit === 'api' ? [UploadService, LibraryService] : []),
+        ...(unit === 'api' ? [UploadService, LibraryService] : [MediaWorkerHandlers]),
       ],
       exports: [MEDIA_PUBLIC_API],
     };
