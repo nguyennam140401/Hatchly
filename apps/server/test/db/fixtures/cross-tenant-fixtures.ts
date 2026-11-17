@@ -14,6 +14,11 @@ import {
   postEvents,
   posts,
 } from '../../../src/modules/content/internal/db/schema';
+import {
+  mediaItems,
+  storageQuotas,
+  uploadSessions,
+} from '../../../src/modules/media/internal/db/schema';
 import { publishAttempts } from '../../../src/modules/publishing/internal/db/schema';
 import { publishSteps } from '../../../src/modules/publishing/internal/db/publish-steps.log-table';
 import type { CrossTenantOptions } from '../helpers/cross-tenant';
@@ -46,6 +51,30 @@ async function postOf(db: Db, accountId: string): Promise<{ postId: string }> {
     .insert(posts)
     .values({ id, account_id: accountId, status: 'draft', created_by: uuidV7() });
   return { postId: id };
+}
+
+let mediaSeq = 0;
+
+/** Media đang tải của tài khoản (lấy hoặc tạo) – dữ liệu cha cho `upload_sessions` (014). */
+async function mediaOf(db: Db, accountId: string): Promise<{ mediaId: string }> {
+  const found = await db
+    .select({ id: mediaItems.id })
+    .from(mediaItems)
+    .where(eq(mediaItems.account_id, accountId))
+    .limit(1);
+  if (found[0] !== undefined) return { mediaId: found[0].id };
+  const id = uuidV7();
+  await db.insert(mediaItems).values({
+    id,
+    account_id: accountId,
+    kind: 'image',
+    status: 'uploading',
+    display_name: 'cha.jpg',
+    original_content_type: 'image/jpeg',
+    original_bytes: 1000,
+    uploaded_by_user_id: uuidV7(),
+  });
+  return { mediaId: id };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- danh mục chứa nhiều kiểu bảng/cha
@@ -127,6 +156,39 @@ export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
     updateRow: () => ({ type: 'submitted' }),
     appendOnly: { reason: 'Lịch sử chỉ thêm – migration 0018 thu hồi UPDATE, DELETE của app' },
   } satisfies CrossTenantOptions<typeof postEvents, { postId: string }>,
+  // 014: thư viện media – ba bảng (media, phiên tải, bộ đếm dung lượng).
+  'media.media': {
+    table: mediaItems,
+    insertRow: () => ({
+      kind: 'image',
+      status: 'uploading',
+      display_name: `anh-${mediaSeq++}.jpg`,
+      original_content_type: 'image/jpeg',
+      original_bytes: 2048,
+      uploaded_by_user_id: uuidV7(),
+    }),
+    updateRow: () => ({ display_name: 'sửa.jpg' }),
+  } satisfies CrossTenantOptions<typeof mediaItems>,
+  'media.upload_sessions': {
+    table: uploadSessions,
+    seedParent: mediaOf,
+    insertRow: (parent: { mediaId: string }) => ({
+      media_id: parent.mediaId,
+      created_by_user_id: uuidV7(),
+      fingerprint: randomBytes(32).toString('hex'),
+      mode: 'single',
+      declared_bytes: 1000,
+      declared_content_type: 'image/jpeg',
+      expires_at: new Date(Date.now() + 86_400_000),
+    }),
+    updateRow: () => ({ state: 'cancelled' }),
+  } satisfies CrossTenantOptions<typeof uploadSessions, { mediaId: string }>,
+  'media.storage_quotas': {
+    table: storageQuotas,
+    insertRow: () => ({ used_bytes: 0, reserved_bytes: 0, limit_bytes: 5 * 1024 ** 3 }),
+    updateRow: () => ({ used_bytes: 1 }),
+    onePerAccount: true,
+  } satisfies CrossTenantOptions<typeof storageQuotas>,
   'publishing.publish_attempts': {
     table: publishAttempts,
     insertRow: () => ({

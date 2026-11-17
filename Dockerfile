@@ -37,6 +37,10 @@ ENV APP_VERSION=$APP_VERSION
 LABEL org.opencontainers.image.revision=$APP_VERSION
 LABEL org.opencontainers.image.created=$IMAGE_CREATED
 LABEL org.opencontainers.image.source=$IMAGE_SOURCE
+# ffmpeg/ffprobe cho việc `media` (lấy khung hình đại diện + thời lượng video – 014, R5).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
 USER node

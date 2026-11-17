@@ -10,8 +10,12 @@ export {
 } from './location';
 export {
   ALLOWED_CONTENT_TYPES,
+  MAX_MULTIPART_BYTES,
+  MultipartIncompleteError,
   OBJECT_STORAGE,
   type AllowedContentType,
+  type MultipartHandle,
+  type PartInfo,
   type ObjectInfo,
   type ObjectStorage,
   type PresignedUpload,

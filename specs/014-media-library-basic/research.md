@@ -263,3 +263,45 @@ vì V3 — Security Link/nguồn riêng tư của vCDN — chưa xác minh). Lư
 - Màn hình mới `features/media/`: trang thư viện (lưới, lọc, tìm, thanh dung lượng, khung tải), hộp chi tiết, hộp xác nhận xóa liệt kê bài đang dùng.
   Dùng hệ thống trạng thái (`ui/badge`), `ui/feedback`, `ui/layout` của 011; không thêm thư viện giao diện/trạng thái. Hợp đồng chi tiết: [contracts/media-ui.md](./contracts/media-ui.md).
 - Không lưu tên tệp/đường dẫn ký sẵn vào `localStorage` (quy tắc có sẵn của hàng đợi); chỉ giữ trong bộ nhớ của hàng đợi.
+
+## Kết quả thử nghiệm (T029–T031, ghi 2026-11-17)
+
+Môi trường đo: máy dev Windows 10 (Node 24, `sharp` 0.35.5, `libheif-js` 1.23.5, ffmpeg/ffprobe 8.0 bản tĩnh), MinIO `bitnamilegacy/minio:2025.4.22`.
+Số đo trên máy dev chỉ chứng minh **khả thi và đúng chức năng**; số đo trên Worker thật (CPU/đĩa của VNG Cloud) làm lại ở T090.
+
+### T029 – HEIC (R4): **ĐẠT** bằng bộ giải mã WASM
+
+| Hạng mục | Kết quả | Tiêu chí |
+|---|---|---|
+| `sharp` giải mã HEIC trực tiếp | **Không**: `Support for this compression format has not been built in: HEVC` | (xác nhận giả định R4) |
+| `libheif-js` (WASM) → điểm ảnh thô → `sharp` (`raw`) | ảnh 4032×3024 (12 MP, 535 KB): giải mã 260 ms + xoay/thu nhỏ/JPEG 115 ms = **375 ms** | ≤ 5 giây |
+| RSS đỉnh của tiến trình | **200 MB** | ≤ 500 MB |
+| Không gian màu đầu ra | `srgb` | sRGB |
+| Đúng chiều | góc trên-trái đỏ (221,60,40) giữ nguyên ở bản 2048×1536 | đúng chiều |
+
+Kết luận: **giữ HEIC/HEIF trong `MEDIA_ACCEPTED`**; `heic.ts` dùng `libheif-js/wasm-bundle`. Tồn đọng: tệp mẫu do `pillow-heif` sinh ra; ảnh iPhone thật
+(10-bit, Display P3, ma trận xoay `irot`) cần thử lại ở bước thử tay của quickstart trên thiết bị thật; nếu lệch màu thì thêm bước chuyển hồ sơ màu.
+
+### T030 – ffmpeg lấy khung hình (R5): **ĐẠT**
+
+| Tệp | `ffprobe` | Khung hình | Thời gian |
+|---|---|---|---|
+| MP4 H.264, `moov` ở cuối (2 giây) | 320×240, 2,0 giây | 320×240, đúng | probe 25 ms, khung 559 ms (lần đầu nạp ffmpeg) |
+| MP4 `faststart` | 320×240 | đúng | 22 ms / 50 ms |
+| MOV | 320×240 | đúng | 21 ms / 50 ms |
+| MP4 có ma trận xoay 90° | `rotation: 90` ở `side_data_list`; kích thước hiển thị **240×320** | **240×320** (ffmpeg tự xoay) | 22 ms / 49 ms |
+| MP4 **505 MB** (1080p, 125 giây, `moov` ở cuối) | 1920×1080, 125 giây | 1920×1080 | probe 37 ms, khung **151 ms** (tiêu chí ≤ 2 phút) |
+| MP4 chỉ có âm thanh | không có luồng hình | — | → `no_video_stream` |
+| Tệp giả (HTML đuôi .jpg) | `ffprobe` lỗi | — | → `corrupt` |
+
+Chọn khung ở `min(1 giây, 10% thời lượng)`; nếu không có khung thì thử lại từ giây 0 (cài ở `video-pipeline.ts`). Tệp gốc được tải về đĩa tạm nên `moov` ở cuối không gây chậm.
+
+### T031 – Tải nhiều phần + `Content-Length` ký trong URL phần (R1): **ĐẠT trên MinIO**
+
+- `X-Amz-SignedHeaders = content-length;host` ⇒ `Content-Length` **được ký**. Phần thiếu 1000 byte → **HTTP 403**, đúng cỡ → 200, thừa 1000 byte → **403**: kho từ chối phần sai cỡ **ngay lúc tải**.
+- Bộ hợp đồng `multipart.contract.ts` đạt 12/12 trên MinIO, gồm mục 9 (25 MiB / 4 phần ngắt giữa chừng: `listParts` đúng, bù phần rồi ghép, SHA-256 khớp) và
+  truy cập chéo A↔B cho cả 5 thao tác. `completeMultipart` còn kiểm tổng + phần liên tục nên vẫn bác đúng khi nhà cung cấp **không** ký được `Content-Length`.
+- Lưu ý MinIO: `ListMultipartUploads` chỉ khớp `Prefix` khi bằng đúng khóa đối tượng ⇒ `deleteAllForCurrentAccount` liệt kê không lọc rồi lọc phía client theo `tenants/{acc}/`
+  (S3 thật lọc đúng nhưng cách này chạy đúng ở cả hai).
+- **Chưa kiểm** trên vStorage HCM04 (chưa có thông tin nhà cung cấp; câu hỏi V5 ở `infra/docs/p6-cau-hoi-nha-cung-cap.md` đã bổ sung `UploadPart` ký sẵn, ghép phần,
+  `AbortIncompleteMultipartUpload`). Nếu vStorage không hỗ trợ: SC-002 ghi nhận chưa đạt cho video lớn; chế độ `single` (≤ 8 MiB) vẫn dùng được.

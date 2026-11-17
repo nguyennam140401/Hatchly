@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  ListMultipartUploadsCommand,
+  ListPartsCommand,
+  UploadPartCommand,
   CopyObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -23,10 +29,16 @@ import {
   type StoragePrefix,
 } from '../location';
 import {
+  checkCreateMultipart,
   checkPresign,
+  checkPresignPart,
   checkSignedUrl,
+  MAX_PART_NUMBER,
+  MultipartIncompleteError,
   TMP_TAG,
   type AllowedContentType,
+  type MultipartHandle,
+  type PartInfo,
   type ObjectInfo,
   type ObjectStorage,
   type PresignedUpload,
@@ -234,8 +246,168 @@ export class S3ObjectStorage implements ObjectStorage {
     return { url, expiresAt: new Date(Date.now() + ttl * 1000), purpose };
   }
 
+  // ---------- Tải nhiều phần (014, contracts/storage-multipart.md) ----------
+
+  async createMultipart(
+    l: StorageLocation,
+    opts: { contentType: AllowedContentType; bytes: number; partSizeBytes: number },
+  ): Promise<MultipartHandle> {
+    checkCreateMultipart(l, opts);
+    const r = await this.client.send(
+      new CreateMultipartUploadCommand({
+        Bucket: this.cfg.bucket,
+        Key: this.key(l),
+        ContentType: opts.contentType,
+      }),
+    );
+    if (r.UploadId === undefined) throw new Error('CreateMultipartUpload không trả UploadId');
+    return { uploadId: r.UploadId };
+  }
+
+  async presignPart(
+    l: StorageLocation,
+    h: MultipartHandle,
+    part: { partNumber: number; contentLength: number; ttlSec?: number },
+  ): Promise<{ url: string; expiresAt: Date; headers: Record<string, string> }> {
+    const ttl = checkPresignPart(l, part);
+    const url = await getSignedUrl(
+      this.publicClient,
+      new UploadPartCommand({
+        Bucket: this.cfg.bucket,
+        Key: this.key(l),
+        UploadId: h.uploadId,
+        PartNumber: part.partNumber,
+        ContentLength: part.contentLength,
+      }),
+      // Ký `content-length` vào URL: phần sai cỡ bị kho từ chối (R1; không ký được ⇒ bác ở `complete` theo tổng).
+      { expiresIn: ttl, signableHeaders: new Set(['content-length']) },
+    );
+    return { url, expiresAt: new Date(Date.now() + ttl * 1000), headers: {} };
+  }
+
+  async listParts(l: StorageLocation, h: MultipartHandle): Promise<PartInfo[]> {
+    const key = this.key(l);
+    const out: PartInfo[] = [];
+    let marker: string | undefined;
+    try {
+      do {
+        const r = await this.client.send(
+          new ListPartsCommand({
+            Bucket: this.cfg.bucket,
+            Key: key,
+            UploadId: h.uploadId,
+            PartNumberMarker: marker,
+            MaxParts: 1000,
+          }),
+        );
+        for (const p of r.Parts ?? []) {
+          if (p.PartNumber !== undefined && p.ETag !== undefined) {
+            out.push({ partNumber: p.PartNumber, bytes: p.Size ?? 0, etag: p.ETag });
+          }
+        }
+        marker = r.IsTruncated === true ? r.NextPartNumberMarker : undefined;
+      } while (marker !== undefined && out.length <= MAX_PART_NUMBER);
+    } catch (err) {
+      if ((err as { name?: string }).name === 'NoSuchUpload' || isNotFound(err)) return [];
+      throw err;
+    }
+    return out.sort((a, b) => a.partNumber - b.partNumber);
+  }
+
+  async completeMultipart(
+    l: StorageLocation,
+    h: MultipartHandle,
+    expect: { bytes: number },
+  ): Promise<{ bytes: number }> {
+    const key = this.key(l);
+    const parts = await this.listParts(l, h);
+    if (parts.length === 0) {
+      // Đã ghép trước đó (gọi lặp) hoặc phiên không còn: kiểm đối tượng thật.
+      const info = await this.stat(l);
+      if (info.exists && info.bytes === expect.bytes) return { bytes: info.bytes };
+      throw new MultipartIncompleteError();
+    }
+    // Không biết partSize ở đây ⇒ suy từ phần 1: phần liên tục 1..N, mọi phần trừ phần cuối cùng cỡ phần 1, tổng đúng.
+    const first = parts[0];
+    const n = parts.length;
+    const partSize = first?.bytes ?? 0;
+    let sum = 0;
+    for (const [i, p] of parts.entries()) {
+      if (p.partNumber !== i + 1) throw new MultipartIncompleteError();
+      if (i < n - 1 && p.bytes !== partSize) throw new MultipartIncompleteError();
+      sum += p.bytes;
+    }
+    if (sum !== expect.bytes) throw new MultipartIncompleteError();
+    try {
+      await this.client.send(
+        new CompleteMultipartUploadCommand({
+          Bucket: this.cfg.bucket,
+          Key: key,
+          UploadId: h.uploadId,
+          MultipartUpload: {
+            Parts: parts.map((p) => ({ PartNumber: p.partNumber, ETag: p.etag })),
+          },
+        }),
+      );
+    } catch (err) {
+      const name = (err as { name?: string }).name;
+      if (name === 'InvalidPart' || name === 'InvalidPartOrder' || name === 'EntityTooSmall') {
+        throw new MultipartIncompleteError();
+      }
+      throw err;
+    }
+    return { bytes: sum };
+  }
+
+  async abortMultipart(l: StorageLocation, h: MultipartHandle): Promise<void> {
+    try {
+      await this.client.send(
+        new AbortMultipartUploadCommand({
+          Bucket: this.cfg.bucket,
+          Key: this.key(l),
+          UploadId: h.uploadId,
+        }),
+      );
+    } catch (err) {
+      if ((err as { name?: string }).name === 'NoSuchUpload' || isNotFound(err)) return;
+      throw err;
+    }
+  }
+
+  /** Hủy mọi phiên nhiều phần còn mở dưới tiền tố của tài khoản (không để rác tính phí). */
+  private async abortAllMultipartForCurrentAccount(): Promise<void> {
+    const prefix = accountPrefix();
+    let keyMarker: string | undefined;
+    let uploadIdMarker: string | undefined;
+    do {
+      const r = await this.client.send(
+        // Không truyền `Prefix`: MinIO chỉ khớp `Prefix` khi bằng ĐÚNG khóa đối tượng (S3 thật lọc đúng). Số phiên
+        // dở rất ít (luật vòng đời hủy sau 2 ngày) và hàm chỉ chạy khi xóa tài khoản ⇒ lọc phía client an toàn.
+        new ListMultipartUploadsCommand({
+          Bucket: this.cfg.bucket,
+          KeyMarker: keyMarker,
+          UploadIdMarker: uploadIdMarker,
+        }),
+      );
+      for (const u of r.Uploads ?? []) {
+        if (u.Key === undefined || u.UploadId === undefined || !u.Key.startsWith(prefix)) continue;
+        assertKeyInScope(u.Key, 'multipart');
+        await this.client.send(
+          new AbortMultipartUploadCommand({
+            Bucket: this.cfg.bucket,
+            Key: u.Key,
+            UploadId: u.UploadId,
+          }),
+        );
+      }
+      keyMarker = r.IsTruncated === true ? r.NextKeyMarker : undefined;
+      uploadIdMarker = r.IsTruncated === true ? r.NextUploadIdMarker : undefined;
+    } while (keyMarker !== undefined);
+  }
+
   async deleteAllForCurrentAccount(): Promise<{ deleted: number }> {
     const p = accountPrefix();
+    await this.abortAllMultipartForCurrentAccount();
     let deleted = 0;
     let token: string | undefined;
     do {

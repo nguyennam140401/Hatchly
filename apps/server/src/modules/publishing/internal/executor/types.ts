@@ -16,7 +16,8 @@ export interface ExecutorDeps {
   mode: 'none' | 'run' | 'fake';
   content: ContentPublicApi;
   gateway: PlatformGatewayPublicApi;
-  media: MediaPublicApi;
+  /** Chỉ cần bước 2 "chuẩn bị media" (013) – thu hẹp để bản giả trong kiểm thử không phải cài cả giao diện. */
+  media: Pick<MediaPublicApi, 'getPublishableMedia'>;
   account: AccountPublicApi;
   notifications: NotificationsPublicApi;
   errorMapping: ErrorMappingService;

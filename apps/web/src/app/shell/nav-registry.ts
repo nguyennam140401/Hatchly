@@ -82,7 +82,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     labelKey: 'nav.media',
     icon: 'image',
     path: '/media',
-    permission: 'media.upload',
+    permission: 'media.view',
     area: 'customer',
     placement: { sidebar: true, mobile: 'more' },
     order: 50,
