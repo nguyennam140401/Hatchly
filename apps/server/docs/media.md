@@ -28,7 +28,7 @@ switch (r.kind) {
 ## 2. Cấp đường dẫn công khai cho nền tảng (module `publishing`, 013 bước 2 "chuẩn bị media")
 
 ```ts
-const r = await this.media.issuePublicUrl(mediaId, { ttlSec: 86_400 });   // hoặc getPublishableMedia(ids, { ttlSec })
+const r = await this.media.issuePublicUrl(mediaId, { ttlSec: 86_400 }); // hoặc getPublishableMedia(ids, { ttlSec })
 ```
 
 - Ảnh ⇒ bản **JPEG chuẩn hóa** (`normalized/jpeg`); video ⇒ **tệp gốc**. Hạn mặc định `MEDIA_PUBLIC_URL_TTL_SEC` (86.400 giây);
@@ -61,11 +61,11 @@ cron `7 * * * *` UTC; quét tuần Chủ nhật 00:xx UTC). Khóa chống trùng
 
 ## 5. Cấu hình
 
-| Biến | Mặc định | Ý nghĩa |
-|---|---|---|
-| `MEDIA_QUOTA_BYTES` | 5 × 1024³ | hạn mức dung lượng mỗi tài khoản (lúc tạo dòng `storage_quotas` mới) |
-| `MEDIA_PUBLIC_URL_TTL_SEC` | 86400 (trần 86400) | hạn đường dẫn công khai cho nền tảng |
-| `MEDIA_PREVIEW_URL_TTL_SEC` | 3600 (trần 3600) | hạn đường dẫn xem trước cho giao diện |
+| Biến                          | Mặc định            | Ý nghĩa                                                                     |
+| ----------------------------- | ------------------- | --------------------------------------------------------------------------- |
+| `MEDIA_QUOTA_BYTES`           | 5 × 1024³           | hạn mức dung lượng mỗi tài khoản (lúc tạo dòng `storage_quotas` mới)        |
+| `MEDIA_PUBLIC_URL_TTL_SEC`    | 86400 (trần 86400)  | hạn đường dẫn công khai cho nền tảng                                        |
+| `MEDIA_PREVIEW_URL_TTL_SEC`   | 3600 (trần 3600)    | hạn đường dẫn xem trước cho giao diện                                       |
 | `FFMPEG_PATH`, `FFPROBE_PATH` | `ffmpeg`, `ffprobe` | đường dẫn công cụ video (ảnh container đã cài sẵn; chỉ đặt khi chạy cục bộ) |
 
 ## 6. Đóng gói và vận hành
