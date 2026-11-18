@@ -372,3 +372,7 @@ Sau Phase 2: A làm US1 → US2 (tải lên); B làm US3 → US7 (Worker/xử l�
 - `UploadGate` thật (WBS 2.6) chưa có dữ liệu gói; T024 giữ bản mặc định `allowed: true`.
 - T029 có thể loại HEIC khỏi `MEDIA_ACCEPTED`; khi đó phải sửa spec Assumptions + SC-004 (bỏ HEIC khỏi "ảnh hợp lệ").
 - T031: nếu vStorage không hỗ trợ multipart/URL phần ký sẵn thì SC-002 ghi nhận chưa đạt cho video lớn (chế độ `single` vẫn dùng được; US1/US3/US4 không bị chặn).
+- Kết quả `pnpm verify` (2026-11-18, có Postgres/Docker): `test:db` 423 giây đạt, `test:e2e`, `test:web-e2e`, `db:compat`, `check:image` đạt. Còn lỗi NGOÀI phạm vi 014: `typecheck` (`test/check-wiki.spec.ts` thuộc wiki), `test` tooling và `infra:check` (thiếu `tooling/infra/commands/kubeconfig.mjs` — không có trong git), `test:queue` `purge-account` lỗi khi chạy cả bộ nhưng ĐẠT khi chạy riêng (nghi phụ thuộc thời điểm việc nền).
+- T090 (đo SC-001/002/003/007/010) và T093 (14 bước thử tay + 6 thử nghiệm kỹ thuật) cần 4G thật, kho vStorage, HEIC từ iPhone: chưa làm. `check:image` đã đạt (ảnh container có ffmpeg).
+- Quyết định FR-023: mã phiên `uploadId` vẫn có trong đường dẫn của nhật ký truy cập chung (core); test chỉ cấm ở dòng do module media ghi và thông điệp lỗi.
+

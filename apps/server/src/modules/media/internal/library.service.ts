@@ -287,7 +287,8 @@ export class LibraryService {
       }
       await enqueue(purgeMediaFiles, { mediaId: row.id }, { dedupeKey: purgeDedupeKey(row.id) });
       // Chỉ số dung lượng theo loại: media `ready` đã được cộng khi xử lý xong, nay trừ đi.
-      if (done.status === 'ready') recordStorageBytes(row.kind === 'video' ? 'video' : 'image', -done.bytes);
+      if (done.status === 'ready')
+        recordStorageBytes(row.kind === 'video' ? 'video' : 'image', -done.bytes);
     });
     this.logger.log({ msg: 'media.delete', result: 'ok' });
   }
