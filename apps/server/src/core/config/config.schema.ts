@@ -226,6 +226,46 @@ export const AppConfigSchema = z.object({
   META_INSTAGRAM_RECONCILE: z.enum(['true', 'false']).default('false'),
   /** Giới hạn dung lượng một video Facebook (byte): 1 GB theo quyết định của PO (2026-11-16). */
   FACEBOOK_VIDEO_MAX_BYTES: z.coerce.number().int().min(1_000_000).default(1_000_000_000),
+  // ----- Kết nối kênh Facebook/Instagram/TikTok (010, contracts/channels-http-api.md) -----
+  /** Gốc URL công khai của API để dựng `redirect_uri` của OAuth kênh (khác redirect đăng nhập 009). */
+  CHANNEL_CONNECT_REDIRECT_BASE: z.url().optional(),
+  /** Nhóm quyền xin khi kết nối: `publish`, `analytics`, `ads`. `trends` KHÔNG xin từ nền tảng (FR-043). */
+  CHANNEL_SCOPE_GROUPS: z
+    .string()
+    .default('publish,analytics,ads')
+    .transform((raw) =>
+      raw
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    )
+    .pipe(z.array(z.enum(['publish', 'analytics', 'ads']))),
+  /** Ghi đè danh sách quyền theo nền tảng (phân tách bằng dấu phẩy); trống = dùng bảng mặc định trong mã. */
+  CHANNEL_SCOPES_FACEBOOK_PAGE: z.string().optional(),
+  CHANNEL_SCOPES_INSTAGRAM: z.string().optional(),
+  CHANNEL_SCOPES_TIKTOK: z.string().optional(),
+  /** Làm mới mã quyền Meta bằng việc nền; tắt cho tới khi POC-2 xác nhận hành vi hạn mã. */
+  META_TOKEN_REFRESH_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  TIKTOK_CLIENT_KEY: z.string().min(1).optional(),
+  TIKTOK_CLIENT_SECRET: secret(z.string().min(1).optional()),
+  TIKTOK_BASE_URL: z.url().default('https://open.tiktokapis.com'),
+  TIKTOK_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(10_000),
+  TIKTOK_APP_STATUS: z.enum(['sandbox', 'in_review', 'approved']).default('sandbox'),
+  /** Hết thời gian chờ một lời gọi nền tảng trong thao tác tương tác (kết nối, kiểm tra lại). */
+  CHANNEL_INTERACTIVE_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(10_000),
+  /** `kms` (production) | `env-master-key` (dev/test, staging có điều kiện) | `fake` (dev/test). */
+  CREDENTIAL_VAULT_DRIVER: z.enum(['kms', 'env-master-key', 'fake']).optional(),
+  KMS_KEY_ID: z.string().min(1).optional(),
+  /** Khóa chủ 256 bit (base64) cho `env-master-key`. */
+  CREDENTIAL_MASTER_KEY_B64: secret(z.string().min(1).optional()),
+  /** Cho phép `env-master-key` ở staging (production luôn từ chối). */
+  STAGING_ALLOW_ENV_MASTER_KEY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   PLATFORM_SUBMIT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(120_000).default(30_000),
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(40_000),
   AI_FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5_000),

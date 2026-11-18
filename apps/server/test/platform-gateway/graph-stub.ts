@@ -82,6 +82,82 @@ export class GraphStub {
   }
 }
 
+// ----- Kịch bản kết nối kênh (010): OAuth, me/accounts, debug_token, me/permissions, thu hồi quyền -----
+
+export interface StubPage {
+  id: string;
+  name: string;
+  /** Mã Page (bí mật giả) – phải KHÔNG lọt vào log/phản hồi (kiểm bởi secret-scan). */
+  accessToken: string;
+  tasks?: string[];
+  instagram?: { id: string; username: string };
+}
+
+/** Một trang kết quả `me/accounts` có thể kèm con trỏ trang kế (`paging.next`). */
+export function accountsPage(pages: StubPage[], next?: string): StubReply {
+  return {
+    json: {
+      data: pages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        picture: { data: { url: `https://cdn.example.test/${p.id}.jpg` } },
+        access_token: p.accessToken,
+        tasks: p.tasks ?? ['CREATE_CONTENT', 'MANAGE'],
+        ...(p.instagram === undefined
+          ? {}
+          : { instagram_business_account: { id: p.instagram.id, username: p.instagram.username } }),
+      })),
+      ...(next === undefined ? {} : { paging: { next } }),
+    },
+  };
+}
+
+export interface MetaConnectScenario {
+  pages: StubPage[];
+  /** Quyền người dùng đã cấp (mặc định đủ). */
+  grantedScopes?: string[];
+  /** Hạn mã (epoch giây); 0 = không hạn (Meta trả 0 cho mã không hết hạn). */
+  expiresAt?: number;
+  dataAccessExpiresAt?: number;
+}
+
+export const DEFAULT_GRANTED_SCOPES = [
+  'pages_show_list',
+  'pages_manage_posts',
+  'pages_read_engagement',
+  'instagram_basic',
+  'instagram_content_publish',
+];
+
+/** Nạp kịch bản chuẩn: đổi mã → mã ngắn hạn → dài hạn, danh sách Page, `debug_token`, quyền. */
+export function loadMetaConnectScenario(stub: GraphStub, s: MetaConnectScenario): void {
+  stub.on('GET /oauth/access_token', {
+    json: { access_token: 'EAAshort_user_token', expires_in: 3600 },
+  });
+  stub.on('GET /oauth/access_token', {
+    json: { access_token: 'EAAlong_user_token', token_type: 'bearer', expires_in: 5_184_000 },
+  });
+  stub.on('GET /me/accounts', accountsPage(s.pages));
+  stub.on('GET /debug_token', {
+    json: {
+      data: {
+        is_valid: true,
+        expires_at: s.expiresAt ?? 0,
+        data_access_expires_at: s.dataAccessExpiresAt ?? 0,
+        scopes: s.grantedScopes ?? DEFAULT_GRANTED_SCOPES,
+      },
+    },
+  });
+  stub.on('GET /me/permissions', {
+    json: {
+      data: (s.grantedScopes ?? DEFAULT_GRANTED_SCOPES).map((permission) => ({
+        permission,
+        status: 'granted',
+      })),
+    },
+  });
+}
+
 export const graphError = (code: number, subcode?: number, status = 400): StubReply => ({
   status,
   json: {
