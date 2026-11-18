@@ -75,6 +75,14 @@ export interface PublishingPublicApi {
    * mất dấu bài đã gửi). Trả số lượt đã hủy. Chạy trong giao dịch của người gọi.
    */
   cancelAllForConnection(tx: Db, connectionId: string): Promise<{ cancelled: number }>;
+  /**
+   * 010 – Số lượt đăng CHƯA gửi còn hiệu lực (`scheduled`, `retry_wait`) và giờ gần nhất, theo từng kênh (cho hộp xác
+   * nhận ngắt kết nối và cảnh báo "kênh cần kết nối lại"). Chỉ đọc, theo tài khoản của ngữ cảnh; kênh không có lượt
+   * nào vẫn có mục `{ count: 0, nextAt: null }`.
+   */
+  countScheduledByConnections(
+    connectionIds: readonly string[],
+  ): Promise<Map<string, { count: number; nextAt: Date | null }>>;
   /** Đọc: trạng thái đăng theo bài (xấu nhất + từng kênh). Không cache. */
   statusesByPosts(postIds: readonly string[]): Promise<Map<string, PostPublishState>>;
   /**

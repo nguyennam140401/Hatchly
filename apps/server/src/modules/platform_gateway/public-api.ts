@@ -9,6 +9,8 @@
  * Bên gọi rẽ nhánh theo `capabilities`, không theo tên nền tảng.
  */
 
+import type { Db } from '../../core/db';
+
 export const CHANNEL_TYPES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
@@ -196,6 +198,21 @@ export interface PlatformGatewayPublicApi {
   getConnection(connectionId: string): Promise<ChannelConnection | null>;
   /** 012: mọi kết nối của tài khoản trong ngữ cảnh (kể cả đã ngắt) – không mã quyền. */
   listConnections(): Promise<ChannelConnection[]>;
+}
+
+/**
+ * 010 – Cổng ngược cho module tiêu thụ kênh (R7). `platform_gateway` KHÔNG import `publishing` (tránh vòng phụ thuộc);
+ * `publishing` đăng ký bản cài đặt lúc khởi động bằng `registerConnectionConsumers`. Chưa đăng ký → bản rỗng.
+ */
+export interface ConnectionConsumersPort {
+  /** Số bài đã lên lịch (còn hiệu lực) + giờ gần nhất của TỪNG kênh. Chỉ đọc, theo tài khoản của ngữ cảnh. */
+  scheduledImpact(
+    connectionIds: readonly string[],
+  ): Promise<Map<string, { count: number; nextAt: Date | null }>>;
+  /** Gọi TRONG giao dịch ngắt của cổng: hủy lượt CHƯA gửi của kênh. Trả số lượt đã hủy. */
+  onDisconnect(tx: Db, connectionId: string): Promise<{ cancelled: number }>;
+  /** Bảng ánh xạ lỗi cấu hình (FR-032) – đọc từ `publishing.error_mappings`. */
+  errorMappings(): Promise<ErrorMappingRow[]>;
 }
 
 /** Token NestJS của PlatformGatewayPublicApi. */
