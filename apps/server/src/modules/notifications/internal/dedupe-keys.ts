@@ -9,7 +9,10 @@ const KEYS: { [T in NotificationType]: (refs: RefsOf<T>) => string } = {
   approved_post_rescheduled: (r) => `approved_post_rescheduled:${r.postId}:${r.postVersion}`,
   batch_generation_done: (r) => `batch_generation_done:${r.planId}:${r.batchId}`,
   publish_needs_action: (r) => `publish_needs_action:${r.attemptId}:${r.state}`,
-  channel_token_expiring: (r) => `channel_token_expiring:${r.connectionId}:${r.expiresOn}`,
+  // 010: có `stage` (d7/d1/expired) thì mỗi mốc một thông báo; thiếu `stage` giữ khóa cũ (sự kiện của 005).
+  channel_token_expiring: (r) =>
+    `channel_token_expiring:${r.connectionId}:${r.expiresOn}${r.stage === undefined ? '' : `:${r.stage}`}`,
+  channel_needs_reconnect: (r) => `channel_needs_reconnect:${r.connectionId}:${r.reason}:${r.day}`,
   ai_usage_80: (r) => `ai_usage_80:${r.cycleStart}`,
   ai_usage_100: (r) => `ai_usage_100:${r.cycleStart}`,
   plan_expiring: (r) => `plan_expiring:${r.subscriptionId}:${r.expiresOn}`,

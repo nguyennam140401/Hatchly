@@ -17,7 +17,7 @@ import {
   SaveConnectionRequest,
   type ChannelConnectionDto,
   type ConnectResponse,
-  type SelectionResponse,
+  type LegacySelectionResponse,
 } from '@app/shared/platform_gateway';
 import type { Response } from 'express';
 import { z } from 'zod';
@@ -41,7 +41,13 @@ import { connectionNotFound, ConnectionsService } from './connections.service';
 
 export const CONNECTIONS_SERVICE = Symbol('CONNECTIONS_SERVICE');
 
-const channelParam = z.strictObject({ channelType: ChannelTypeSchema });
+// `tiktok` có trong DTO dùng chung từ 010 nhưng chưa có bộ chuyển đổi (T079): luồng 005 coi như chưa hỗ trợ.
+const SUPPORTED_CHANNEL_TYPES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const;
+const LegacyChannelType = ChannelTypeSchema.refine(
+  (value): value is (typeof SUPPORTED_CHANNEL_TYPES)[number] =>
+    (SUPPORTED_CHANNEL_TYPES as readonly string[]).includes(value),
+);
+const channelParam = z.strictObject({ channelType: LegacyChannelType });
 const selectionParam = z.strictObject({ selectionId: z.uuid() });
 const connectionParam = z.strictObject({ connectionId: z.uuid() });
 const callbackQuery = z.object({
@@ -108,8 +114,10 @@ export class ConnectionsController {
   @HttpCode(200)
   @CustomerAccess('channel.manage')
   connect(@ValidBody(ConnectRequest) body: ConnectRequest): Promise<ConnectResponse> {
+    const channelType = body.channelType;
+    if (channelType === 'tiktok') throw channelNotSupported(); // T079 thay bằng bộ chuyển đổi + công tắc
     return mapErrors(() =>
-      this.connections.startConnect(body.channelType, this.redirectUri(body.channelType)),
+      this.connections.startConnect(channelType, this.redirectUri(channelType)),
     );
   }
 
@@ -135,7 +143,7 @@ export class ConnectionsController {
   @CustomerAccess('channel.manage')
   async selection(
     @ValidParam(selectionParam) params: z.infer<typeof selectionParam>,
-  ): Promise<SelectionResponse> {
+  ): Promise<LegacySelectionResponse> {
     const view = await this.connections.getSelection(params.selectionId);
     return {
       channelType: view.channelType,

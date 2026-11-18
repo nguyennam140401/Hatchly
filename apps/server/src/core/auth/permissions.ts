@@ -29,6 +29,8 @@ export const PERMISSION_DENIED_MESSAGES: Record<Permission, string> = {
   'context.view': 'Bạn không có quyền xem hồ sơ kinh doanh.',
   'context.edit': 'Chỉ chủ tài khoản mới sửa được hồ sơ kinh doanh.',
   'channel.manage': 'Chỉ chủ tài khoản mới kết nối được kênh.',
+  'channel.view': 'Bạn không có quyền xem các kênh đã kết nối.',
+  'feature.manage': 'Chỉ quản trị viên mới bật hoặc tắt được tính năng cho khách hàng.',
   'post.edit': 'Bạn không có quyền soạn hoặc sửa bài.',
   'media.upload': 'Bạn không có quyền tải ảnh, video lên.',
   'post.approve': 'Chỉ chủ tài khoản mới duyệt được bài.',

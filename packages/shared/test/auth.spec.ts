@@ -15,11 +15,13 @@ import {
 import { toFieldErrors } from '../src/core/index.js';
 
 describe('PERMISSIONS (FR-012)', () => {
-  it('đúng 14 quyền theo contracts/authz-api.md mục 1 (006: context.manage → view + edit)', () => {
+  it('đúng 16 quyền theo contracts/authz-api.md mục 1 (006: context.manage → view + edit; 010: + channel.view, feature.manage)', () => {
     expect(PERMISSION_LIST).toEqual([
       'context.view',
       'context.edit',
       'channel.manage',
+      'channel.view',
+      'feature.manage',
       'post.edit',
       'media.upload',
       'post.approve',
@@ -48,6 +50,7 @@ describe('PERMISSIONS (FR-012)', () => {
   it('permissionsOf: cộng tác viên không có post.approve, members.manage', () => {
     expect(permissionsOf('collaborator')).toEqual([
       'context.view',
+      'channel.view',
       'post.edit',
       'media.upload',
       'post.reschedule',
@@ -55,8 +58,13 @@ describe('PERMISSIONS (FR-012)', () => {
       'status.view',
     ]);
     expect(permissionsOf('support')).toEqual(['support.lookup']);
-    expect(permissionsOf('admin')).toEqual(['support.lookup', 'plan.manage', 'staff.manage']);
-    expect(permissionsOf('owner')).toHaveLength(11);
+    expect(permissionsOf('admin')).toEqual([
+      'feature.manage',
+      'support.lookup',
+      'plan.manage',
+      'staff.manage',
+    ]);
+    expect(permissionsOf('owner')).toHaveLength(12);
     expect(PERMISSION_LIST).not.toContain('context.manage');
   });
 });

@@ -1,6 +1,6 @@
 // 005 T026 (contracts/platform-gateway.md mục 3): điểm cuối kết nối kênh trên bản giả lập (kho memory),
 // ApiAppModule thật + phiên đăng nhập thật (CSDL kiểm thử – pnpm test:db).
-import { ChannelConnectionDto, SelectionResponse } from '@app/shared/platform_gateway';
+import { ChannelConnectionDto, LegacySelectionResponse } from '@app/shared/platform_gateway';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { describeDb } from '../db/helpers/db';
 import { createActors, type Actors } from '../auth/helpers/actors';
@@ -54,7 +54,7 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     const selectionId = location.searchParams.get('selection')!;
     const sel = await actors.owner.get(`/api/v1/channels/selections/${selectionId}`);
     expect(sel.status).toBe(200);
-    const body = SelectionResponse.parse(sel.body);
+    const body = LegacySelectionResponse.parse(sel.body);
     expect(body.candidates).toHaveLength(3);
     const eligible = body.candidates.find((c) => c.check.kind === 'eligible')!;
     const ineligible = body.candidates.find((c) => c.check.kind === 'ineligible')!;

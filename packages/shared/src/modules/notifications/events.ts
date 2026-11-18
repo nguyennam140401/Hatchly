@@ -10,6 +10,7 @@ export const NOTIFICATION_TYPES = [
   'batch_generation_done',
   'publish_needs_action',
   'channel_token_expiring',
+  'channel_needs_reconnect',
   'ai_usage_80',
   'ai_usage_100',
   'plan_expiring',
@@ -28,6 +29,8 @@ export const NotificationParams = z.strictObject({
   postTitle: z.string().max(60).optional(),
   channelDisplayName: z.string().max(120).optional(),
   percent: z.union([z.literal(80), z.literal(100)]).optional(),
+  /** 010: số bài đã lên lịch bị ảnh hưởng khi kênh cần kết nối lại (số nguyên – không nội dung bài). */
+  affectedPosts: z.int().min(0).max(100_000).optional(),
 });
 
 export const NOTIFICATION_ACTION_KINDS = [
@@ -85,7 +88,26 @@ export const NOTIFICATION_REFS = {
       ])
       .optional(),
   }),
-  channel_token_expiring: z.strictObject({ connectionId: id, expiresOn: day }),
+  channel_token_expiring: z.strictObject({
+    connectionId: id,
+    expiresOn: day,
+    // 010: tùy chọn – sự kiện cũ (không `stage`) vẫn hợp lệ. `connectionIds` = các kênh cùng hết hạn, gom một thông báo.
+    stage: z.enum(['d7', 'd1', 'expired']).optional(),
+    connectionIds: z.array(id).min(1).max(10).optional(),
+  }),
+  channel_needs_reconnect: z.strictObject({
+    connectionId: id,
+    /** Ngày UTC phát hiện – thành phần của khóa chống trùng (một thông báo/ngày/lý do). */
+    day,
+    connectionIds: z.array(id).min(1).max(10).optional(),
+    reason: z.enum([
+      'token_expired',
+      'token_revoked',
+      'scope_missing',
+      'source_page_lost',
+      'not_eligible',
+    ]),
+  }),
   ai_usage_80: z.strictObject({ cycleStart: day }),
   ai_usage_100: z.strictObject({ cycleStart: day }),
   plan_expiring: z.strictObject({ subscriptionId: id, expiresOn: day }),
@@ -102,6 +124,7 @@ export const NotificationEventSchema = z.discriminatedUnion('type', [
   branch('batch_generation_done'),
   branch('publish_needs_action'),
   branch('channel_token_expiring'),
+  branch('channel_needs_reconnect'),
   branch('ai_usage_80'),
   branch('ai_usage_100'),
   branch('plan_expiring'),
@@ -156,6 +179,12 @@ export const NOTIFICATION_RULES: Record<NotificationType, NotificationRule> = {
     defaultActions: ['open_attempt'],
   },
   channel_token_expiring: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+    defaultActions: ['reconnect_channel'],
+  },
+  channel_needs_reconnect: {
     recipients: ['owner'],
     channels: ['in_app', 'email'],
     emailBatch: 'immediate',
