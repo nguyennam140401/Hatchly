@@ -5,7 +5,9 @@ import { uuidV7 } from '../../../../core/ids/uuid-v7';
 import type { ChannelType } from '../../public-api';
 import { ChannelOwnedByAnotherAccountError, ConnectionLimitError } from '../errors';
 import { channelConnections, connectSelections, connectStates } from '../db/schema';
+import type { Db } from '../../../../core/db';
 import type {
+  AuthFailure,
   ConnectionStore,
   NewConnection,
   StoredCandidate,
@@ -196,6 +198,40 @@ export class PgConnectionStore implements ConnectionStore {
         })
         .where(and(eq(channelConnections.id, id), ne(channelConnections.status, 'disconnected'))),
     );
+  }
+
+  async markAuthFailure(
+    id: string,
+    failure: AuthFailure,
+    within?: (connection: StoredConnection, tx: Db) => Promise<void>,
+  ): Promise<boolean> {
+    if (!UUID.test(id)) return false;
+    return tenantTx(async (db) => {
+      const [row] = await db
+        .update(channelConnections)
+        .set({
+          status: 'needs_reconnect',
+          reason_code: failure.reasonCode,
+          last_error_code: failure.rawCode,
+          version: sql`${channelConnections.version} + 1`,
+        })
+        .where(and(eq(channelConnections.id, id), eq(channelConnections.status, 'active')))
+        .returning();
+      if (row === undefined) return false;
+      if (within !== undefined) await within(toStoredConnection(row), db);
+      return true;
+    });
+  }
+
+  async listLiveConnections(): Promise<StoredConnection[]> {
+    const rows = await tenantTx((db) =>
+      db
+        .select()
+        .from(channelConnections)
+        .where(ne(channelConnections.status, 'disconnected'))
+        .orderBy(asc(channelConnections.connected_at)),
+    );
+    return rows.map(toStoredConnection);
   }
 
   /** Cập nhật có điều kiện theo `version`; xung đột → `VERSION_CONFLICT` (409). Trả hàng mới. */

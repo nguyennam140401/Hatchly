@@ -11,6 +11,7 @@
 
 import type { Db } from '../../core/db';
 
+// 'tiktok' được thêm cùng bộ chuyển đổi TikTok (010 T079) – test `us2.spec` bắt buộc mọi loại kênh đều có bộ chuyển đổi.
 export const CHANNEL_TYPES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
@@ -196,8 +197,28 @@ export interface PlatformGatewayPublicApi {
   capabilities(channelType: ChannelType): ChannelCapabilities;
   contentHash(channelType: ChannelType, text: string): string;
   getConnection(connectionId: string): Promise<ChannelConnection | null>;
-  /** 012: mọi kết nối của tài khoản trong ngữ cảnh (kể cả đã ngắt) – không mã quyền. */
-  listConnections(): Promise<ChannelConnection[]>;
+  /**
+   * 012: mọi kết nối của tài khoản trong ngữ cảnh (kể cả đã ngắt) – không mã quyền, không gọi nền tảng.
+   * 010: lọc tùy chọn; `usableOnly` chỉ giữ kết nối dùng được để đăng (`state ∈ {active, expiring}`).
+   */
+  listConnections(filter?: {
+    channelTypes?: readonly ChannelType[];
+    usableOnly?: boolean;
+  }): Promise<ChannelConnection[]>;
+  /** 010: như `getConnection` + trạng thái hiển thị đã dẫn xuất; null khi không có/không thuộc tài khoản. */
+  getConnectionState(connectionId: string): Promise<ChannelConnection | null>;
+  /**
+   * 010 FR-023: bên đăng bài báo "quyền hỏng". CHỈ `active → needs_reconnect` (cập nhật có điều kiện, idempotent) và phát
+   * thông báo trong cùng giao dịch; module Đăng bài KHÔNG ghi thẳng vào bảng của cổng.
+   */
+  reportAuthFailure(
+    connectionId: string,
+    report: { rawCode: string; kind: 'token_expired' | 'token_revoked' | 'scope_missing' },
+  ): Promise<void>;
+  /** 010: ngắt mọi kết nối của tài khoản trong ngữ cảnh, xóa mã quyền ngay (xóa tài khoản). */
+  disconnectAllForAccount(): Promise<{ disconnected: number }>;
+  /** 010: công tắc hiệu lực của tài khoản trong ngữ cảnh (ghi đè ?? mặc định); lỗi đọc ⇒ `false`. */
+  isFeatureEnabled(flag: 'channel.tiktok'): Promise<boolean>;
 }
 
 /**

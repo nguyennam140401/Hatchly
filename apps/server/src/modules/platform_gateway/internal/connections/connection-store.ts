@@ -1,3 +1,4 @@
+import type { Db } from '../../../../core/db';
 import type { AccountCheckResult, ChannelType, ExpiryInfo } from '../../public-api';
 
 // Kho kết nối kênh + trạng thái luồng kết nối (005, R6). Bản giả lập: `internal/fake/store.*.ts` (bảng
@@ -90,6 +91,14 @@ export interface NewConnection {
   maxPerPlatform?: number;
 }
 
+/** Lý do kênh phải kết nối lại do bên đăng bài/nền tảng báo (FR-023). */
+export interface AuthFailure {
+  /** Mã hiển thị đã lọc (`TOKEN_EXPIRED`, `TOKEN_REVOKED`, `SCOPE_MISSING`…). */
+  reasonCode: string;
+  /** Mã lỗi gốc đã lọc `[A-Za-z0-9_.:-]{1,64}` – chỉ hiện ở "Chi tiết cho hỗ trợ". */
+  rawCode: string;
+}
+
 export interface ConnectionStore {
   getConnection(id: string): Promise<StoredConnection | null>;
   listConnections(): Promise<StoredConnection[]>;
@@ -98,6 +107,18 @@ export interface ConnectionStore {
   /** `active → disconnected` (cập nhật có điều kiện); false khi không có/đã ngắt. */
   disconnect(id: string): Promise<boolean>;
   updateTokenExpiry(id: string, expiresAt: Date): Promise<void>;
+  /**
+   * 010: CHỈ `active → needs_reconnect` bằng cập nhật có điều kiện (idempotent: đã `needs_reconnect`/`ineligible`/ngắt ⇒
+   * `false`, không làm gì). `within` chạy TRONG cùng giao dịch khi có chuyển trạng thái (để phát thông báo). Bản giả
+   * không cài đặt (kênh giả không hỏng quyền theo cách này).
+   */
+  markAuthFailure?(
+    id: string,
+    failure: AuthFailure,
+    within?: (connection: StoredConnection, tx: Db) => Promise<void>,
+  ): Promise<boolean>;
+  /** 010: mọi kết nối chưa ngắt của tài khoản (cho ngắt hàng loạt). */
+  listLiveConnections?(): Promise<StoredConnection[]>;
   saveOauthState(s: {
     stateHash: Buffer;
     userId: string;

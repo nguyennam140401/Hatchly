@@ -11,8 +11,13 @@ import {
 import { ConnectionsService } from './internal/connections/connections.service';
 import { PgConnectionStore } from './internal/connections/pg-connection-store';
 import { getFakePlatformStore, makeFakeAdapterFactory } from './internal/fake';
+import { FeatureGate } from './internal/features/feature-gate';
+import { PgFeatureReader } from './internal/features/pg-feature-reader';
 import { PlatformGatewayService } from './internal/gateway.service';
+import { GatewaySettings } from './internal/settings/gateway-settings';
+import { PgGatewaySettingsReader } from './internal/settings/pg-gateway-settings-reader';
 import { FakeCredentialVault, type CredentialVault } from './internal/vault/credential-vault';
+import { NOTIFICATIONS, type NotificationsPublicApi } from '../notifications';
 import { PLATFORM_GATEWAY } from './public-api';
 
 // Module Cổng nền tảng (005). Chọn bản cài đặt theo `PLATFORM_GATEWAY_DRIVER` (hiện chỉ `fake` – bản thật
@@ -89,12 +94,21 @@ const providers = [
   },
   {
     provide: PLATFORM_GATEWAY,
-    inject: [APP_CONFIG, PLATFORM_STORE, CREDENTIAL_VAULT],
-    useFactory: (config: AppConfig, store: ConnectionStore, vault: CredentialVault) =>
+    inject: [APP_CONFIG, PLATFORM_STORE, CREDENTIAL_VAULT, NOTIFICATIONS],
+    useFactory: (
+      config: AppConfig,
+      store: ConnectionStore,
+      vault: CredentialVault,
+      notifications: NotificationsPublicApi,
+    ) =>
       new PlatformGatewayService({
         store,
         vault,
         submitTimeoutMs: config.PLATFORM_SUBMIT_TIMEOUT_MS,
+        // 010: công tắc theo khách hàng (đọc lỗi ⇒ tắt), cấu hình dùng chung, thông báo "cần kết nối lại".
+        features: new FeatureGate(new PgFeatureReader()),
+        settings: new GatewaySettings(new PgGatewaySettingsReader()),
+        notifications,
       }),
   },
 ];

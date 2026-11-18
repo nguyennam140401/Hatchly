@@ -1,3 +1,5 @@
+import { currentAccountId, tenantTx } from '../../../core/db';
+import { TenantContextError } from '../../../core/db/errors';
 import { withGatewayOp } from '../../../core/gateways/op-log';
 import {
   MAX_POST_TEXT_LENGTH,
@@ -17,6 +19,7 @@ import {
   type SubmitRequest,
   type SubmitResult,
 } from '../public-api';
+import type { NotificationsPublicApi } from '../../notifications';
 import type { PlatformAdapter } from './adapters/adapter';
 import { getAdapter } from './adapters/registry';
 import {
@@ -32,7 +35,11 @@ import {
   type StateInput,
 } from './connections/connection-state';
 import type { ConnectionStore, StoredConnection } from './connections/connection-store';
+import { connectionConsumers } from './connections/consumers';
 import { ConnectionNotFoundError, InvalidRequestError } from './errors';
+import type { FeatureGate } from './features/feature-gate';
+import { emitNeedsReconnect } from './notify/channel-notify';
+import type { GatewaySettings } from './settings/gateway-settings';
 import type { CredentialVault, DecryptedCredential } from './vault/credential-vault';
 
 // Tầng công khai của Cổng nền tảng (005, contracts/platform-gateway.md mục 1): connectionId → kết nối của
@@ -128,7 +135,27 @@ export interface PlatformGatewayOptions {
   vault: CredentialVault;
   /** Hết thời gian chờ phản hồi `submit` → `failed/unknown` (mặc định 30 000). */
   submitTimeoutMs: number;
+  // ----- 010 (tùy chọn – bản dựng cũ/kiểm thử không cần) -----
+  /** Công tắc theo tài khoản; thiếu ⇒ mọi công tắc TẮT (an toàn). */
+  features?: FeatureGate;
+  /** Cấu hình dùng chung (số ngày báo hết hạn…); thiếu ⇒ mặc định trong mã. */
+  settings?: GatewaySettings;
+  /** Phát thông báo "cần kết nối lại" trong giao dịch ghi trạng thái; thiếu ⇒ không phát. */
+  notifications?: NotificationsPublicApi;
+  now?: () => Date;
 }
+
+/** Mã lỗi gốc chỉ được ghi dạng đã lọc `[A-Za-z0-9_.:-]{1,64}` (chống rò chuỗi lạ vào cột/nhật ký). */
+export function sanitizeRawCode(raw: string): string {
+  const cleaned = raw.replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 64);
+  return cleaned === '' ? 'UNKNOWN' : cleaned;
+}
+
+const AUTH_FAILURE_REASON = {
+  token_expired: { code: 'TOKEN_EXPIRED', reason: 'token_expired' },
+  token_revoked: { code: 'TOKEN_REVOKED', reason: 'token_revoked' },
+  scope_missing: { code: 'SCOPE_MISSING', reason: 'scope_missing' },
+} as const;
 
 interface Resolved {
   connection: StoredConnection;
@@ -344,10 +371,103 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
     return getAdapter(channelType).contentHash(text);
   }
 
-  listConnections(): Promise<ChannelConnection[]> {
-    return withGatewayOp('platform_gateway', 'listConnections', {}, async () =>
-      toChannelConnections(await this.opts.store.listConnections()),
+  /** Công tắc + số ngày báo trước hết hạn cho việc dẫn xuất trạng thái (không gọi nền tảng). */
+  private async derivation(
+    rows: readonly StoredConnection[],
+  ): Promise<{ warnDays: number; featureEnabled: boolean; now: Date }> {
+    const warnDays = (await this.opts.settings?.get())?.expiryWarnDays ?? 7;
+    // Chỉ hỏi công tắc khi có kết nối TikTok (tránh một truy vấn thừa ở mọi lần liệt kê).
+    const needsFeature = rows.some((r) => (r.channelType as string) === 'tiktok');
+    const featureEnabled = needsFeature ? await this.isFeatureEnabled('channel.tiktok') : true;
+    return { warnDays, featureEnabled, now: (this.opts.now ?? (() => new Date()))() };
+  }
+
+  listConnections(filter?: {
+    channelTypes?: readonly ChannelType[];
+    usableOnly?: boolean;
+  }): Promise<ChannelConnection[]> {
+    return withGatewayOp('platform_gateway', 'listConnections', {}, async () => {
+      const rows = await this.opts.store.listConnections();
+      const all = toChannelConnections(rows, await this.derivation(rows));
+      return all.filter(
+        (c) =>
+          (filter?.channelTypes === undefined || filter.channelTypes.includes(c.channelType)) &&
+          (filter?.usableOnly !== true || c.state === 'active' || c.state === 'expiring'),
+      );
+    });
+  }
+
+  getConnectionState(connectionId: string): Promise<ChannelConnection | null> {
+    return this.getConnection(connectionId);
+  }
+
+  async isFeatureEnabled(flag: 'channel.tiktok'): Promise<boolean> {
+    const accountId = currentAccountId();
+    if (accountId === null) throw new TenantContextError('TENANT_CONTEXT_MISSING');
+    return (await this.opts.features?.isEnabled(accountId, flag)) ?? false;
+  }
+
+  reportAuthFailure(
+    connectionId: string,
+    report: { rawCode: string; kind: 'token_expired' | 'token_revoked' | 'scope_missing' },
+  ): Promise<void> {
+    return withGatewayOp(
+      'platform_gateway',
+      'reportAuthFailure',
+      { connection_id: connectionId },
+      async () => {
+        const store = this.opts.store;
+        if (store.markAuthFailure === undefined) return; // bản giả: không có quyền thật để hỏng
+        if (!UUID.test(connectionId)) throw new ConnectionNotFoundError();
+        const mapped = AUTH_FAILURE_REASON[report.kind];
+        const now = (this.opts.now ?? (() => new Date()))();
+        await store.markAuthFailure(
+          connectionId,
+          { reasonCode: mapped.code, rawCode: sanitizeRawCode(report.rawCode) },
+          async (conn, tx) => {
+            if (this.opts.notifications === undefined) return;
+            // Instagram liên kết qua Page này tự thành "cần kết nối lại" (dẫn xuất) → gom MỘT thông báo (FR-042).
+            const live = (await store.listLiveConnections?.()) ?? [];
+            const dependents = live.filter((c) => c.sourceConnectionId === conn.id);
+            const impact = await connectionConsumers().scheduledImpact([
+              conn.id,
+              ...dependents.map((d) => d.id),
+            ]);
+            const affected = [...impact.values()].reduce((n, v) => n + v.count, 0);
+            await emitNeedsReconnect(this.opts.notifications, tx, {
+              connectionIds: [conn.id, ...dependents.map((d) => d.id)],
+              channelNames: [conn.displayName, ...dependents.map((d) => d.displayName)],
+              reason: mapped.reason,
+              affectedPosts: affected,
+              now,
+            });
+          },
+        );
+      },
     );
+  }
+
+  disconnectAllForAccount(): Promise<{ disconnected: number }> {
+    return withGatewayOp('platform_gateway', 'disconnectAllForAccount', {}, async () => {
+      const store = this.opts.store;
+      let disconnected = 0;
+      if (store.listLiveConnections === undefined) {
+        // Bản giả (không có giao dịch thật): chỉ ngắt.
+        for (const c of await store.listConnections()) {
+          if (c.status !== 'disconnected' && (await store.disconnect(c.id))) disconnected++;
+        }
+        return { disconnected };
+      }
+      for (const c of await store.listLiveConnections()) {
+        // Mỗi kết nối MỘT giao dịch: hủy lượt chưa gửi + xóa mã quyền cùng lúc (Hiến pháp II, VII).
+        const done = await tenantTx(async (tx) => {
+          await connectionConsumers().onDisconnect(tx, c.id);
+          return store.disconnect(c.id);
+        });
+        if (done) disconnected++;
+      }
+      return { disconnected };
+    });
   }
 
   getConnection(connectionId: string): Promise<ChannelConnection | null> {
@@ -358,7 +478,12 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
       async () => {
         if (!UUID.test(connectionId)) return null;
         const c = await this.opts.store.getConnection(connectionId);
-        return c === null ? null : toChannelConnection(c);
+        if (c === null) return null;
+        const source =
+          c.sourceConnectionId === undefined || c.sourceConnectionId === null
+            ? undefined
+            : await this.opts.store.getConnection(c.sourceConnectionId);
+        return toChannelConnection(c, { ...(await this.derivation([c])), source });
       },
     );
   }

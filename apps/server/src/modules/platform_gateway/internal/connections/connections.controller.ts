@@ -177,7 +177,11 @@ export class ConnectionsController {
   @Get()
   @CustomerAccess('status.view')
   async list(): Promise<ChannelConnectionDto[]> {
-    return (await this.connections.listConnections()).map(toDto);
+    // Bộ chọn kênh của 012: KHÔNG có `tiktok` (`channel_variants` chưa hỗ trợ; đăng TikTok từ trình soạn là tính năng sau).
+    // Màn hình quản lý kênh dùng `GET /channels/overview`.
+    return (await this.connections.listConnections())
+      .filter((c) => (c.channelType as string) !== 'tiktok')
+      .map(toDto);
   }
 
   @Delete(':connectionId')
