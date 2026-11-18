@@ -8,7 +8,7 @@ sources:
     apps/server/src/modules/publishing/index.ts,
     .specify/memory/architecture.md,
   ]
-updated: 2026-11-16
+updated: 2026-11-18
 status: draft
 related: [concepts/publish-idempotency.md, modules/platform_gateway.md, concepts/queues.md]
 ---
@@ -16,6 +16,8 @@ related: [concepts/publish-idempotency.md, modules/platform_gateway.md, concepts
 # publishing – Đăng bài
 
 > **Cập nhật 012:** Từ 012: bảng `publish_attempts` (mục lịch đăng, chỉ mục duy nhất chống đăng trùng), `PublishingPublicApi` (schedule/cancel/reschedule/statuses/precheck), việc `publishing.run_attempt` với bộ thực thi tạm; 5 bước thật ở 013. Xem [012](../features/012-manual-compose-approval-calendar.md). Các mục dưới đây là mô tả cũ của 001 và cần rà lại.
+
+> **Cập nhật 014:** bước 2 "chuẩn bị media" của 013 dùng `MEDIA_PUBLIC_API.getPublishableMedia` bản thật (đường dẫn công khai có hạn, `format` dạng ngắn); không còn bản giữ chỗ. Xem [014](../features/014-media-library-basic.md).
 
 ## Trách nhiệm
 

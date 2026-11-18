@@ -8,7 +8,7 @@ sources:
     apps/server/src/modules/content/index.ts,
     .specify/memory/architecture.md,
   ]
-updated: 2026-11-16
+updated: 2026-11-18
 status: draft
 related: [modules/context.md, modules/ai_gateway.md, modules/media.md, modules/trends.md]
 ---
@@ -16,6 +16,8 @@ related: [modules/context.md, modules/ai_gateway.md, modules/media.md, modules/t
 # content – Nội dung
 
 > **Cập nhật 012:** Từ 012: bảng `posts`, `channel_variants`, `post_events`, `channel_rules`; hàm công khai nhận `tx` (`ContentPublicApi`: tạo/lưu nháp, chuyển trạng thái có điều kiện, kiểm tra theo kênh, Lịch). Chưa có: `content_plans`, `topics`, `generations`. Phụ thuộc thêm `platform_gateway`. Xem [012](../features/012-manual-compose-approval-calendar.md). Các mục dưới đây là mô tả cũ của 001 và cần rà lại.
+
+> **Cập nhật 014:** `content` nối cổng mô tả media `MEDIA_DESCRIBER` tới `MEDIA_PUBLIC_API` (`internal/media-describer.ts`) và đăng ký nhà cung cấp "bài đang dùng media" cho thư viện (`internal/media-usage.provider.ts`, chỉ đọc `content.channel_variants`/`posts`; bài `approved` chặn xóa media). Kênh bắt buộc media không còn báo "chưa thể lên lịch" vì thiếu cổng mô tả. Xem [014](../features/014-media-library-basic.md).
 
 ## Trách nhiệm
 
