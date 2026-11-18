@@ -170,6 +170,18 @@ export const AppConfigSchema = z.object({
    * `fake` = bí danh cũ của 012 (chạy như `run`, vẫn bị từ chối ở production).
    */
   PUBLISH_EXECUTOR: z.enum(['none', 'run', 'fake']).default('none'),
+  // ----- Thư viện media (014, data-model.md mục 5) -----
+  /** Hạn mức dung lượng media mỗi tài khoản, byte (mặc định 5 GiB). Lúc tạo dòng `storage_quotas` mới. */
+  MEDIA_QUOTA_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1024 ** 4)
+    .default(5 * 1024 ** 3),
+  /** Hạn đường dẫn CÔNG KHAI cho nền tảng tải media, giây (mặc định và trần 24 giờ). */
+  MEDIA_PUBLIC_URL_TTL_SEC: z.coerce.number().int().min(60).max(86_400).default(86_400),
+  /** Hạn đường dẫn XEM TRƯỚC cho giao diện, giây (mặc định và trần 1 giờ). */
+  MEDIA_PREVIEW_URL_TTL_SEC: z.coerce.number().int().min(60).max(3_600).default(3_600),
   /** Bắt buộc khi `STORAGE_DRIVER=s3`. */
   S3_ENDPOINT: z.url().optional(),
   /** Địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = S3_ENDPOINT. */

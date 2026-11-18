@@ -19,3 +19,16 @@ Append-only. Định dạng: `## [YYYY-MM-DD] ingest|query|lint | tiêu đề`.
 - Cập nhật concepts/feature-status.md (011: 84/85, giao diện hiện có, thứ tự làm tiếp), concepts/ci-cd.md (cổng `check:web-rules`, `test:web-e2e`),
   howto/run-tests.md (E2E web), open-questions.md (T074, kiểm thủ công, Figma, verify đỏ có sẵn), index.md
 - Lưu ý: wiki chưa ingest 010, 012 và trang 009 vẫn `draft` dù đã merge; không thuộc lần này
+
+## [2026-11-16] ingest | 012-manual-compose-approval-calendar
+
+- Thêm features/012-manual-compose-approval-calendar.md (`draft`: 91/95, kèm banner việc chưa làm T059, T066, T093, T094)
+- Cập nhật concepts/feature-status.md, modules/content.md, modules/approval.md, modules/publishing.md, index.md
+- open-questions.md đã có POC-2 (012) và cổng gói/media từ lúc implement
+
+## [2026-11-18] ingest | 014-media-library-basic
+
+- Thêm features/014-media-library-basic.md (`draft`: 92/94, kèm banner việc chưa làm T090, T093)
+- Viết lại modules/media.md (`current`: 3 bảng, 4 loại việc, `MediaPublicApi`, `MediaUsageProvider`); cập nhật modules/content.md và modules/publishing.md (nối `MEDIA_DESCRIBER`, `MediaUsageRegistrar`, `getPublishableMedia` thật)
+- Cập nhật concepts/feature-status.md (FR-03 một phần, dòng 014, màn Thư viện), open-questions.md (đóng phần media của 012/013, thêm 014-T090/T093/FR-023/gói/trùng-format/verify-đỏ), glossary.md, index.md
+- Ghi chú: wiki chưa ingest 010 và 013; trang 009, 011, 012 vẫn `draft`

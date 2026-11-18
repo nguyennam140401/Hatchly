@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import {
   accountPrefix,
   assertKeyInScope,
+  StorageAccessDenied,
   locationFromKey,
   resolveKey,
   resolvePrefix,
@@ -10,10 +11,16 @@ import {
   type StoragePrefix,
 } from '../location';
 import {
+  checkCreateMultipart,
   checkPresign,
+  checkPresignPart,
   checkSignedUrl,
+  MultipartIncompleteError,
+  partsComplete,
   TMP_TAG,
   type AllowedContentType,
+  type MultipartHandle,
+  type PartInfo,
   type ObjectInfo,
   type ObjectStorage,
   type PresignedUpload,
@@ -31,6 +38,15 @@ interface Obj {
   createdAt: Date;
   sha256: string;
   tags: Record<string, string>;
+}
+
+interface MultipartSession {
+  key: string;
+  contentType: string;
+  bytes: number;
+  partSizeBytes: number;
+  parts: Map<number, Buffer>;
+  completed: boolean;
 }
 
 const DAY_MS = 86_400_000;
@@ -51,6 +67,7 @@ export class UploadRejected extends Error {
 
 export class MemoryObjectStorage implements ObjectStorage {
   private readonly objects = new Map<string, Obj>();
+  private readonly multiparts = new Map<string, MultipartSession>();
   private readonly secret = randomBytes(32);
 
   constructor(private readonly now: () => Date = () => new Date()) {}
@@ -231,8 +248,128 @@ export class MemoryObjectStorage implements ObjectStorage {
     return this.objects.get(key)?.body ?? null;
   }
 
+  // ---------- Tải nhiều phần (014, contracts/storage-multipart.md) ----------
+
+  /** Phiên của đúng khóa trong ngữ cảnh; khóa khác (tài khoản khác) ⇒ StorageAccessDenied. */
+  private session(l: StorageLocation, h: MultipartHandle): MultipartSession | undefined {
+    const key = this.key(l);
+    const s = this.multiparts.get(h.uploadId);
+    if (s === undefined) return undefined;
+    if (s.key !== key) throw new StorageAccessDenied();
+    return s;
+  }
+
+  async createMultipart(
+    l: StorageLocation,
+    opts: { contentType: AllowedContentType; bytes: number; partSizeBytes: number },
+  ): Promise<MultipartHandle> {
+    checkCreateMultipart(l, opts);
+    const key = this.key(l);
+    const uploadId = randomBytes(16).toString('hex');
+    this.multiparts.set(uploadId, {
+      key,
+      contentType: opts.contentType,
+      bytes: opts.bytes,
+      partSizeBytes: opts.partSizeBytes,
+      parts: new Map(),
+      completed: false,
+    });
+    return { uploadId };
+  }
+
+  async presignPart(
+    l: StorageLocation,
+    h: MultipartHandle,
+    part: { partNumber: number; contentLength: number; ttlSec?: number },
+  ): Promise<{ url: string; expiresAt: Date; headers: Record<string, string> }> {
+    const ttl = checkPresignPart(l, part);
+    const s = this.session(l, h);
+    if (s === undefined || s.completed) throw new Error('NoSuchUpload');
+    const expiresAt = new Date(this.now().getTime() + ttl * 1000);
+    const exp = String(expiresAt.getTime());
+    const sig = this.sign([
+      'part',
+      h.uploadId,
+      String(part.partNumber),
+      String(part.contentLength),
+      exp,
+    ]);
+    const url = `memory://part/${h.uploadId}/${part.partNumber}?len=${part.contentLength}&exp=${exp}&sig=${sig}`;
+    return { url, expiresAt, headers: {} };
+  }
+
+  /** "Trình duyệt" PUT một phần bằng URL ký sẵn: kiểm chữ ký, hạn và `Content-Length` đã ký. */
+  simulateBrowserUploadPart(url: string, bytes: Buffer): Promise<{ etag: string }> {
+    const u = new URL(url);
+    const [uploadId = '', partNo = ''] = u.pathname.replace(/^\//, '').split('/');
+    const len = u.searchParams.get('len') ?? '';
+    const exp = u.searchParams.get('exp') ?? '';
+    if (!this.verify(['part', uploadId, partNo, len, exp], u.searchParams.get('sig') ?? '')) {
+      return Promise.reject(new UploadRejected('signature'));
+    }
+    if (this.now().getTime() > Number(exp)) return Promise.reject(new UploadRejected('expired'));
+    if (bytes.length !== Number(len)) return Promise.reject(new UploadRejected('size'));
+    const s = this.multiparts.get(uploadId);
+    if (s === undefined || s.completed) return Promise.reject(new UploadRejected('signature'));
+    s.parts.set(Number(partNo), Buffer.from(bytes));
+    return Promise.resolve({ etag: createHash('md5').update(bytes).digest('hex') });
+  }
+
+  async listParts(l: StorageLocation, h: MultipartHandle): Promise<PartInfo[]> {
+    const s = this.session(l, h);
+    if (s === undefined || s.completed) return [];
+    return [...s.parts.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([partNumber, body]) => ({
+        partNumber,
+        bytes: body.length,
+        etag: createHash('md5').update(body).digest('hex'),
+      }));
+  }
+
+  async completeMultipart(
+    l: StorageLocation,
+    h: MultipartHandle,
+    expect: { bytes: number },
+  ): Promise<{ bytes: number }> {
+    const s = this.session(l, h);
+    if (s === undefined) throw new MultipartIncompleteError();
+    if (s.completed) return { bytes: s.bytes };
+    const parts = await this.listParts(l, h);
+    if (expect.bytes !== s.bytes || !partsComplete(parts, s.partSizeBytes, s.bytes)) {
+      throw new MultipartIncompleteError();
+    }
+    const body = Buffer.concat(
+      [...s.parts.entries()].sort((a, b) => a[0] - b[0]).map(([, b]) => b),
+    );
+    this.objects.set(s.key, {
+      body,
+      contentType: s.contentType,
+      createdAt: this.now(),
+      sha256: createHash('sha256').update(body).digest('hex'),
+      tags: {},
+    });
+    s.completed = true;
+    s.parts.clear();
+    return { bytes: body.length };
+  }
+
+  async abortMultipart(l: StorageLocation, h: MultipartHandle): Promise<void> {
+    const s = this.session(l, h);
+    if (s !== undefined && !s.completed) this.multiparts.delete(h.uploadId);
+  }
+
+  /** Số phiên nhiều phần còn mở của tài khoản trong ngữ cảnh (kiểm thử `deleteAllForCurrentAccount`). */
+  openMultipartCount(): number {
+    const p = accountPrefix();
+    return [...this.multiparts.values()].filter((s) => s.key.startsWith(p) && !s.completed).length;
+  }
+
   async deleteAllForCurrentAccount(): Promise<{ deleted: number }> {
     const p = accountPrefix();
+    for (const [id, s] of [...this.multiparts]) {
+      if (s.key.startsWith(p)) this.multiparts.delete(id);
+    }
     let deleted = 0;
     for (const k of [...this.objects.keys()]) {
       if (k.startsWith(p)) {

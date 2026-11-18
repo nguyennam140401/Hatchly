@@ -23,6 +23,7 @@ import '../../src/modules/context/internal/db/schema';
 import '../../src/modules/content/internal/db/schema';
 import '../../src/modules/platform_gateway/internal/db/schema';
 import '../../src/modules/publishing/internal/db/schema';
+import '../../src/modules/media/internal/db/schema';
 import '../../src/modules/publishing/internal/db/publish-steps.log-table';
 
 const FIXTURES = join(__dirname, 'fixtures', 'conventions');

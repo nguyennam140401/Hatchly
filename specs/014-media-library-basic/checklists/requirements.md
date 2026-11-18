@@ -35,5 +35,8 @@
   truy vết/ràng buộc hiến pháp; phần mô tả hành vi và tiêu chí thành công nói theo góc nhìn người dùng.
 - Không có [NEEDS CLARIFICATION]: các điểm chưa chắc được chốt bằng mặc định trong Assumptions (định dạng chấp nhận,
   quyền xóa chỉ chủ tài khoản – chờ WBS 2.6, thời hạn phiên tải dở 24 giờ so với "1 giờ" trong Kiến trúc dữ liệu 8.3).
-- Cần đối chiếu ở `/speckit-plan`: (1) thời hạn dọn bản ghi "Đang tải" (1 giờ vs 24 giờ để có thể tiếp tục), (2) tổng
-  dung lượng kho gồm bản phái sinh so với ngân sách 500 GB, (3) danh sách định dạng theo thư viện xử lý được chọn.
+- Đã đối chiếu ở `/speckit-plan` (2026-11-16, xem plan.md): (1) thời hạn phiên tải dở **24 giờ** (sửa Kiến trúc dữ liệu 8.1 và
+  Kiến trúc triển khai mục 6); (2) tổng dung lượng kho gồm bản phái sinh: bảng "Ngân sách kho" ở plan, theo dõi bằng chỉ số
+  sau 1 tháng chạy; (3) danh sách định dạng: JPEG/PNG/WebP/HEIC + MP4/MOV, **HEIC chờ thử nghiệm kỹ thuật** (research R4,
+  quickstart mục 3) — không đạt thì bỏ HEIC và cập nhật spec; (4) giới hạn việc `media` mỗi tài khoản = 1 theo `queue_settings`
+  (FR-014, SC-003 đã chỉnh).

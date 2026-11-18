@@ -15,7 +15,7 @@ import {
 import { toFieldErrors } from '../src/core/index.js';
 
 describe('PERMISSIONS (FR-012)', () => {
-  it('đúng 16 quyền theo contracts/authz-api.md mục 1 (006: context.manage → view + edit; 010: + channel.view, feature.manage)', () => {
+  it('đúng 18 quyền theo contracts/authz-api.md mục 1 (006: view + edit; 010: + channel.view, feature.manage; 014: + media.view, media.delete)', () => {
     expect(PERMISSION_LIST).toEqual([
       'context.view',
       'context.edit',
@@ -24,6 +24,8 @@ describe('PERMISSIONS (FR-012)', () => {
       'feature.manage',
       'post.edit',
       'media.upload',
+      'media.view',
+      'media.delete',
       'post.approve',
       'post.reschedule',
       'post.republish',
@@ -53,6 +55,8 @@ describe('PERMISSIONS (FR-012)', () => {
       'channel.view',
       'post.edit',
       'media.upload',
+      'media.view',
+      'media.delete',
       'post.reschedule',
       'post.republish',
       'status.view',
@@ -64,7 +68,7 @@ describe('PERMISSIONS (FR-012)', () => {
       'plan.manage',
       'staff.manage',
     ]);
-    expect(permissionsOf('owner')).toHaveLength(12);
+    expect(permissionsOf('owner')).toHaveLength(14);
     expect(PERMISSION_LIST).not.toContain('context.manage');
   });
 });

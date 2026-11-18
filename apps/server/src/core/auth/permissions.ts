@@ -33,6 +33,8 @@ export const PERMISSION_DENIED_MESSAGES: Record<Permission, string> = {
   'feature.manage': 'Chỉ quản trị viên mới bật hoặc tắt được tính năng cho khách hàng.',
   'post.edit': 'Bạn không có quyền soạn hoặc sửa bài.',
   'media.upload': 'Bạn không có quyền tải ảnh, video lên.',
+  'media.view': 'Bạn không có quyền xem thư viện ảnh, video.',
+  'media.delete': 'Bạn không có quyền xóa ảnh, video.',
   'post.approve': 'Chỉ chủ tài khoản mới duyệt được bài.',
   'post.reschedule': 'Bạn không có quyền đổi giờ đăng bài.',
   'post.republish': 'Bạn không có quyền đăng lại bài.',

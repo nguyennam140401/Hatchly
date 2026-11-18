@@ -286,7 +286,9 @@ export function makeWorld(postId: string, connectionId: string): World {
         { userId: uuidV7(), role: 'owner' as const, email: 'a@b.c', displayName: 'A' },
       ]),
   } as unknown as AccountPublicApi;
-  const mediaApi: MediaPublicApi = { getPublishableMedia: () => Promise.resolve(media.result) };
+  const mediaApi: Pick<MediaPublicApi, 'getPublishableMedia'> = {
+    getPublishableMedia: () => Promise.resolve(media.result),
+  };
   const notifications: NotificationsPublicApi = {
     emit: (_tx: Db, event: NotificationEvent) => {
       emitted.push(event);

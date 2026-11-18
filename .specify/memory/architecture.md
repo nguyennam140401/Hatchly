@@ -1,6 +1,6 @@
 # Đặc tả kiến trúc triển khai – Ứng dụng AI tạo & đăng nội dung MXH
 
-- Phiên bản: 1.6 (2026-11-16) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
+- Phiên bản: 1.8 (2026-11-17) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
   001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn;
   v1.2 theo tính năng 002 (lớp CSDL): vai trò `system` đặt được ngữ cảnh tenant và chịu RLS, biểu thức
   RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11; v1.3 theo tính năng 003
@@ -9,7 +9,9 @@
   (xác thực tối thiểu): chốt T7 (bộ thư viện nhỏ thay khung trọn gói, lý do RLS), lớp chặn quyền ở API
   (mục 5), dữ liệu cá nhân mới, thuật ngữ xác thực ở mục 11; v1.6 theo tính năng 012 (bài, duyệt, lịch):
   bảng của `content`/`publishing` (mục 4), `content → platform_gateway` trong tệp kê khai, thuật ngữ
-  bài/duyệt/lịch (mục 11)
+  bài/duyệt/lịch (mục 11); v1.8 theo tính năng 014 (thư viện media cơ bản): bảng `upload_sessions`,
+  `storage_quotas` (mục 4), việc `media.cleanup`/`media.sweep` + dọn tải dở 24 giờ (mục 6), hash ở Worker
+  + tải nhiều phần (mục 7.3), bộ đếm dung lượng ở schema `media` (mục 8), thuật ngữ media (mục 11)
 - Nguồn: `TaiLieuDacTa/` – Đặc tả yêu cầu v1.7, ADD tổng thể v1.2, ADD module Worker v1.1 /
   Đăng bài v1.1 / Cổng AI v1.0, ADR-01…10, Kiến trúc dữ liệu & cache v1.2, Lựa chọn công nghệ v1.1
 - Vai trò: tài liệu tham chiếu kỹ thuật cho `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`.
@@ -140,7 +142,7 @@ thành job trong cùng giao dịch. CI tự động kiểm tra phụ thuộc gi�
 |---|---|---|---|---|
 | Account & Plan (`account`) | `account` | `accounts`, `users`, `login_identities`, `memberships`, `subscriptions`, `usage_cycles` | Đăng nhập (mật khẩu/Google/Facebook), vai trò, tenant, chu kỳ theo ngày kích hoạt, hạn mức 100 bài, dung lượng 5 GB, quản trị gói | FR-13, 14, 15 |
 | Business Context (`context`) | `context` | `business_profiles`, `profile_versions`, `context_files` | Hồ sơ kinh doanh có phiên bản | FR-01 |
-| Media Library (`media`) | `media` | `media`, `media_labels` | Presigned URL, chuẩn hóa, gán nhãn, tìm theo nhãn, không xử lý lại tệp trùng | FR-03 |
+| Media Library (`media`) | `media` | `media`, `upload_sessions`, `storage_quotas`, `media_labels` (T11) | Presigned URL, chuẩn hóa, gán nhãn, tìm theo nhãn, không xử lý lại tệp trùng | FR-03 |
 | Trends (`trends`) | `trends` | `industries`, `industry_trends`, `account_keywords` | Xu hướng theo ngành hằng tuần (dùng chung); từ khóa riêng + RSS khi tạo kế hoạch | FR-04 |
 | Content (`content`) | `content` | `posts`, `channel_variants`, `post_events`, `channel_rules` (012); `content_plans`, `topics`, `generations` (sau) | Kế hoạch, chủ đề, bài, mỗi kênh một phiên bản, tạo lại ≤ 5 lần; trạng thái duyệt nằm trên `posts` | FR-04, 05, 06 |
 | Approval & Schedule (`approval`) | `approval` (dành sẵn, để trống) | — | Thao tác duyệt bài và xếp lịch; chỉ chạy ở API. Thêm bảng vào schema này cần đặc tả mới | FR-06 |
@@ -244,7 +246,7 @@ dùng `deadLetter` của thư viện). Việc định kỳ: bộ hẹn giờ ri�
 | Giữ chỗ ngân sách AI treo > 15 phút: `held` → trả lại; `calling` → quyết toán theo ước tính (sổ `unsettled`) | Tài khoản: việc `ai_gateway.release_stale` hẹn trong giao dịch giữ chỗ, chạy sau 15 phút trong ngữ cảnh tài khoản; hệ thống: mỗi phút |
 | Đối soát sổ chi phí AI với nhà cung cấp (lệch > 5% → cảnh báo) | Hằng ngày |
 | Xóa tài khoản (hết hạn > 90 ngày, báo trước 7 ngày; hoặc theo yêu cầu, xóa xong ≤ 30 ngày) | Hằng ngày |
-| Dọn dẹp (job xong > 30 ngày, job chết > 90 ngày, tệp tạm, bản ghi tải lên dở > 1 giờ, tệp mồ côi) | Hằng ngày / hằng tuần |
+| Dọn dẹp (job xong > 30 ngày, job chết > 90 ngày, tệp tạm, bản ghi tải lên dở > **24 giờ kể từ hoạt động cuối** – `media.cleanup`/`media.sweep`, tệp mồ côi) | Hằng giờ (quét) / hằng tuần |
 | Tạo trước phân vùng tháng; bỏ phân vùng > 12 tháng | Hằng tháng |
 | Phát hiện lượt đăng quá giờ > 5 phút | Mỗi phút |
 | Báo cáo tham chiếu giữa module bị hỏng | Hằng ngày |
@@ -323,9 +325,10 @@ Thứ tự prompt cố định để tận dụng prompt cache: chỉ dẫn hệ
 ### 7.3 Media
 
 API kiểm tra dung lượng còn lại và giữ chỗ dung lượng, cấp đường dẫn tải lên presigned POST (≤ 15 phút; khóa, Content-Type, kích thước tối đa ràng buộc trong policy – 005) và tạo bản
-ghi `uploading`. Trình duyệt tải tệp lên. API xác nhận (tệp tồn tại, kích thước, hash) và chuyển bản
-ghi sang `ready`, đồng thời tạo job `media`. Nếu đã có hash trùng trong cùng tài khoản thì sao chép
-kết quả cũ, không tốn AI. Media dùng được ngay sau khi chuẩn hóa, kể cả khi gán nhãn lỗi hoặc hết
+ghi `uploading`. Trình duyệt tải tệp lên (tệp > 8 MiB: **S3 multipart**, tiếp tục được; 014). API xác nhận
+(tệp tồn tại, kích thước, dò nội dung thật – **không** tính hash ở API) và chuyển bản ghi sang `processing`,
+đồng thời tạo job `media`; **Worker tính hash (SHA-256)** rồi chuẩn hóa/tạo ảnh thu nhỏ và đặt `ready`. Nếu đã
+có hash trùng trong cùng tài khoản thì bản ghi mới bị bỏ, hoàn dung lượng, không tốn CPU/AI. Media dùng được ngay sau khi chuẩn hóa, kể cả khi gán nhãn lỗi hoặc hết
 ngân sách. Xóa media: đánh dấu xóa trước, job nền xóa tệp sau. Media đang được bài đã lên lịch dùng
 thì không xóa hẳn được.
 
@@ -346,7 +349,7 @@ Giao diện hỏi định kỳ để cập nhật tiến độ.
 | Cột bắt buộc trên bảng của khách hàng | `account_id NOT NULL` (cột đầu của mọi chỉ mục), `created_at`, `updated_at` |
 | Xóa | Bảng nghiệp vụ: xóa mềm (`deleted_at`) 30 ngày rồi xóa hẳn; bảng nhật ký: chỉ bỏ cả phân vùng |
 | Khóa lạc quan | Cột `version` trên `posts` và `channel_variants`; lệch phiên bản → "Bài vừa được người khác sửa" |
-| Bộ đếm | `usage_cycles.posts_used` có `CHECK (posts_used <= posts_limit)`; dung lượng giữ chỗ khi cấp URL, trả lại sau 1 giờ nếu tải bỏ dở |
+| Bộ đếm | `usage_cycles.posts_used` có `CHECK (posts_used <= posts_limit)`; dung lượng (5 GB) ở `media.storage_quotas` – giữ chỗ khi cấp URL, trả lại sau **24 giờ kể từ hoạt động cuối** nếu tải bỏ dở |
 | Phân vùng theo tháng | Chỉ `publish_steps`, `ai_cost_ledger`, `audit_log` (giữ 12 tháng) |
 | Chu kỳ | Theo ngày kích hoạt gói, lặp hằng tháng; tháng không có ngày đó → ngày cuối tháng |
 | Không phân mảnh CSDL | Xem lại khi > 10.000 tài khoản hoặc CSDL > 1 TB |
@@ -499,6 +502,15 @@ Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đ�
 - **Chưa có ở 012** (ghi nhận): cổng kiểm tra gói còn hạn (`PLAN_GATE`, chưa có mô hình gói ở `account`)
   và cổng mô tả media (`MEDIA_DESCRIBER`, chưa có thư viện media) – thiếu cổng thì kênh bắt buộc media
   báo "chưa thể lên lịch".
+
+### 11.z Bổ sung v1.8 – tính năng 014 (thư viện media cơ bản)
+
+- phiên tải lên / tải dở → `upload_session` (`upload_sessions`); dấu tệp → `file_hash`; bản chuẩn hóa / ảnh thu nhỏ /
+  bản biểu diễn → `normalized` / `thumb` / `rendition`; dấu vân tay tệp (tên+dung lượng+lastModified) → `fingerprint`.
+- dung lượng tài khoản → `storage_quotas` (`used_bytes`, `reserved_bytes`, `limit_bytes`); đường dẫn công khai có hạn /
+  xem trước → `signedUrl(…, 'public')` / `signedUrl(…, 'preview')`; không xử lý được → `unprocessable`.
+- nhà cung cấp "bài đang dùng media" → `MediaUsageProvider`, `registerMediaUsageProvider`; cổng cho phép tải lên theo
+  gói → `UploadGate`; dọn dẹp / quét dọn → `media.cleanup` / `media.sweep`.
 
 ### 11.y Bổ sung v1.7 – tính năng 013 (đăng bài 5 bước)
 

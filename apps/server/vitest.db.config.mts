@@ -18,6 +18,8 @@ export default defineConfig({
       'test/contracts/**/*.sandbox.contract.spec.ts',
       'test/e2e/**/*.e2e.spec.ts',
       'test/context/**/*.spec.ts',
+      // 014: thư viện media (e2e API + hợp đồng công khai) cần CSDL + kho tệp `memory`.
+      'test/media/**/*.spec.ts',
     ],
     globalSetup: ['./test/db/global-setup.ts'],
     fileParallelism: false,

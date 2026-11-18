@@ -2,8 +2,13 @@
 type: glossary
 title: Thuật ngữ Việt → Anh
 sources:
-  [.specify/memory/architecture.md, CLAUDE.md, specs/007-terraform-infra-environments/data-model.md]
-updated: 2026-11-14
+  [
+    .specify/memory/architecture.md,
+    CLAUDE.md,
+    specs/007-terraform-infra-environments/data-model.md,
+    specs/014-media-library-basic/data-model.md,
+  ]
+updated: 2026-11-18
 status: current
 related: [concepts/tenant-rls.md, concepts/queues.md]
 ---
@@ -31,6 +36,8 @@ vào đó trong cùng thay đổi). Trang này chỉ giữ các cặp hay gặp 
 | Biến phiên tenant                                                                     | GUC `app.account_id`; đọc qua `account.current_account_id()`         |
 | Giao dịch có ngữ cảnh tenant / hệ thống / hỗ trợ                                      | `tenantTx` / `systemTx` / `supportSearch`, `supportViewAccount`      |
 | Cổng nền tảng · Cổng AI · Duyệt & lịch                                                | `platform_gateway` · `ai_gateway` · `approval`                       |
+| Thư viện media · phiên tải lên · hạn mức dung lượng                                   | `media` · `upload_sessions` · `storage_quotas`                       |
+| dấu tệp · dấu vân tay tệp (nhận lại phiên) · ảnh thu nhỏ · bản chuẩn hóa              | `file_hash` · `fingerprint` · `thumb` · `normalized/jpeg`            |
 | Cổng chất lượng · môi trường test / release                                           | `gate` · `staging` / `production`                                    |
 
 Quy ước số liệu: tiền là số nguyên micro-USD; thời gian `timestamptz` UTC (hiển thị UTC+7); khóa chính UUID v7.

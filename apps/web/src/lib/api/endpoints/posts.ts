@@ -58,7 +58,7 @@ const ChannelsResponse: ResponseSchema<ComposerChannel[]> = {
     if (!parsed.every((p) => p.success)) return { success: false as const };
     const data = parsed
       .map((p) => p.data)
-      .filter((c): c is ComposerChannel => c !== undefined && c.channelType !== 'tiktok');
+      .filter((c): c is ComposerChannel => c.channelType !== 'tiktok');
     return { success: true as const, data };
   },
 };

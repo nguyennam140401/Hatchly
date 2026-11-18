@@ -1,6 +1,6 @@
 // Bảng của module Cổng nền tảng (010, data-model.md mục 1–6). Migration CHỈ THÊM (tương thích ngược – API/Worker
 // bản cũ và mới chạy song song); khung nhìn hỗ trợ, hàm SECURITY DEFINER, quyền và dữ liệu gốc viết tay ở
-// migration `0023_platform_gateway_010_functions.sql`.
+// migration `0025_platform_gateway_010_functions.sql`.
 //
 // Mã quyền (`token_ciphertext`, `refresh_ciphertext`, `candidates[*].tokenCiphertextB64`) CHỈ ở dạng đã mã hóa
 // bằng CredentialVault (Hiến pháp VII). `account_id` luôn lấy từ phiên; không bảng nào có khóa ngoại sang module khác
@@ -264,7 +264,7 @@ export const featureOverrides = tenantTable(
   ],
 );
 
-/** Nhật ký đổi công tắc – CHỈ THÊM (quyền SQL của `app` chỉ INSERT, SELECT; xem migration 0023). Giữ 12 tháng. */
+/** Nhật ký đổi công tắc – CHỈ THÊM (quyền SQL của `app` chỉ INSERT, SELECT; xem migration 0025). Giữ 12 tháng. */
 export const featureOverrideEvents = tenantTable(
   platformGateway,
   'feature_override_events',

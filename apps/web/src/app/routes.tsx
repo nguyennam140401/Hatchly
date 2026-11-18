@@ -112,7 +112,13 @@ export const appRoutes: RouteObject[] = [
                   Component: (await import('../features/posts/ComposePage')).ComposePage,
                 }),
               },
-              { path: '/media', element: comingSoon(t('nav.media')) },
+              // 014: Thư viện ảnh & video (quyền chỉ ẩn/hiện ở thanh điều hướng; API tự chặn).
+              {
+                path: '/media',
+                lazy: async () => ({
+                  Component: (await import('../features/media/MediaLibraryPage')).MediaLibraryPage,
+                }),
+              },
               { path: '/channels', element: comingSoon(t('nav.channelsPlan')) },
               { path: '/settings', element: comingSoon(t('nav.settings')) },
               { path: '/more', element: <MorePage /> },

@@ -27,6 +27,16 @@ export const PERMISSIONS = {
   'post.edit': { owner: true, collaborator: true, support: false, admin: false },
   /** Tải media (FR-03). */
   'media.upload': { owner: true, collaborator: true, support: false, admin: false },
+  /**
+   * Xem, lọc, tìm thư viện media và dung lượng đã dùng (FR-03, 014) –
+   * TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#pq-media-view.
+   */
+  'media.view': { owner: true, collaborator: true, support: false, admin: false },
+  /**
+   * Xóa media (FR-03, 014). Cộng tác viên chỉ xóa tệp mình tải – điều kiện này kiểm ở dịch vụ `media`,
+   * quyền ở đây chỉ cho phép thử – TaiLieuDacTa/Dac_ta_yeu_cau_App_AI_Content_MXH.md#pq-media-delete.
+   */
+  'media.delete': { owner: true, collaborator: true, support: false, admin: false },
   /** Duyệt + lên lịch bài mới duyệt (FR-06, nguyên tắc VI). */
   'post.approve': { owner: true, collaborator: false, support: false, admin: false },
   /** Đổi giờ bài đã duyệt (FR-06). */

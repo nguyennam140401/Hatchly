@@ -6,6 +6,7 @@ export { defineJobType, type DefineJobTypeInput } from './job-types';
 export * from './public-api';
 // Mục 2–3 – tạo / hủy / đổi giờ việc trong giao dịch.
 export { cancelJob, enqueue, enqueueMany, rescheduleJob } from './internal/producer';
+export { enqueueForAccount } from './enqueue-for-account';
 // Mục 4 – bộ xử lý (chỉ Worker).
 export { registerJobHandler } from './internal/handlers';
 export { noRetry, PermanentJobError, retryAfter } from './results';

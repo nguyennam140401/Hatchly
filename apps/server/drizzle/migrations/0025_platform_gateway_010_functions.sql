@@ -1,5 +1,5 @@
--- Migration tay 0023 (010, data-model.md mục 1, 5, 6; contracts/jobs-and-notifications.md mục 1.1, 4):
--- quyền, dữ liệu gốc `gateway_settings`, hàm SECURITY DEFINER cho việc nền và khung nhìn hỗ trợ của bảng ở 0022.
+-- Migration tay 0025 (010, data-model.md mục 1, 5, 6; contracts/jobs-and-notifications.md mục 1.1, 4):
+-- quyền, dữ liệu gốc `gateway_settings`, hàm SECURITY DEFINER cho việc nền và khung nhìn hỗ trợ của bảng ở 0024.
 -- Chỉ thêm / chỉ thu hồi quyền trên bảng MỚI → tương thích ngược (API, Worker cũ không chạm bảng mới).
 
 -- 1) Nhật ký đổi công tắc là CHỈ THÊM: thu hồi UPDATE, DELETE của vai trò ứng dụng (dòng chỉ mất theo CASCADE khi

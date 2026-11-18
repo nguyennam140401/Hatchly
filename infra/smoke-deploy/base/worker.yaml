@@ -47,5 +47,11 @@ spec:
             httpGet: { path: /healthz, port: 3001 }
             periodSeconds: 20
             failureThreshold: 3
+          volumeMounts:
+            # Tệp tạm của việc `media` (video ≤ 500 MB, 014 R5): emptyDir ≥ 2 GiB.
+            - { name: media-tmp, mountPath: /tmp }
           securityContext:
             allowPrivilegeEscalation: false
+      volumes:
+        - name: media-tmp
+          emptyDir: { sizeLimit: 2Gi }
