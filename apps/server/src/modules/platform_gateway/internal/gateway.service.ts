@@ -7,6 +7,7 @@ import {
   type ChannelConnectionStatus,
   type ChannelType,
   type CheckStatusResult,
+  type ExpiryInfo,
   type ClassifiedError,
   type MediaRules,
   type PlatformGatewayPublicApi,
@@ -24,6 +25,12 @@ import {
   RefreshTokenShape,
   unknownError,
 } from './adapters/result-shapes';
+import {
+  deriveState,
+  toLegacyStatus,
+  type DerivedResult,
+  type StateInput,
+} from './connections/connection-state';
 import type { ConnectionStore, StoredConnection } from './connections/connection-store';
 import { ConnectionNotFoundError, InvalidRequestError } from './errors';
 import type { CredentialVault, DecryptedCredential } from './vault/credential-vault';
@@ -32,28 +39,88 @@ import type { CredentialVault, DecryptedCredential } from './vault/credential-va
 // tài khoản trong ngữ cảnh → bộ chuyển đổi theo loại kênh → giải mã quyền → gọi. Rẽ nhánh CHỈ theo
 // `capabilities`, không theo tên nền tảng. Cổng không bao giờ tự thử lại `submit`.
 
-const DAY_MS = 86_400_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** `expiring` = còn < 7 ngày; hết hạn → `expired`; đã ngắt → `disconnected`. */
-export function connectionStatus(c: StoredConnection, now = new Date()): ChannelConnectionStatus {
-  if (c.status === 'disconnected') return 'disconnected';
-  const left = c.tokenExpiresAt.getTime() - now.getTime();
-  if (left <= 0) return 'expired';
-  if (left < 7 * DAY_MS) return 'expiring';
-  return 'active';
+/** Đầu vào của `deriveState` từ hàng kết nối (bản giả chỉ có `status` 2 giá trị + ngày hết hạn). */
+export function toStateInput(c: StoredConnection): StateInput {
+  return {
+    channelType: c.channelType,
+    status: c.rowStatus ?? c.status,
+    tokenExpiresAt: c.tokenExpiresAt,
+    reasonCode: c.reasonCode ?? null,
+    sourceConnectionId: c.sourceConnectionId ?? null,
+  };
 }
 
-export function toChannelConnection(c: StoredConnection): ChannelConnection {
+export interface StateOptions {
+  now?: Date;
+  /** Số ngày báo trước hết hạn (mặc định 7). */
+  warnDays?: number;
+  /** Công tắc `channel.tiktok` đã tính; mặc định `true` (chỉ ảnh hưởng TikTok). */
+  featureEnabled?: boolean;
+  /** Hàng Page nguồn của Instagram: `null` = không tìm thấy (đã xóa); `undefined` = không cần. */
+  source?: StoredConnection | null | undefined;
+}
+
+export function connectionState(c: StoredConnection, opts: StateOptions = {}): DerivedResult {
+  return deriveState(toStateInput(c), {
+    now: opts.now ?? new Date(),
+    warnDays: opts.warnDays ?? 7,
+    featureEnabled: opts.featureEnabled ?? true,
+    source:
+      opts.source === undefined || opts.source === null ? opts.source : toStateInput(opts.source),
+  });
+}
+
+/** `status` công khai (4 giá trị cũ): `expiring` = còn < `warnDays`; hết hạn/hỏng → `expired`; ngắt/tạm tắt → `disconnected`. */
+export function connectionStatus(
+  c: StoredConnection,
+  now = new Date(),
+  opts: Omit<StateOptions, 'now'> = {},
+): ChannelConnectionStatus {
+  return toLegacyStatus(connectionState(c, { ...opts, now }).state);
+}
+
+function expiryOfRow(c: StoredConnection): ExpiryInfo {
+  if (c.tokenExpiresAt === null || c.expiryKind === 'none') return { kind: 'none' };
+  return { kind: c.expiryKind ?? 'token', expiresAt: c.tokenExpiresAt };
+}
+
+export function toChannelConnection(
+  c: StoredConnection,
+  opts: StateOptions = {},
+): ChannelConnection {
+  const derived = connectionState(c, opts);
   return {
     connectionId: c.id,
     channelType: c.channelType,
     displayName: c.displayName.slice(0, 120),
     externalId: c.externalId,
-    status: connectionStatus(c),
+    status: toLegacyStatus(derived.state),
     tokenExpiresAt: c.tokenExpiresAt,
     connectedAt: c.connectedAt,
+    state: derived.state,
+    reasonCode: derived.reasonCode,
+    expiry: expiryOfRow(c),
+    sourceConnectionId: c.sourceConnectionId ?? null,
   };
+}
+
+/** Danh sách kết nối của tài khoản: Instagram tự tìm Page nguồn trong chính danh sách (FR-042). */
+export function toChannelConnections(
+  rows: StoredConnection[],
+  opts: Omit<StateOptions, 'source'> = {},
+): ChannelConnection[] {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return rows.map((r) =>
+    toChannelConnection(r, {
+      ...opts,
+      source:
+        r.sourceConnectionId === undefined || r.sourceConnectionId === null
+          ? undefined
+          : (byId.get(r.sourceConnectionId) ?? null),
+    }),
+  );
 }
 
 export interface PlatformGatewayOptions {
@@ -279,7 +346,7 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
 
   listConnections(): Promise<ChannelConnection[]> {
     return withGatewayOp('platform_gateway', 'listConnections', {}, async () =>
-      (await this.opts.store.listConnections()).map(toChannelConnection),
+      toChannelConnections(await this.opts.store.listConnections()),
     );
   }
 

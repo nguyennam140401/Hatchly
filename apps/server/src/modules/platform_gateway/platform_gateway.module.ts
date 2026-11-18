@@ -9,6 +9,7 @@ import {
   ConnectionsController,
 } from './internal/connections/connections.controller';
 import { ConnectionsService } from './internal/connections/connections.service';
+import { PgConnectionStore } from './internal/connections/pg-connection-store';
 import { getFakePlatformStore, makeFakeAdapterFactory } from './internal/fake';
 import { PlatformGatewayService } from './internal/gateway.service';
 import { FakeCredentialVault, type CredentialVault } from './internal/vault/credential-vault';
@@ -50,6 +51,11 @@ const providers = [
           facebookVideoMaxBytes: config.FACEBOOK_VIDEO_MAX_BYTES,
         });
       };
+      // 010: driver `real` = bảng `platform_gateway.channel_connections` thật + bộ chuyển đổi thật.
+      if (config.PLATFORM_GATEWAY_DRIVER === 'real') {
+        registerReal();
+        return new PgConnectionStore();
+      }
       if (config.PLATFORM_GATEWAY_DRIVER !== 'fake') {
         registerReal();
         return NOT_CONFIGURED_STORE;
@@ -68,8 +74,18 @@ const providers = [
   {
     provide: CREDENTIAL_VAULT,
     inject: [APP_CONFIG],
-    useFactory: (config: AppConfig): CredentialVault =>
-      config.PLATFORM_GATEWAY_DRIVER === 'fake' ? new FakeCredentialVault() : NOT_CONFIGURED_VAULT,
+    useFactory: (config: AppConfig): CredentialVault => {
+      // Kho mã hóa phong bì thật (`kms` / `env-master-key`) do T033 cung cấp; tới lúc đó chỉ bản giả chạy được.
+      // Chọn theo `CREDENTIAL_VAULT_DRIVER`; chưa có bản thật thì "chưa cấu hình" (không bao giờ im lặng dùng giả).
+      if (config.CREDENTIAL_VAULT_DRIVER === 'fake') return new FakeCredentialVault();
+      if (
+        config.CREDENTIAL_VAULT_DRIVER === undefined &&
+        config.PLATFORM_GATEWAY_DRIVER === 'fake'
+      ) {
+        return new FakeCredentialVault();
+      }
+      return NOT_CONFIGURED_VAULT;
+    },
   },
   {
     provide: PLATFORM_GATEWAY,

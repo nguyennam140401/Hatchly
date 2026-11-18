@@ -137,7 +137,8 @@ export const AppConfigSchema = z.object({
   // ----- Cổng + bản giả lập (005, contracts/runtime-config.md mục 1) -----
   // Bắt buộc ở staging/production (bản thật thêm giá trị `real` ở WBS 2.3/3.1/4.3); ở development/test
   // thiếu thì `resolveGatewayDefaults` (load-config.ts) đặt bản giả lập / bộ nhớ.
-  PLATFORM_GATEWAY_DRIVER: z.enum(['fake']).optional(),
+  /** `fake` (dev/test) | `real` (010: bảng `channel_connections` thật + bộ chuyển đổi thật). */
+  PLATFORM_GATEWAY_DRIVER: z.enum(['fake', 'real']).optional(),
   AI_GATEWAY_DRIVER: z.enum(['fake']).optional(),
   NOTIFICATIONS_DRIVER: z.enum(['fake']).optional(),
   STORAGE_DRIVER: z.enum(['memory', 's3']).optional(),

@@ -3,7 +3,7 @@ import { withGatewayOp } from '../../../../core/gateways/op-log';
 import type { AccountCheckResult, ChannelConnection, ChannelType } from '../../public-api';
 import { getAdapter } from '../adapters/registry';
 import { ConnectionNotFoundError } from '../errors';
-import { toChannelConnection } from '../gateway.service';
+import { toChannelConnection, toChannelConnections } from '../gateway.service';
 import type { CredentialVault } from '../vault/credential-vault';
 import type { ConnectionStore, StoredCandidate } from './connection-store';
 import { hashOauthState, newOauthState, OAUTH_STATE_TTL_MS, SELECTION_TTL_MS } from './oauth-state';
@@ -174,7 +174,7 @@ export class ConnectionsService {
   }
 
   async listConnections(): Promise<ChannelConnection[]> {
-    return (await this.store.listConnections()).map(toChannelConnection);
+    return toChannelConnections(await this.store.listConnections());
   }
 
   async disconnect(connectionId: string): Promise<void> {

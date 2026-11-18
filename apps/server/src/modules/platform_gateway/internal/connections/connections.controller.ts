@@ -63,8 +63,11 @@ function toDto(c: ChannelConnection): ChannelConnectionDto {
     displayName: c.displayName,
     externalId: c.externalId,
     status: c.status,
-    tokenExpiresAt: c.tokenExpiresAt.toISOString(),
+    tokenExpiresAt: c.tokenExpiresAt?.toISOString() ?? null,
     connectedAt: c.connectedAt.toISOString(),
+    ...(c.state === undefined ? {} : { state: c.state }),
+    ...(c.reasonCode === undefined ? {} : { reasonCode: c.reasonCode }),
+    ...(c.sourceConnectionId === undefined ? {} : { sourceConnectionId: c.sourceConnectionId }),
   };
 }
 

@@ -90,6 +90,15 @@ describe('loadConfig', () => {
       META_FACEBOOK_RECONCILE: 'false',
       META_INSTAGRAM_RECONCILE: 'false',
       FACEBOOK_VIDEO_MAX_BYTES: 1_000_000_000,
+      // 010: kết nối kênh (mặc định an toàn: TikTok sandbox, làm mới Meta tắt, kho mã quyền giả ở dev/test).
+      CHANNEL_SCOPE_GROUPS: ['publish', 'analytics', 'ads'],
+      META_TOKEN_REFRESH_ENABLED: false,
+      TIKTOK_BASE_URL: 'https://open.tiktokapis.com',
+      TIKTOK_TIMEOUT_MS: 10_000,
+      TIKTOK_APP_STATUS: 'sandbox',
+      CHANNEL_INTERACTIVE_TIMEOUT_MS: 10_000,
+      CREDENTIAL_VAULT_DRIVER: 'fake',
+      STAGING_ALLOW_ENV_MASTER_KEY: false,
       PLATFORM_SUBMIT_TIMEOUT_MS: 30_000,
       AI_PROVIDER_TIMEOUT_MS: 40_000,
       AI_FIRST_TOKEN_TIMEOUT_MS: 5_000,
@@ -395,5 +404,68 @@ describe('cấu hình đăng nhập qua nhà cung cấp (009)', () => {
     expect(() =>
       loadConfig({ ...base, DETACHED_RETENTION_DAYS: '5', DETACHED_NOTICE_DAYS: '5' }),
     ).toThrow(/DETACHED_NOTICE_DAYS/);
+  });
+
+  describe('010: kho mã quyền (CREDENTIAL_VAULT_DRIVER)', () => {
+    const real = {
+      ...base,
+      PLATFORM_GATEWAY_DRIVER: 'real',
+      AI_GATEWAY_DRIVER: 'fake',
+      NOTIFICATIONS_DRIVER: 'fake',
+      STORAGE_DRIVER: 's3',
+      S3_ENDPOINT: 'https://s3.example.vn',
+      S3_REGION: 'hcm',
+      S3_BUCKET: 'bucket',
+      S3_ACCESS_KEY_ID: 'k',
+      S3_SECRET_ACCESS_KEY: 's',
+      STAGING_ALLOW_FAKES: 'true',
+    };
+
+    it('dev/test: mặc định kho giả; driver `real` thiếu cấu hình kho → nêu TÊN biến', () => {
+      expect(loadConfig({ ...base }).CREDENTIAL_VAULT_DRIVER).toBe('fake');
+      const noVault = { ...real, APP_ENV: 'development' };
+      expect(loadConfig(noVault).CREDENTIAL_VAULT_DRIVER).toBe('fake');
+      expect(() => loadConfig({ ...noVault, CREDENTIAL_VAULT_DRIVER: 'env-master-key' })).toThrow(
+        /CREDENTIAL_MASTER_KEY_B64/,
+      );
+      expect(() => loadConfig({ ...noVault, CREDENTIAL_VAULT_DRIVER: 'kms' })).toThrow(
+        /KMS_KEY_ID/,
+      );
+    });
+
+    it('production từ chối kho giả và env-master-key (thông điệp không chứa giá trị khóa)', () => {
+      const prod = { ...real, APP_ENV: 'production', FAKE_STATE_STORE: undefined as never };
+      expect(() => loadConfig({ ...prod, CREDENTIAL_VAULT_DRIVER: 'fake' })).toThrow(
+        /CREDENTIAL_VAULT_DRIVER=fake/,
+      );
+      const key = 'c2VjcmV0LWtleS1tYXJrZXItMzJieXRlcy1sb25nISE=';
+      try {
+        loadConfig({
+          ...prod,
+          CREDENTIAL_VAULT_DRIVER: 'env-master-key',
+          CREDENTIAL_MASTER_KEY_B64: key,
+        });
+        expect.unreachable();
+      } catch (err) {
+        expect((err as Error).message).toMatch(/env-master-key/);
+        expect((err as Error).message).not.toContain(key);
+      }
+    });
+
+    it('staging: env-master-key chỉ chạy khi STAGING_ALLOW_ENV_MASTER_KEY=true; kms luôn hợp lệ', () => {
+      const staging = {
+        ...real,
+        APP_ENV: 'staging',
+        PLATFORM_GATEWAY_DRIVER: 'real',
+        CREDENTIAL_VAULT_DRIVER: 'env-master-key',
+        CREDENTIAL_MASTER_KEY_B64: 'c2VjcmV0LWtleS1tYXJrZXItMzJieXRlcy1sb25nISE=',
+      };
+      expect(() => loadConfig(staging)).toThrow(/STAGING_ALLOW_ENV_MASTER_KEY/);
+      expect(
+        loadConfig({ ...staging, STAGING_ALLOW_ENV_MASTER_KEY: 'true' }).CREDENTIAL_VAULT_DRIVER,
+      ).toBe('env-master-key');
+      const kms = { ...staging, CREDENTIAL_VAULT_DRIVER: 'kms', KMS_KEY_ID: 'key-1' };
+      expect(loadConfig(kms).CREDENTIAL_VAULT_DRIVER).toBe('kms');
+    });
   });
 });

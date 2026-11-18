@@ -163,10 +163,22 @@ export interface ChannelConnection {
   /** ≤ 120 ký tự. */
   displayName: string;
   externalId: string;
+  /** Luôn là một trong 4 giá trị cũ (R3): mọi trạng thái không dùng được ánh xạ về `expired`/`disconnected`. */
   status: ChannelConnectionStatus;
-  tokenExpiresAt: Date;
+  /** `null` ⇔ `expiry.kind = 'none'` (Meta không có mốc hạn cố định). */
+  tokenExpiresAt: Date | null;
   connectedAt: Date;
+  // ----- 010 (tùy chọn – bên gọi cũ bỏ qua) -----
+  /** Trạng thái hiển thị đầy đủ (FR-025). */
+  state?: ConnectionState;
+  reasonCode?: string | null;
+  expiry?: ExpiryInfo;
+  /** Chỉ Instagram: Page nguồn (FR-042). */
+  sourceConnectionId?: string | null;
 }
+
+export type ConnectionState =
+  'active' | 'expiring' | 'needs_reconnect' | 'ineligible' | 'suspended' | 'disconnected';
 
 export interface PlatformGatewayPublicApi {
   // --- 7 thao tác ADR-05, theo kết nối kênh ---
