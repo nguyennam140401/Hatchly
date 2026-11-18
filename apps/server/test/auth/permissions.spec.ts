@@ -15,6 +15,8 @@ const EXPECTED = {
     'channel.manage',
     'post.edit',
     'media.upload',
+    'media.view',
+    'media.delete',
     'post.approve',
     'post.reschedule',
     'post.republish',
@@ -26,6 +28,8 @@ const EXPECTED = {
     'context.view',
     'post.edit',
     'media.upload',
+    'media.view',
+    'media.delete',
     'post.reschedule',
     'post.republish',
     'status.view',
@@ -35,8 +39,8 @@ const EXPECTED = {
 } as const;
 
 describe('Danh mục quyền', () => {
-  it('có đúng 14 quyền (006: context.manage tách thành context.view + context.edit)', () => {
-    expect(PERMISSION_LIST).toHaveLength(14);
+  it('có đúng 16 quyền (006: context.manage tách thành context.view + context.edit)', () => {
+    expect(PERMISSION_LIST).toHaveLength(16);
     expect(PERMISSION_LIST as string[]).not.toContain('context.manage');
   });
 

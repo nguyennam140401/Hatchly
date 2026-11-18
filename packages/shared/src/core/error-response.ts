@@ -163,5 +163,26 @@ export const ERROR_CODES = {
   PUBLISH_VERSION_CONFLICT: 'PUBLISH_VERSION_CONFLICT',
   /** 404 – không có lượt đăng này (hoặc không thuộc tài khoản). */
   PUBLISH_ATTEMPT_NOT_FOUND: 'PUBLISH_ATTEMPT_NOT_FOUND',
+  // ----- Thư viện media (014, contracts/media-http-api.md) -----
+  /** 400 – loại tệp chưa hỗ trợ. */
+  MEDIA_TYPE_UNSUPPORTED: 'MEDIA_TYPE_UNSUPPORTED',
+  /** 400 – ảnh > 20 MB hoặc video > 500 MB, hoặc tệp rỗng. */
+  MEDIA_TOO_LARGE: 'MEDIA_TOO_LARGE',
+  /** 409 – hết 5 GB dung lượng. */
+  MEDIA_QUOTA_EXCEEDED: 'MEDIA_QUOTA_EXCEEDED',
+  /** 403 – gói hết hạn nên chưa tải thêm được (xem/xóa vẫn dùng được). */
+  MEDIA_PLAN_EXPIRED: 'MEDIA_PLAN_EXPIRED',
+  /** 409 – tệp chưa lên đủ khi xác nhận. */
+  UPLOAD_INCOMPLETE: 'UPLOAD_INCOMPLETE',
+  /** 422 – tệp lên xong nhưng bị bác (lệch dung lượng, sai loại, ảnh động). */
+  UPLOAD_REJECTED: 'UPLOAD_REJECTED',
+  /** 409 – media đang dùng trong bài đã duyệt/lên lịch nên không xóa được. */
+  MEDIA_IN_USE: 'MEDIA_IN_USE',
+  /** 409 – media đang dùng trong bài nháp/chờ duyệt/đã đăng, cần xác nhận mới xóa. */
+  MEDIA_USED_CONFIRM_REQUIRED: 'MEDIA_USED_CONFIRM_REQUIRED',
+  /** 403 – cộng tác viên chỉ xóa được tệp do mình tải. */
+  MEDIA_DELETE_NOT_OWNER: 'MEDIA_DELETE_NOT_OWNER',
+  /** 503 – kho tệp tạm lỗi. */
+  STORAGE_UNAVAILABLE: 'STORAGE_UNAVAILABLE',
 } as const;
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

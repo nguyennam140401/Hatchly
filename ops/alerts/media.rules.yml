@@ -1,0 +1,47 @@
+# Quy tắc cảnh báo của Thư viện media (014 T086, plan.md "Quan sát", hiến pháp VIII).
+# Nạp vào Prometheus cùng queue.rules.yml. Ngưỡng nằm trong tệp này – đổi không cần sửa mã.
+#
+# Tên chỉ số Prometheus suy từ chỉ số OpenTelemetry (meter `app.media`, xem modules/media/internal/metrics.ts).
+# Nhãn chỉ có `result`/`kind` – KHÔNG có account_id, media_id, tên tệp, URL (tra từng tài khoản bằng nhật ký có cấu trúc).
+# Cảnh báo "việc `media` chờ > 10 phút" đã có ở queue.rules.yml (Kiến trúc triển khai mục 9).
+groups:
+  - name: media
+    rules:
+      - alert: MediaQuotaDriftDetected
+        expr: increase(media_quota_drift_total[24h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Bộ đếm dung lượng media lệch so với tổng thực và đã được tự sửa trong 24 giờ qua'
+          description: >-
+            Việc quét tuần `media.cleanup` (scope full) đối soát `media.storage_quotas` với tổng `original_bytes` thực rồi sửa.
+            Lệch nghĩa là có đường ghi bộ đếm không đi qua `quota.store` hoặc một bước hoàn dung lượng bị bỏ sót: tìm dòng
+            nhật ký `media.quota.drift` (có số byte lệch) và xem các thay đổi gần đây ở upload.service / library.service /
+            process.handler. Giá trị đúng (SC-009) là 0 – không để cảnh báo này tự biến mất mà không tìm nguyên nhân.
+
+      - alert: MediaUnprocessableRatioHigh
+        expr: >-
+          sum(increase(media_processed_total{result="unprocessable"}[1h]))
+          / clamp_min(sum(increase(media_processed_total[1h])), 1) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hơn 5% media được xử lý trong một giờ ở trạng thái "Không xử lý được"'
+          description: >-
+            Kiểm tra mã lỗi gốc trong nhật ký `media.process.unprocessable` (failureCode): `corrupt`/`unsupported` tăng đột biến
+            thường do một dòng máy/định dạng mới (vd HEIC từ iOS mới), `storage_mismatch` do kho tệp; `too_many_pixels` do
+            giới hạn 50 triệu điểm ảnh. Người dùng đã thấy cách khắc phục trong ứng dụng; cần quyết định có hỗ trợ thêm định dạng không.
+
+      - alert: MediaVideoProcessSlow
+        expr: >-
+          histogram_quantile(0.95, sum by (le) (rate(media_process_duration_seconds_bucket{kind="video"}[1h]))) > 120
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p95 thời gian xử lý video vượt 2 phút (mục tiêu SC-003)'
+          description: >-
+            Kiểm tra CPU/đĩa tạm của Worker (emptyDir 2 GiB), tốc độ đọc từ kho tệp (video ≤ 500 MB được tải về đĩa trước khi
+            lấy khung hình) và giới hạn đồng thời hàng chờ `media` (infra.queue_settings, hiện 2 việc/Worker, 1 việc/tài khoản).

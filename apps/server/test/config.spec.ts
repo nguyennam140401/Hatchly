@@ -83,6 +83,10 @@ describe('loadConfig', () => {
       POST_BULK_APPROVE_LIMIT: 100,
       POST_BULK_SUBMIT_LIMIT: 50,
       PUBLISH_EXECUTOR: 'none',
+      // 014: thư viện media.
+      MEDIA_QUOTA_BYTES: 5 * 1024 ** 3,
+      MEDIA_PUBLIC_URL_TTL_SEC: 86_400,
+      MEDIA_PREVIEW_URL_TTL_SEC: 3_600,
       AI_SYSTEM_WEEKLY_CAP_MICRO_USD: 2_000_000,
       META_GRAPH_VERSION: 'v21.0',
       META_GRAPH_BASE_URL: 'https://graph.facebook.com',
@@ -389,6 +393,24 @@ describe('cấu hình đăng nhập qua nhà cung cấp (009)', () => {
     const unset: Record<string, string> = { ...strict };
     delete unset.OAUTH_DRIVER;
     expect(resolveOAuthConfig(loadConfig({ ...unset, APP_ENV: 'staging' })).driver).toBe('off');
+  });
+
+  it('biến thư viện media (014): mặc định 5 GiB / 24 giờ / 1 giờ; hạn vượt trần → nêu tên biến', () => {
+    const config = loadConfig({ ...base });
+    expect(config.MEDIA_QUOTA_BYTES).toBe(5 * 1024 ** 3);
+    expect(config.MEDIA_PUBLIC_URL_TTL_SEC).toBe(86_400);
+    expect(config.MEDIA_PREVIEW_URL_TTL_SEC).toBe(3_600);
+    expect(loadConfig({ ...base, MEDIA_QUOTA_BYTES: '1073741824' }).MEDIA_QUOTA_BYTES).toBe(
+      1024 ** 3,
+    );
+    // Trần cứng: đường dẫn công khai ≤ 24 giờ, xem trước ≤ 1 giờ (R9) – không âm thầm cắt.
+    expect(() => loadConfig({ ...base, MEDIA_PUBLIC_URL_TTL_SEC: '86401' })).toThrow(
+      /MEDIA_PUBLIC_URL_TTL_SEC/,
+    );
+    expect(() => loadConfig({ ...base, MEDIA_PREVIEW_URL_TTL_SEC: '3601' })).toThrow(
+      /MEDIA_PREVIEW_URL_TTL_SEC/,
+    );
+    expect(() => loadConfig({ ...base, MEDIA_QUOTA_BYTES: '0' })).toThrow(/MEDIA_QUOTA_BYTES/);
   });
 
   it('DETACHED_NOTICE_DAYS phải nhỏ hơn DETACHED_RETENTION_DAYS', () => {

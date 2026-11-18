@@ -10,7 +10,14 @@ export type PostFilter = Readonly<{
   to?: string;
   q?: string;
 }>;
-export type MediaFilter = Readonly<{ kind?: string; q?: string }>;
+export type MediaFilter = Readonly<{
+  kind?: string | undefined;
+  q?: string | undefined;
+  from?: string | undefined;
+  to?: string | undefined;
+  /** Con trỏ trang tiếp (014 – "Xem thêm"). */
+  cursor?: string | undefined;
+}>;
 
 export const queryKeys = {
   session: { me: () => ['session', 'me'] as const },
@@ -33,6 +40,8 @@ export const queryKeys = {
   media: {
     lists: () => ['media', 'list'] as const,
     list: (filter: MediaFilter = {}) => ['media', 'list', filter] as const,
+    detail: (id: string) => ['media', 'detail', id] as const,
+    usages: (id: string) => ['media', 'usages', id] as const,
   },
   profile: {
     current: () => ['profile', 'current'] as const,

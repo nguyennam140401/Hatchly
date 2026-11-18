@@ -155,6 +155,20 @@
       "when": 1794824501533,
       "tag": "0021_publishing_013_sweep_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794933913823,
+      "tag": "0022_media_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794933948337,
+      "tag": "0023_media_functions",
+      "breakpoints": true
     }
   ]
 }

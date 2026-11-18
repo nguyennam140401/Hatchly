@@ -19,6 +19,7 @@ export default defineConfig({
       'test/contracts/**/*.infra.contract.spec.ts',
       'test/e2e/**',
       'test/context/**',
+      'test/media/**',
       'test/compat/**',
       '**/node_modules/**',
     ],
