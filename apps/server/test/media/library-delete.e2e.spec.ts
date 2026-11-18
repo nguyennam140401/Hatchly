@@ -102,6 +102,8 @@ describeDb('Xem, tìm, xóa media (e2e)', () => {
     collaborator = await collaboratorOf(t, owner.me);
     stranger = await registerAndVerify(t, { displayName: 'Chủ B' });
     accountId = owner.me.account.id;
+    // Gỡ nhà cung cấp thật của `content` (đã tự đăng ký khi khởi động) để dùng nhà cung cấp giả có kịch bản.
+    resetMediaUsageProviderForTests();
     registerMediaUsageProvider({
       findUsages: (ids) => Promise.resolve(usages.filter((u) => ids.includes(u.mediaId))),
     });

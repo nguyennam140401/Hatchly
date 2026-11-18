@@ -28,6 +28,8 @@ describeDb('Bí mật không lọt vào nhật ký khi tải lên thư viện me
   let t: TestApp;
   let owner: { agent: Agent; me: MeBody };
   const secrets = new Set<string>();
+  /** Mã phiên của ứng dụng: nằm trong đường dẫn của nhật ký truy cập chung (core) nên chỉ kiểm ở dòng của module media. */
+  const sessionIds = new Set<string>();
   const errorTexts: string[] = [];
 
   beforeAll(async () => {
@@ -41,7 +43,7 @@ describeDb('Bí mật không lọt vào nhật ký khi tải lên thư viện me
 
   /** Ghi nhớ mọi giá trị nhạy cảm của một lần bắt đầu tải để quét nhật ký sau đó. */
   function remember(start: StartUploadResponse): void {
-    secrets.add(start.uploadId);
+    sessionIds.add(start.uploadId);
     if (start.mode === 'single') {
       for (const v of Object.values(start.post.fields)) if (v.length >= 8) secrets.add(v);
       secrets.add(start.post.url);
@@ -110,6 +112,22 @@ describeDb('Bí mật không lọt vào nhật ký khi tải lên thư viện me
     const haystack = `${logs}\n${errorTexts.join('\n')}`;
     for (const secret of secrets) {
       expect(haystack, 'lộ giá trị nhạy cảm của tải lên').not.toContain(secret);
+    }
+    // Dòng nhật ký do chính module media ghi (context 'media') và thông điệp lỗi: không chứa mã phiên tải lên.
+    // Phần do module ghi: bỏ `req`/`res` (nhật ký truy cập chung của core gắn kèm đường dẫn yêu cầu, có mã phiên trong URL).
+    const mediaLines = t.rawLogs
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+      .filter((entry) => entry.context === 'media')
+      .map((entry) => {
+        const own = { ...entry };
+        delete own.req;
+        delete own.res;
+        return JSON.stringify(own);
+      })
+      .join('\n');
+    const errorsText = errorTexts.join('\n');
+    for (const id of sessionIds) {
+      expect(`${mediaLines}\n${errorsText}`, 'lộ mã phiên tải lên').not.toContain(id);
     }
     for (const name of names) {
       expect(haystack, `lộ tên tệp ${name}`).not.toContain(name);

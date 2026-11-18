@@ -1,7 +1,8 @@
 // Clarifications / edge case: xóa hẳn tài khoản → dữ liệu tenant của nó biến mất (ON DELETE CASCADE)
 // trong cùng giao dịch; dữ liệu tài khoản khác và nhật ký kiểm toán còn nguyên.
-import { expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { loadConfig } from '../../src/core/config/load-config';
+import { TenantContextError } from '../../src/core/db/errors';
 import { uuidV7 } from '../../src/core/ids/uuid-v7';
 import { loc } from '../../src/core/storage';
 import { MemoryObjectStorage } from '../../src/core/storage/memory/memory-storage';
@@ -12,11 +13,21 @@ import {
   createAccount,
   dbUrls,
   describeDb,
+  makeDatabase,
   seedNotes,
   withAccount,
+  type TestDatabase,
 } from './helpers/db';
 
 describeDb('Xóa hẳn tài khoản', () => {
+  let database: TestDatabase;
+  beforeAll(() => {
+    database = makeDatabase();
+  });
+  afterAll(async () => {
+    await database.close();
+  });
+
   it('xóa accounts A bằng owner → mọi dòng của A ở tenant_notes mất; dòng B, audit_log của A còn', async () => {
     const a = await createAccount();
     const b = await createAccount();
@@ -123,9 +134,12 @@ describeDb('Xóa hẳn tài khoản', () => {
     }
     expect((await withAccount(b, () => storage.stat(loc.mediaOriginal(mediaB)))).exists).toBe(true);
 
-    // sau khi xóa: không cấp thêm URL nào cho media cũ (dòng đã mất ⇒ not_found / không URL xem trước)
-    const previews = await withAccount(a, () => api.getPreviewUrls([mediaA]));
-    expect(previews[0]).toMatchObject({ thumbUrl: null, expiresAt: null });
-    expect(await withAccount(a, () => api.issuePublicUrl(mediaA))).toEqual({ kind: 'not_found' });
+    // sau khi xóa: tài khoản không còn ⇒ ngữ cảnh không hợp lệ, không cấp thêm URL nào cho media cũ
+    await expect(withAccount(a, () => api.getPreviewUrls([mediaA]))).rejects.toBeInstanceOf(
+      TenantContextError,
+    );
+    await expect(withAccount(a, () => api.issuePublicUrl(mediaA))).rejects.toBeInstanceOf(
+      TenantContextError,
+    );
   });
 });

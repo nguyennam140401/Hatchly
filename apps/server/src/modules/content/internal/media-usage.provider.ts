@@ -16,31 +16,36 @@ type UsageRow = {
   post_status: string;
 };
 
-let registered = false;
-
 @Injectable()
 export class MediaUsageRegistrar implements OnModuleInit {
   onModuleInit(): void {
-    // Nhiều ứng dụng Nest trong cùng một tiến trình (kiểm thử) dùng chung một nhà cung cấp không giữ trạng thái.
-    if (registered) return;
-    registered = true;
-    registerMediaUsageProvider({
-      findUsages: (mediaIds) =>
-        tenantTx(async (db): Promise<MediaUsageRef[]> => {
-          if (mediaIds.length === 0) return [];
-          const result = await db.execute<UsageRow>(sql`
-            SELECT DISTINCT ids.media_id, p.id AS post_id, p.internal_name AS post_title, p.status AS post_status
-              FROM unnest(${[...mediaIds]}::text[]) AS ids(media_id)
-              JOIN content.channel_variants cv ON cv.media @> jsonb_build_array(jsonb_build_object('mediaId', ids.media_id))
+    // Nhiều ứng dụng Nest trong cùng một tiến trình (kiểm thử) dùng chung một nhà cung cấp không giữ trạng thái:
+    // đã có nhà cung cấp (của ứng dụng trước) thì giữ nguyên.
+    try {
+      registerMediaUsageProvider({
+        findUsages: (mediaIds) =>
+          tenantTx(async (db): Promise<MediaUsageRef[]> => {
+            if (mediaIds.length === 0) return [];
+            const ids = sql.join(
+              mediaIds.map((id) => sql`${id}`),
+              sql`, `,
+            );
+            const result = await db.execute<UsageRow>(sql`
+            SELECT DISTINCT e.item ->> 'mediaId' AS media_id, p.id AS post_id, p.internal_name AS post_title, p.status AS post_status
+              FROM content.channel_variants cv
               JOIN content.posts p ON p.id = cv.post_id AND p.account_id = cv.account_id
-             WHERE p.deleted_at IS NULL`);
-          return result.rows.map((row) => ({
-            mediaId: row.media_id,
-            postId: row.post_id,
-            postTitle: row.post_title ?? '',
-            postStatus: row.post_status as MediaUsageRef['postStatus'],
-          }));
-        }),
-    });
+             CROSS JOIN LATERAL jsonb_array_elements(cv.media) AS e(item)
+             WHERE p.deleted_at IS NULL AND e.item ->> 'mediaId' IN (${ids})`);
+            return result.rows.map((row) => ({
+              mediaId: row.media_id,
+              postId: row.post_id,
+              postTitle: row.post_title ?? '',
+              postStatus: row.post_status as MediaUsageRef['postStatus'],
+            }));
+          }),
+      });
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('đã được đăng ký')) throw error;
+    }
   }
 }
