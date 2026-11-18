@@ -1,4 +1,5 @@
 import type { Db } from '../../../../core/db';
+import type { channelConnections } from '../db/schema';
 import type { AccountCheckResult, ChannelType, ExpiryInfo } from '../../public-api';
 
 // Kho kết nối kênh + trạng thái luồng kết nối (005, R6). Bản giả lập: `internal/fake/store.*.ts` (bảng
@@ -44,7 +45,8 @@ export interface StoredCandidate {
   externalId: string;
   displayName: string;
   tokenCiphertextB64: string;
-  tokenExpiresAt: string;
+  /** `null` khi nền tảng không có mốc hạn cố định. */
+  tokenExpiresAt: string | null;
   check: AccountCheckResult;
   // ----- 010 (tùy chọn) -----
   avatarUrl?: string | null;
@@ -91,6 +93,33 @@ export interface NewConnection {
   maxPerPlatform?: number;
 }
 
+/** Các cột được phép cập nhật bằng `updateRow` (không có `id`, `account_id`, `version`). */
+export type ConnectionPatch = Partial<
+  Pick<
+    typeof channelConnections.$inferInsert,
+    | 'display_name'
+    | 'avatar_url'
+    | 'account_type'
+    | 'granted_scopes'
+    | 'quota_remaining'
+    | 'source_connection_id'
+    | 'token_ciphertext'
+    | 'refresh_ciphertext'
+    | 'token_issued_at'
+    | 'expiry_kind'
+    | 'token_expires_at'
+    | 'status'
+    | 'reason_code'
+    | 'last_error_code'
+    | 'last_checked_at'
+    | 'last_refreshed_at'
+    | 'last_manual_check_at'
+    | 'recheck_required'
+    | 'last_notified_stage'
+    | 'disconnected_at'
+  >
+>;
+
 /** Lý do kênh phải kết nối lại do bên đăng bài/nền tảng báo (FR-023). */
 export interface AuthFailure {
   /** Mã hiển thị đã lọc (`TOKEN_EXPIRED`, `TOKEN_REVOKED`, `SCOPE_MISSING`…). */
@@ -117,6 +146,17 @@ export interface ConnectionStore {
     failure: AuthFailure,
     within?: (connection: StoredConnection, tx: Db) => Promise<void>,
   ): Promise<boolean>;
+  /**
+   * 010: cập nhật có điều kiện theo `version` (kết nối lại tại chỗ, kiểm tra lại…). Xung đột ⇒ `VERSION_CONFLICT`.
+   * Bản giả không cài đặt.
+   */
+  updateRow?(
+    id: string,
+    expectedVersion: number,
+    patch: ConnectionPatch,
+  ): Promise<StoredConnection>;
+  /** 010: xóa HẲN phiên chọn (mã quyền của ứng viên không được chọn bị hủy cùng dòng). */
+  deleteSelection?(id: string): Promise<void>;
   /** 010: mọi kết nối chưa ngắt của tài khoản (cho ngắt hàng loạt). */
   listLiveConnections?(): Promise<StoredConnection[]>;
   saveOauthState(s: {

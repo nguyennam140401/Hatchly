@@ -47,6 +47,8 @@ export interface AdapterReconcile {
 export interface CallbackParams {
   code?: string | undefined;
   error?: string | undefined;
+  /** 010: địa chỉ quay về đã dùng ở bước ủy quyền – Meta/TikTok yêu cầu khớp khi đổi `code`. */
+  redirectUri?: string | undefined;
 }
 
 /** Page/tài khoản người dùng có thể chọn sau lượt gọi lại. Mã quyền chỉ đi tiếp vào vault. */
@@ -55,7 +57,8 @@ export interface ConnectionCandidate {
   displayName: string;
   /** Mã quyền thô của ứng viên – chỉ dùng để mã hóa ngay bằng CredentialVault. */
   accessToken: string;
-  tokenExpiresAt: Date;
+  /** `null` khi nền tảng không có mốc hạn cố định (`expiry.kind = 'none'`). */
+  tokenExpiresAt: Date | null;
   // ----- 010 (đều tùy chọn – bộ chuyển đổi cũ vẫn hợp lệ) -----
   avatarUrl?: string | undefined;
   /** `page`, `instagram_business`, `instagram_creator`, `tiktok_creator`… */
@@ -92,7 +95,8 @@ export interface PlatformAdapter {
   /** 010: hạn hiện tại của quyền (đo lại bằng lời gọi nền tảng khi cần). Dạng `none` khi không có mốc hạn cố định. */
   expiryOf(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<ExpiryInfo>;
   // Luồng kết nối (bản thật WBS 2.2 dùng OAuth):
-  authorizeUrl(state: string, redirectUri: string): string;
+  /** `rerequest`: xin lại đúng quyền bị từ chối (Meta `auth_type=rerequest`) khi kết nối lại. */
+  authorizeUrl(state: string, redirectUri: string, opts?: { rerequest?: boolean }): string;
   exchangeCallback(params: CallbackParams): Promise<{ candidates: ConnectionCandidate[] }>;
 }
 

@@ -7,47 +7,50 @@ import {
   Get,
   HttpCode,
   Inject,
+  Optional,
   Post,
   Res,
   UseFilters,
 } from '@nestjs/common';
 import {
   ChannelType as ChannelTypeSchema,
+  ConfirmRequest,
   ConnectRequest,
   SaveConnectionRequest,
   type ChannelConnectionDto,
+  type ConfirmResponse,
   type ConnectResponse,
-  type LegacySelectionResponse,
+  type OverviewResponse,
+  type SelectionResponse,
 } from '@app/shared/platform_gateway';
 import type { Response } from 'express';
 import { z } from 'zod';
 import {
+  APP_CONFIG,
   AppError,
   AUTH_CONFIG,
   CustomerAccess,
   ValidBody,
   ValidParam,
   ValidQuery,
+  type AppConfig,
   type AuthConfig,
 } from '../../../../core';
 import type { ChannelConnection, ChannelType } from '../../public-api';
 import { ChannelNotSupportedError, ConnectionNotFoundError } from '../errors';
 import { connectionNotFound, ConnectionsService } from './connections.service';
 
-// Điểm cuối kết nối kênh (005, contracts/platform-gateway.md mục 3), tiền tố /api/v1/channels.
-// Chủ: kết nối/lưu/ngắt (`channel.manage`); chủ + cộng tác viên: liệt kê (`status.view`). Phản hồi KHÔNG
-// BAO GIỜ có mã quyền. Lượt gọi lại: phiên lấy từ cookie như mọi điểm cuối khách hàng; thiếu/sai phiên
-// không trả JSON mà chuyển về trang kết nối với `?error=STATE_INVALID` (bộ lọc bên dưới).
+// Điểm cuối kết nối kênh (005 + 010 contracts/channels-http-api.md), tiền tố /api/v1/channels.
+// Chủ: kết nối/xác nhận/ngắt (`channel.manage`); chủ + cộng tác viên: xem (`channel.view`, `status.view`). Mã tài khoản
+// CHỈ từ phiên – không có ở đường dẫn/query/thân của điểm cuối khách hàng. Phản hồi KHÔNG BAO GIỜ có mã quyền. Lượt
+// gọi lại: thiếu/sai phiên không trả JSON mà chuyển về trang kênh với `?error=STATE_INVALID` (bộ lọc bên dưới).
 
 export const CONNECTIONS_SERVICE = Symbol('CONNECTIONS_SERVICE');
 
-// `tiktok` có trong DTO dùng chung từ 010 nhưng chưa có bộ chuyển đổi (T079): luồng 005 coi như chưa hỗ trợ.
-const SUPPORTED_CHANNEL_TYPES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const;
-const LegacyChannelType = ChannelTypeSchema.refine(
-  (value): value is (typeof SUPPORTED_CHANNEL_TYPES)[number] =>
-    (SUPPORTED_CHANNEL_TYPES as readonly string[]).includes(value),
-);
-const channelParam = z.strictObject({ channelType: LegacyChannelType });
+// `tiktok` có trong DTO dùng chung nhưng chưa là `ChannelType` của máy chủ cho tới khi có bộ chuyển đổi (T079): giá trị
+// này vẫn đi vào dịch vụ, nơi công tắc chặn trước (403) và registry trả CHANNEL_NOT_SUPPORTED (422) nếu chưa đăng ký.
+const asServerType = (t: z.infer<typeof ChannelTypeSchema>): ChannelType => t as ChannelType;
+const channelParam = z.strictObject({ channelType: ChannelTypeSchema });
 const selectionParam = z.strictObject({ selectionId: z.uuid() });
 const connectionParam = z.strictObject({ connectionId: z.uuid() });
 const callbackQuery = z.object({
@@ -91,14 +94,14 @@ async function mapErrors<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Lỗi trước/trong lượt gọi lại (thiếu phiên, thiếu quyền…) → 302 về trang kết nối, không JSON. */
+/** Lỗi trước/trong lượt gọi lại (thiếu phiên, thiếu quyền…) → 302 về trang kênh, không JSON. */
 @Catch()
 export class CallbackRedirectFilter implements ExceptionFilter {
   constructor(@Inject(AUTH_CONFIG) private readonly auth: AuthConfig) {}
 
   catch(_exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
-    res.redirect(302, `${this.auth.webBaseUrl}/channels/connect?error=STATE_INVALID`);
+    res.redirect(302, `${this.auth.webBaseUrl}/channels?error=STATE_INVALID`);
   }
 }
 
@@ -107,20 +110,32 @@ export class ConnectionsController {
   constructor(
     @Inject(CONNECTIONS_SERVICE) private readonly connections: ConnectionsService,
     @Inject(AUTH_CONFIG) private readonly auth: AuthConfig,
+    @Optional() @Inject(APP_CONFIG) private readonly config?: AppConfig,
   ) {}
 
+  /** `redirect_uri` của OAuth kênh – KHÁC redirect đăng nhập 009 (FR-005). Gốc có thể ghi đè bằng cấu hình. */
   private redirectUri(channelType: ChannelType): string {
-    return `${this.auth.webBaseUrl}/api/v1/channels/callback/${channelType}`;
+    const base = this.config?.CHANNEL_CONNECT_REDIRECT_BASE ?? this.auth.webBaseUrl;
+    return `${base.replace(/\/+$/, '')}/api/v1/channels/callback/${channelType}`;
+  }
+
+  /** Màn hình "Kênh kết nối": chỉ đọc dữ liệu đã lưu, không gọi nền tảng, không cache (FR-028). */
+  @Get('overview')
+  @CustomerAccess('channel.view')
+  overview(@Res({ passthrough: true }) res: Response): Promise<OverviewResponse> {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.connections.overview();
   }
 
   @Post('connect')
   @HttpCode(200)
   @CustomerAccess('channel.manage')
   connect(@ValidBody(ConnectRequest) body: ConnectRequest): Promise<ConnectResponse> {
-    const channelType = body.channelType;
-    if (channelType === 'tiktok') throw channelNotSupported(); // T079 thay bằng bộ chuyển đổi + công tắc
+    const channelType = asServerType(body.channelType);
     return mapErrors(() =>
-      this.connections.startConnect(channelType, this.redirectUri(channelType)),
+      this.connections.startConnect(channelType, this.redirectUri(channelType), {
+        reconnectConnectionId: body.reconnectConnectionId,
+      }),
     );
   }
 
@@ -132,35 +147,47 @@ export class ConnectionsController {
     @ValidQuery(callbackQuery) query: z.infer<typeof callbackQuery>,
     @Res() res: Response,
   ): Promise<void> {
-    const outcome = await this.connections.handleCallback(params.channelType, query);
-    const base = `${this.auth.webBaseUrl}/channels/connect`;
-    res.redirect(
-      302,
-      outcome.kind === 'selection'
-        ? `${base}?selection=${encodeURIComponent(outcome.selectionId)}`
-        : `${base}?error=${outcome.code}`,
+    const channelType = asServerType(params.channelType);
+    const outcome = await this.connections.handleCallback(
+      channelType,
+      query,
+      this.redirectUri(channelType),
     );
+    const web = this.auth.webBaseUrl;
+    let target: string;
+    switch (outcome.kind) {
+      case 'selection':
+        target = `${web}/channels/select/${encodeURIComponent(outcome.selectionId)}`;
+        break;
+      case 'reconnected':
+        target = `${web}/channels?reconnected=${encodeURIComponent(outcome.connectionId)}`;
+        break;
+      case 'error':
+        target = `${web}/channels?error=${outcome.code}`;
+        break;
+    }
+    res.redirect(302, target);
   }
 
   @Get('selections/:selectionId')
   @CustomerAccess('channel.manage')
-  async selection(
+  selection(
     @ValidParam(selectionParam) params: z.infer<typeof selectionParam>,
-  ): Promise<LegacySelectionResponse> {
-    const view = await this.connections.getSelection(params.selectionId);
-    return {
-      channelType: view.channelType,
-      candidates: view.candidates.map((c) => ({
-        externalId: c.externalId,
-        displayName: c.displayName,
-        check:
-          c.check.kind === 'eligible'
-            ? { ...c.check, tokenExpiresAt: c.check.tokenExpiresAt.toISOString() }
-            : c.check,
-      })),
-    };
+  ): Promise<SelectionResponse> {
+    return this.connections.getSelection(params.selectionId);
   }
 
+  @Post('selections/:selectionId/confirm')
+  @HttpCode(200)
+  @CustomerAccess('channel.manage')
+  confirm(
+    @ValidParam(selectionParam) params: z.infer<typeof selectionParam>,
+    @ValidBody(ConfirmRequest) body: ConfirmRequest,
+  ): Promise<ConfirmResponse> {
+    return mapErrors(() => this.connections.confirm(params.selectionId, body.externalIds));
+  }
+
+  /** 005: lưu MỘT ứng viên (giữ để tương thích). */
   @Post()
   @CustomerAccess('channel.manage')
   async save(
@@ -174,11 +201,12 @@ export class ConnectionsController {
     return toDto(connection);
   }
 
+  /** Bộ chọn kênh của 012 (hình dạng cũ + trường mới tùy chọn). */
   @Get()
   @CustomerAccess('status.view')
   async list(): Promise<ChannelConnectionDto[]> {
-    // Bộ chọn kênh của 012: KHÔNG có `tiktok` (`channel_variants` chưa hỗ trợ; đăng TikTok từ trình soạn là tính năng sau).
-    // Màn hình quản lý kênh dùng `GET /channels/overview`.
+    // KHÔNG có `tiktok`: `channel_variants` chưa hỗ trợ; đăng TikTok từ trình soạn là tính năng sau. Màn hình quản lý
+    // kênh dùng `GET /channels/overview`.
     return (await this.connections.listConnections())
       .filter((c) => (c.channelType as string) !== 'tiktok')
       .map(toDto);

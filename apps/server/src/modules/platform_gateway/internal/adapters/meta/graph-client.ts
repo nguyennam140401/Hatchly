@@ -71,11 +71,29 @@ export class GraphClient {
    */
   async call<T>(
     cred: DecryptedCredential,
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     init: {
       query?: Record<string, string>;
       body?: Record<string, unknown>;
+      signal?: AbortSignal;
+    } = {},
+  ): Promise<T> {
+    return this.callWithToken<T>(revealCredential(cred), method, path, init);
+  }
+
+  /**
+   * Như `call` nhưng nhận mã dạng chuỗi – CHỈ cho luồng kết nối (010) khi mã vừa nhận từ nền tảng và chưa vào kho mã
+   * (đổi mã, liệt kê Page, `debug_token` bằng mã ứng dụng). Mã vẫn chỉ đi trong tiêu đề `Authorization`.
+   */
+  async callWithToken<T>(
+    token: string,
+    method: 'GET' | 'POST' | 'DELETE',
+    path: string,
+    init: {
+      query?: Record<string, string>;
+      body?: Record<string, unknown>;
+      form?: Record<string, string>;
       signal?: AbortSignal;
     } = {},
   ): Promise<T> {
@@ -90,11 +108,16 @@ export class GraphClient {
       res = await this.fetchImpl(url, {
         method,
         headers: {
-          Authorization: `Bearer ${revealCredential(cred)}`,
+          ...(token === '' ? {} : { Authorization: `Bearer ${token}` }),
           Accept: 'application/json',
           ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(init.form !== undefined
+            ? { 'Content-Type': 'application/x-www-form-urlencoded' }
+            : {}),
         },
+        // Bí mật OAuth (code, client_secret, fb_exchange_token) đi trong THÂN form, không bao giờ trong URL/nhật ký.
         ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
+        ...(init.form !== undefined ? { body: new URLSearchParams(init.form).toString() } : {}),
         signal,
       });
     } catch (err) {

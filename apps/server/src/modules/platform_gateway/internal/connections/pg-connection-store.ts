@@ -8,6 +8,7 @@ import { channelConnections, connectSelections, connectStates } from '../db/sche
 import type { Db } from '../../../../core/db';
 import type {
   AuthFailure,
+  ConnectionPatch,
   ConnectionStore,
   NewConnection,
   StoredCandidate,
@@ -61,33 +62,6 @@ export function toStoredConnection(r: ConnRow): StoredConnection {
     version: r.version,
   };
 }
-
-/** Các cột được phép cập nhật bằng `updateRow` (không có `id`, `account_id`, `version`). */
-export type ConnectionPatch = Partial<
-  Pick<
-    typeof channelConnections.$inferInsert,
-    | 'display_name'
-    | 'avatar_url'
-    | 'account_type'
-    | 'granted_scopes'
-    | 'quota_remaining'
-    | 'source_connection_id'
-    | 'token_ciphertext'
-    | 'refresh_ciphertext'
-    | 'token_issued_at'
-    | 'expiry_kind'
-    | 'token_expires_at'
-    | 'status'
-    | 'reason_code'
-    | 'last_error_code'
-    | 'last_checked_at'
-    | 'last_refreshed_at'
-    | 'last_manual_check_at'
-    | 'recheck_required'
-    | 'last_notified_stage'
-    | 'disconnected_at'
-  >
->;
 
 export class PgConnectionStore implements ConnectionStore {
   async getConnection(id: string): Promise<StoredConnection | null> {

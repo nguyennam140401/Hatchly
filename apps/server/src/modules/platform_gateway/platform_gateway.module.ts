@@ -17,6 +17,7 @@ import { PlatformGatewayService } from './internal/gateway.service';
 import { GatewaySettings } from './internal/settings/gateway-settings';
 import { PgGatewaySettingsReader } from './internal/settings/pg-gateway-settings-reader';
 import { FakeCredentialVault, type CredentialVault } from './internal/vault/credential-vault';
+import { ACCOUNT_PUBLIC_API, type AccountPublicApi } from '../account';
 import { NOTIFICATIONS, type NotificationsPublicApi } from '../notifications';
 import { PLATFORM_GATEWAY } from './public-api';
 
@@ -26,6 +27,9 @@ import { PLATFORM_GATEWAY } from './public-api';
 
 const PLATFORM_STORE = Symbol('PLATFORM_STORE');
 const CREDENTIAL_VAULT = Symbol('CREDENTIAL_VAULT');
+// Dùng CHUNG một bộ nhớ đệm công tắc/cấu hình giữa API công khai của cổng và dịch vụ kết nối (≤ 60 giây).
+const FEATURE_GATE = Symbol('FEATURE_GATE');
+const GATEWAY_SETTINGS = Symbol('GATEWAY_SETTINGS');
 
 const NOT_CONFIGURED_STORE = notConfiguredProxy<ConnectionStore>(
   'PLATFORM_GATEWAY_DRIVER',
@@ -92,22 +96,36 @@ const providers = [
       return NOT_CONFIGURED_VAULT;
     },
   },
+  { provide: FEATURE_GATE, useFactory: (): FeatureGate => new FeatureGate(new PgFeatureReader()) },
+  {
+    provide: GATEWAY_SETTINGS,
+    useFactory: (): GatewaySettings => new GatewaySettings(new PgGatewaySettingsReader()),
+  },
   {
     provide: PLATFORM_GATEWAY,
-    inject: [APP_CONFIG, PLATFORM_STORE, CREDENTIAL_VAULT, NOTIFICATIONS],
+    inject: [
+      APP_CONFIG,
+      PLATFORM_STORE,
+      CREDENTIAL_VAULT,
+      NOTIFICATIONS,
+      FEATURE_GATE,
+      GATEWAY_SETTINGS,
+    ],
     useFactory: (
       config: AppConfig,
       store: ConnectionStore,
       vault: CredentialVault,
       notifications: NotificationsPublicApi,
+      features: FeatureGate,
+      settings: GatewaySettings,
     ) =>
       new PlatformGatewayService({
         store,
         vault,
         submitTimeoutMs: config.PLATFORM_SUBMIT_TIMEOUT_MS,
         // 010: công tắc theo khách hàng (đọc lỗi ⇒ tắt), cấu hình dùng chung, thông báo "cần kết nối lại".
-        features: new FeatureGate(new PgFeatureReader()),
-        settings: new GatewaySettings(new PgGatewaySettingsReader()),
+        features,
+        settings,
         notifications,
       }),
   },
@@ -137,9 +155,26 @@ export class PlatformGatewayModule {
         ...providers,
         {
           provide: CONNECTIONS_SERVICE,
-          inject: [PLATFORM_STORE, CREDENTIAL_VAULT],
-          useFactory: (store: ConnectionStore, vault: CredentialVault) =>
-            new ConnectionsService(store, vault),
+          inject: [
+            PLATFORM_STORE,
+            CREDENTIAL_VAULT,
+            FEATURE_GATE,
+            GATEWAY_SETTINGS,
+            ACCOUNT_PUBLIC_API,
+          ],
+          useFactory: (
+            store: ConnectionStore,
+            vault: CredentialVault,
+            features: FeatureGate,
+            settings: GatewaySettings,
+            account: AccountPublicApi,
+          ) =>
+            new ConnectionsService(store, vault, () => new Date(), {
+              features,
+              settings,
+              // Gói hết hạn/đang xóa ⇒ dừng kết nối mới (FR-033); module `account` sở hữu dữ liệu này (ADR-13).
+              eligibility: () => account.getPublishingEligibility(),
+            }),
         },
       ],
       exports: [PLATFORM_GATEWAY],

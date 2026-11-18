@@ -1,3 +1,4 @@
+import { GatewaySettings } from '../../../src/modules/platform_gateway/internal/settings/gateway-settings';
 import { readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { expect } from 'vitest';
@@ -115,7 +116,13 @@ export async function makePlatformHarness(
     publishedCount: (hash) => control.publishedCount(hash),
     gateway: (submitTimeoutMs = 200) =>
       new PlatformGatewayService({ store, vault, submitTimeoutMs }),
-    connections: () => new ConnectionsService(store, vault),
+    // Bộ hợp đồng 005 không kiểm giới hạn kết nối (010 có test riêng) – nâng trần để harness tạo tùy ý.
+    connections: () =>
+      new ConnectionsService(store, vault, () => new Date(), {
+        settings: new GatewaySettings({
+          readAll: () => Promise.resolve({ 'channel.max_per_platform': 1000 }),
+        }),
+      }),
     logText() {
       const file = resolve(
         TEST_LOG_DIR,

@@ -63,6 +63,25 @@ function common(p: 'FB' | 'IG'): ErrorTable {
       remedies: [...WAIT],
       retryAfterSec: 60,
     },
+    // ----- 010: kết nối và kiểm tra điều kiện tài khoản (mỗi dòng ≥ 1 cách khắc phục) -----
+    [`${p}:SCOPE_MISSING`]: {
+      category: 'user_action',
+      messageVi:
+        'Bạn chưa cấp đủ quyền cho ứng dụng. Hãy kết nối lại và cho phép tất cả các quyền được yêu cầu.',
+      remedies: [...RECONNECT],
+    },
+    [`${p}:ROLE_TOO_LOW`]: {
+      category: 'user_action',
+      messageVi:
+        'Tài khoản của bạn chưa có vai trò đủ quyền đăng bài trên Page này. Hãy nhờ quản trị viên Page cấp lại vai trò rồi kiểm tra lại.',
+      remedies: [{ action: 'check_on_platform', labelVi: 'Kiểm tra vai trò trên Page' }],
+    },
+    [`${p}:PAGE_UNAVAILABLE`]: {
+      category: 'user_action',
+      messageVi:
+        'Page này không còn tồn tại hoặc bạn không còn quyền truy cập. Hãy chọn Page khác.',
+      remedies: [...RECONNECT],
+    },
     [`${p}:NET_BEFORE_SEND`]: {
       category: 'transient',
       messageVi: `Chưa kết nối được tới ${name} nên bài chưa được gửi. Hệ thống sẽ tự thử lại.`,
@@ -90,6 +109,12 @@ export const FACEBOOK_ERROR_TABLE: ErrorTable = {
 
 export const INSTAGRAM_ERROR_TABLE: ErrorTable = {
   ...common('IG'),
+  'IG:PAGE_NOT_LINKED': {
+    category: 'user_action',
+    messageVi:
+      'Page này chưa liên kết với tài khoản Instagram chuyên nghiệp. Hãy liên kết trong cài đặt Page rồi kiểm tra lại.',
+    remedies: [{ action: 'check_on_platform', labelVi: 'Liên kết Instagram với Page' }],
+  },
   'IG:NOT_PROFESSIONAL': {
     category: 'user_action',
     messageVi:

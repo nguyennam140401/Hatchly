@@ -295,11 +295,11 @@ export function describePlatformGatewayContract(harness: () => PlatformHarness):
         expect(out.kind).toBe('selection');
         if (out.kind !== 'selection') return;
         const sel = await c.getSelection(out.selectionId);
-        expect(sel.candidates.map((x) => x.check.kind)).toEqual([
-          'eligible',
-          'eligible',
-          'ineligible',
-        ]);
+        // Hợp đồng 010: ứng viên có `selectable` + `blocked` (lý do + cách khắc phục), không còn `check` thô.
+        expect(sel.candidates.map((x) => x.selectable)).toEqual([true, true, false]);
+        expect(sel.candidates[2]?.blocked?.code).toBe('NOT_PROFESSIONAL');
+        expect(sel.candidates[2]?.blocked?.remedies.length).toBeGreaterThanOrEqual(1);
+        expect(sel.remainingSlots).toBeGreaterThan(0);
         expect(JSON.stringify(sel)).not.toContain('fake_tok_');
         const first = await c.saveConnection(out.selectionId, sel.candidates[0]!.externalId);
         expect(first.created).toBe(true);
