@@ -266,7 +266,7 @@ describeDb('MediaPublicApi – hợp đồng (bản thật)', () => {
       expect(r.items[0]).toMatchObject({
         mediaId: readyImage,
         kind: 'image',
-        format: 'image/jpeg',
+        format: 'jpeg',
         bytes: 1200,
         width: 640,
         height: 640,
@@ -274,7 +274,7 @@ describeDb('MediaPublicApi – hợp đồng (bản thật)', () => {
       expect(r.items[1]).toMatchObject({
         mediaId: readyVideo,
         kind: 'video',
-        format: 'video/mp4',
+        format: 'mp4',
         bytes: 5000,
         durationSec: 4,
       });

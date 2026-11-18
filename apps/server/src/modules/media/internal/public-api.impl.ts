@@ -45,6 +45,12 @@ function summaryOf(row: MediaRow): MediaSummary {
   };
 }
 
+/** Tên định dạng ngắn như quy tắc kênh (`jpeg`, `png`, `mp4`, `mov`) – KHÔNG phải loại MIME đầy đủ. */
+export function formatOf(contentType: string): string {
+  const sub = contentType.toLowerCase().split('/')[1] ?? contentType.toLowerCase();
+  return sub === 'quicktime' ? 'mov' : sub;
+}
+
 @Injectable()
 export class MediaPublicApiImpl implements MediaPublicApi {
   private readonly logger = new Logger('media');
@@ -175,7 +181,7 @@ export class MediaPublicApiImpl implements MediaPublicApi {
         mediaId,
         kind: m.kind,
         url: r.url,
-        format: m.contentType,
+        format: formatOf(m.contentType),
         bytes: m.kind === 'image' ? (m.normalizedBytes ?? m.originalBytes) : m.originalBytes,
         width: m.width ?? 0,
         height: m.height ?? 0,
