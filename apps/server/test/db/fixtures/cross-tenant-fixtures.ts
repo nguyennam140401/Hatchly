@@ -14,6 +14,13 @@ import {
   postEvents,
   posts,
 } from '../../../src/modules/content/internal/db/schema';
+import {
+  channelConnections,
+  connectSelections,
+  connectStates,
+  featureOverrideEvents,
+  featureOverrides,
+} from '../../../src/modules/platform_gateway/internal/db/schema';
 import { publishAttempts } from '../../../src/modules/publishing/internal/db/schema';
 import { publishSteps } from '../../../src/modules/publishing/internal/db/publish-steps.log-table';
 import type { CrossTenantOptions } from '../helpers/cross-tenant';
@@ -155,6 +162,67 @@ export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
       reason: 'Nhật ký bước đăng chỉ thêm – migration 0020 chỉ cấp SELECT, INSERT cho app',
     },
   } satisfies CrossTenantOptions<typeof publishSteps>,
+  // 010: kết nối kênh + phiên kết nối + công tắc. Mã quyền chỉ là bản mã giả (không phải mã thật).
+  'platform_gateway.channel_connections': {
+    table: channelConnections,
+    insertRow: () => ({
+      channel_type: 'facebook_page',
+      external_id: `page-${randomBytes(8).toString('hex')}`,
+      display_name: 'Page thử',
+      token_ciphertext: randomBytes(48),
+      token_issued_at: new Date(),
+      expiry_kind: 'token' as const,
+      token_expires_at: new Date(Date.now() + 30 * 86_400_000),
+      connected_at: new Date(),
+    }),
+    updateRow: () => ({ display_name: 'sửa' }),
+  } satisfies CrossTenantOptions<typeof channelConnections>,
+  'platform_gateway.connect_states': {
+    table: connectStates,
+    insertRow: () => ({
+      state_hash: randomBytes(32),
+      user_id: uuidV7(),
+      channel_type: 'facebook_page',
+      expires_at: new Date(Date.now() + 600_000),
+    }),
+    updateRow: () => ({ used_at: new Date() }),
+  } satisfies CrossTenantOptions<typeof connectStates>,
+  'platform_gateway.connect_selections': {
+    table: connectSelections,
+    insertRow: () => ({
+      user_id: uuidV7(),
+      channel_type: 'facebook_page',
+      candidates: [],
+      expires_at: new Date(Date.now() + 600_000),
+    }),
+    updateRow: () => ({ used_at: new Date() }),
+  } satisfies CrossTenantOptions<typeof connectSelections>,
+  'platform_gateway.feature_overrides': {
+    table: featureOverrides,
+    insertRow: () => ({
+      flag_key: 'channel.tiktok',
+      value: true,
+      reason: 'Khách thử nghiệm',
+      changed_by_staff_id: uuidV7(),
+    }),
+    updateRow: () => ({ value: false }),
+    onePerAccount: true,
+  } satisfies CrossTenantOptions<typeof featureOverrides>,
+  'platform_gateway.feature_override_events': {
+    table: featureOverrideEvents,
+    insertRow: () => ({
+      flag_key: 'channel.tiktok',
+      old_value: 'default' as const,
+      new_value: 'on' as const,
+      reason: 'Khách thử nghiệm',
+      changed_by_staff_id: uuidV7(),
+      trace_id: 'trace-test',
+    }),
+    updateRow: () => ({ reason: 'sửa trái phép' }),
+    appendOnly: {
+      reason: 'Nhật ký đổi công tắc chỉ thêm – migration 0023 thu hồi UPDATE, DELETE của app',
+    },
+  } satisfies CrossTenantOptions<typeof featureOverrideEvents>,
 };
 
 /** Bảng tenant đã có spec truy cập chéo riêng (không chạy lại ở đây) – lý do trỏ tệp spec. */

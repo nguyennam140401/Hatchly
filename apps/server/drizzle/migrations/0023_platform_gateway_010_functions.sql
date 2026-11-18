@@ -94,6 +94,10 @@ CREATE VIEW platform_gateway.support_channel_view AS
     FROM platform_gateway.channel_connections
    WHERE account_id = account.current_account_id();
 --> statement-breakpoint
+-- Quyền mặc định của schema cấp SELECT cho app/system trên đối tượng mới → thu hồi (quy tắc i: khung nhìn đọc vượt
+-- RLS chỉ được cấp cho support).
+REVOKE ALL ON platform_gateway.support_channel_view FROM "app", "system";
+--> statement-breakpoint
 GRANT USAGE ON SCHEMA platform_gateway TO "support";
 --> statement-breakpoint
 GRANT SELECT ON platform_gateway.support_channel_view TO "support";
