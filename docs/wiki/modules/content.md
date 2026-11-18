@@ -8,12 +8,14 @@ sources:
     apps/server/src/modules/content/index.ts,
     .specify/memory/architecture.md,
   ]
-updated: 2026-11-14
+updated: 2026-11-16
 status: draft
 related: [modules/context.md, modules/ai_gateway.md, modules/media.md, modules/trends.md]
 ---
 
 # content – Nội dung
+
+> **Cập nhật 012:** Từ 012: bảng `posts`, `channel_variants`, `post_events`, `channel_rules`; hàm công khai nhận `tx` (`ContentPublicApi`: tạo/lưu nháp, chuyển trạng thái có điều kiện, kiểm tra theo kênh, Lịch). Chưa có: `content_plans`, `topics`, `generations`. Phụ thuộc thêm `platform_gateway`. Xem [012](../features/012-manual-compose-approval-calendar.md). Các mục dưới đây là mô tả cũ của 001 và cần rà lại.
 
 ## Trách nhiệm
 

@@ -8,12 +8,14 @@ sources:
     apps/server/src/modules/approval/index.ts,
     .specify/memory/architecture.md,
   ]
-updated: 2026-11-14
+updated: 2026-11-16
 status: draft
 related: [modules/content.md, modules/publishing.md]
 ---
 
 # approval – Duyệt & lịch
+
+> **Cập nhật 012:** Từ 012: điều phối duyệt/trả lại/hủy lịch/đổi giờ/sửa bài đã duyệt trong MỘT giao dịch; có controller `/posts/*`, `/approvals/*`, `/calendar`; vẫn không có bảng. Xem [012](../features/012-manual-compose-approval-calendar.md). Các mục dưới đây là mô tả cũ của 001 và cần rà lại.
 
 ## Trách nhiệm
 
