@@ -66,6 +66,17 @@ describe('ErrorResponse', () => {
     });
     expect(parsed.success).toBe(true);
   });
+  it('nhận `reason` hợp lệ và vẫn nhận phản hồi cũ không có `reason`', () => {
+    const actions = [{ kind: 'navigate', label: 'Đăng nhập', href: '/login' }];
+    const old = ErrorResponse.safeParse({ error: { ...base, actions } });
+    const withReason = ErrorResponse.safeParse({
+      error: { ...base, actions, reason: 'password_changed' },
+    });
+    const bad = ErrorResponse.safeParse({ error: { ...base, actions, reason: 'unknown_reason' } });
+    expect(old.success).toBe(true);
+    expect(withReason.success).toBe(true);
+    expect(bad.success).toBe(false);
+  });
   it('từ chối actions rỗng', () => {
     expect(ErrorResponse.safeParse({ error: { ...base, actions: [] } }).success).toBe(false);
   });
@@ -137,7 +148,8 @@ describe('ERROR_CODES', () => {
 
   it('có mã lỗi xác thực (004) và mỗi mã có thông điệp tiếng Việt', () => {
     const authCodes = Object.keys(AUTH_ERROR_MESSAGES);
-    expect(authCodes).toHaveLength(14);
+    // 14 mã của 004 + 17 mã của 009 (contracts/auth-http-api.md mục 8).
+    expect(authCodes).toHaveLength(31);
     for (const code of authCodes) {
       expect((ERROR_CODES as Record<string, string>)[code]).toBe(code);
       expect(AUTH_ERROR_MESSAGES[code as keyof typeof AUTH_ERROR_MESSAGES].length).toBeGreaterThan(

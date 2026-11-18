@@ -1,6 +1,7 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../../core';
 import { notConfiguredProxy } from '../../core/gateways/not-configured';
+import { registerMetaAdapters } from './internal/adapters/meta/register';
 import { registerDefaultAdapters } from './internal/adapters/registry';
 import type { ConnectionStore } from './internal/connections/connection-store';
 import {
@@ -34,7 +35,25 @@ const providers = [
     provide: PLATFORM_STORE,
     inject: [APP_CONFIG],
     useFactory: async (config: AppConfig): Promise<ConnectionStore> => {
-      if (config.PLATFORM_GATEWAY_DRIVER !== 'fake') return NOT_CONFIGURED_STORE;
+      // 013: bộ chuyển đổi Meta THẬT (đăng ký sau bản giả để thay thế cùng loại kênh).
+      const registerReal = () => {
+        if (config.PLATFORM_ADAPTER_MODE !== 'real') return;
+        registerMetaAdapters({
+          baseUrl: config.META_GRAPH_BASE_URL,
+          version: config.META_GRAPH_VERSION,
+          timeoutMs: Math.min(
+            config.META_GRAPH_TIMEOUT_MS,
+            config.PLATFORM_SUBMIT_TIMEOUT_MS - 1_000,
+          ),
+          facebookReconcile: config.META_FACEBOOK_RECONCILE === 'true',
+          instagramReconcile: config.META_INSTAGRAM_RECONCILE === 'true',
+          facebookVideoMaxBytes: config.FACEBOOK_VIDEO_MAX_BYTES,
+        });
+      };
+      if (config.PLATFORM_GATEWAY_DRIVER !== 'fake') {
+        registerReal();
+        return NOT_CONFIGURED_STORE;
+      }
       const mode = config.FAKE_STATE_STORE ?? 'memory';
       const store = await getFakePlatformStore(mode);
       registerDefaultAdapters({
@@ -42,6 +61,7 @@ const providers = [
         appEnv: config.APP_ENV,
         makeFake: makeFakeAdapterFactory(mode, store),
       });
+      registerReal();
       return store;
     },
   },
@@ -71,10 +91,17 @@ const providers = [
 export class PlatformGatewayModule {
   static forUnit(unit: 'api' | 'worker'): DynamicModule {
     if (unit === 'worker') {
-      return { module: PlatformGatewayModule, providers, exports: [PLATFORM_GATEWAY] };
+      return {
+        module: PlatformGatewayModule,
+        global: true,
+        providers,
+        exports: [PLATFORM_GATEWAY],
+      };
     }
     return {
       module: PlatformGatewayModule,
+      // 012: `content` và `publishing` tiêm PLATFORM_GATEWAY (ranh giới do manifest + check:boundaries kiểm).
+      global: true,
       controllers: [ConnectionsController],
       providers: [
         ...providers,

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { axe } from 'vitest-axe';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiError, fakeApi, keyboardReachable, renderAt } from './helpers';
@@ -36,7 +36,10 @@ describe('RegisterPage', () => {
     fill();
     fireEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }));
     const terms = screen.getByRole('checkbox');
-    expect(terms).toHaveAttribute('aria-invalid', 'true');
+    // Kiểm tra của react-hook-form chạy bất đồng bộ: chờ lỗi hiện ra (kỳ vọng không đổi).
+    await waitFor(() => {
+      expect(terms).toHaveAttribute('aria-invalid', 'true');
+    });
     expect(terms).toHaveAccessibleDescription(/Bạn cần đồng ý điều khoản/);
     expect(api.calls).toHaveLength(0);
   });

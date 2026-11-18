@@ -7,7 +7,13 @@ import { isCustomerPermission, type Permission } from './permissions';
 
 export type AccessDeclaration =
   | { kind: 'public' }
-  | { kind: 'customer'; permissions: Permission[]; allowUnverifiedEmail: boolean }
+  | {
+      kind: 'customer';
+      permissions: Permission[];
+      allowUnverifiedEmail: boolean;
+      /** 009: cho phép người đang ở tài khoản chờ (không thuộc tài khoản nào). */
+      allowDetached: boolean;
+    }
   | { kind: 'staff'; permissions: Permission[] };
 
 const ACCESS_KEY = Symbol('access-declaration');
@@ -32,11 +38,18 @@ export function Public(): MethodDecorator & ClassDecorator {
 export interface CustomerAccessOptions {
   /** Cho phép cả khi email chưa xác nhận (vd /auth/me, đăng xuất, sửa email). */
   allowUnverifiedEmail?: boolean;
+  /**
+   * 009: cho phép cả người không thuộc tài khoản nào (tài khoản chờ) – chỉ cho điểm cuối CÁ NHÂN (tôi
+   * là ai, đăng xuất, cách đăng nhập, lời mời của tôi, tạo tài khoản riêng). KHÔNG dùng kèm quyền:
+   * người ở tài khoản chờ không có quyền nào (kiểm khi khởi động).
+   */
+  allowDetached?: boolean;
 }
 
 /**
  * Khách hàng đã đăng nhập, có ĐỦ mọi quyền liệt kê; mặc định đòi email đã xác nhận.
  * `@CustomerAccess({ allowUnverifiedEmail: true })` – chỉ cần đăng nhập.
+ * Mặc định TỪ CHỐI người ở tài khoản chờ (403 NO_ACCOUNT); mở bằng `allowDetached: true`.
  */
 export function CustomerAccess(
   ...args: [CustomerAccessOptions, ...Permission[]] | Permission[]
@@ -53,6 +66,7 @@ export function CustomerAccess(
     kind: 'customer',
     permissions,
     allowUnverifiedEmail: options.allowUnverifiedEmail === true,
+    allowDetached: options.allowDetached === true,
   });
 }
 

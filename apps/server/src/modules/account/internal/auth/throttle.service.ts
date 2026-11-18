@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
-import { AUTH_CONFIG, type AuthConfig } from '../../../../core';
+import { AUTH_CONFIG, OAUTH_CONFIG, type AuthConfig, type OAuthConfig } from '../../../../core';
 import { authTx } from '../../../../core/db/auth-tx';
 import type { ThrottleKind } from '../db/schema';
 import { hmacKey } from './tokens';
@@ -25,7 +25,10 @@ export interface ThrottleState {
 export class ThrottleService {
   private readonly limits: Record<ThrottleKind, Limit>;
 
-  constructor(@Inject(AUTH_CONFIG) private readonly config: AuthConfig) {
+  constructor(
+    @Inject(AUTH_CONFIG) private readonly config: AuthConfig,
+    @Optional() @Inject(OAUTH_CONFIG) oauth?: OAuthConfig,
+  ) {
     const block = config.loginBlockMinutes;
     const window = config.loginWindowMinutes;
     this.limits = {
@@ -38,6 +41,16 @@ export class ThrottleService {
       mail_reset: { max: 3, windowMinutes: 60, blockMinutes: null },
       mail_verify: { max: 3, windowMinutes: 60, blockMinutes: null },
       register_ip: { max: 20, windowMinutes: 60, blockMinutes: null },
+      // 009 (data-model mục 5). Khóa: email được mời · mã tài khoản · email đích · địa chỉ mạng.
+      mail_invite: { max: 3, windowMinutes: 60, blockMinutes: null },
+      invite_account: {
+        max: oauth?.inviteMaxPerAccountPerDay ?? 10,
+        windowMinutes: 24 * 60,
+        blockMinutes: null,
+      },
+      // Dùng chung cho thư xác nhận liên kết và thư hoàn tất đăng ký.
+      mail_link_confirm: { max: 3, windowMinutes: 60, blockMinutes: null },
+      oauth_start_ip: { max: 30, windowMinutes: 60, blockMinutes: null },
     };
   }
 

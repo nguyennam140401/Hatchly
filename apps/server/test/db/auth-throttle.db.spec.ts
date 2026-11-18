@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { resolveAuthConfig } from '../../src/core/config/auth-config';
+import { resolveOAuthConfig } from '../../src/core/config/oauth-config';
 import { loadConfig } from '../../src/core/config/load-config';
 import { setActiveDatabase } from '../../src/core/db/database';
 import { ThrottleService } from '../../src/modules/account/internal/auth/throttle.service';
@@ -91,5 +92,40 @@ describeDb('ThrottleService', () => {
     expect(stored.some((k) => k.includes(e))).toBe(false);
     await throttle.reset('login_email', e);
     expect(await throttle.hit('login_email', e)).toBe(1);
+  });
+  it('009: bốn bộ đếm mới – mail_invite 3/giờ, mail_link_confirm 3/giờ, oauth_start_ip 30/giờ, invite_account theo cấu hình', async () => {
+    setActiveDatabase(dbA.service);
+    const app = loadConfig({
+      APP_ENV: 'test',
+      ...TEST_AUTH_ENV,
+      DATABASE_APP_URL: dbUrls.app,
+      INVITE_MAX_PER_ACCOUNT_PER_DAY: '2',
+    });
+    const limited = new ThrottleService(resolveAuthConfig(app), resolveOAuthConfig(app));
+    const run = async (kind: Parameters<ThrottleService['consume']>[0], key: string, n: number) => {
+      const out: boolean[] = [];
+      for (let i = 0; i < n; i++) out.push(await limited.consume(kind, key));
+      return out;
+    };
+    expect(await run('mail_invite', email(), 4)).toEqual([true, true, true, false]);
+    expect(await run('mail_link_confirm', email(), 4)).toEqual([true, true, true, false]);
+    const ip = `198.51.100.${Math.floor(Math.random() * 250)}-${randomBytes(2).toString('hex')}`;
+    const starts = await run('oauth_start_ip', ip, 31);
+    expect(starts.slice(0, 30).every(Boolean)).toBe(true);
+    expect(starts[30]).toBe(false);
+    // Khóa theo mã tài khoản; ngưỡng lấy từ INVITE_MAX_PER_ACCOUNT_PER_DAY; tài khoản khác không ảnh hưởng.
+    const account = randomBytes(8).toString('hex');
+    expect(await run('invite_account', account, 3)).toEqual([true, true, false]);
+    expect(await limited.consume('invite_account', randomBytes(8).toString('hex'))).toBe(true);
+    // Không có cấu hình 009 (bản dựng cũ của kiểm thử) → mặc định 10.
+    const fallback = await (async () => {
+      const key = randomBytes(8).toString('hex');
+      const out: boolean[] = [];
+      for (let i = 0; i < 11; i++) out.push(await throttle.consume('invite_account', key));
+      return out;
+    })();
+    expect(fallback.filter(Boolean)).toHaveLength(10);
+    // Các bộ đếm này chỉ đếm, không chặn đăng nhập.
+    expect((await limited.check('mail_invite', email())).blocked).toBe(false);
   });
 });

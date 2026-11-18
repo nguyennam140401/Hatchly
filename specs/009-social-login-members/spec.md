@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Ready for implementation
 
 **Input**: User description: "Dựa trên tài liệu nghiệp vụ và kiến trúc dự án trong @TaiLieuKienTruc, hãy tạo tài liệu nghiệp vụ tính năng Tài khoản & đăng nhập đầy đủ: đăng nhập Facebook / Google, liên kết nhiều cách đăng nhập, xác nhận khi trùng email, mời / gỡ cộng tác viên"
 
@@ -27,6 +27,35 @@ và tự quản lý chúng; (3) khi tài khoản Google/Facebook có email trùn
 tự gộp** mà phải xác nhận; (4) chủ tài khoản mời cộng tác viên qua email và gỡ họ khi cần. Nhân viên
 nội bộ (hỗ trợ, quản trị) không thuộc phạm vi – vẫn chỉ đăng nhập bằng email + mật khẩu ở lối vào riêng.
 
+## Clarifications
+
+### Session 2026-11-13
+
+- Q: Sau khi bị chủ tài khoản gỡ, cộng tác viên có được tự tạo tài khoản kinh doanh riêng bằng chính
+  email đó không? → A: Được. Màn hình "Bạn không còn là thành viên của tài khoản nào" có nút "Tạo tài
+  khoản kinh doanh của riêng tôi" (trở thành chủ một tài khoản mới), hoặc chờ lời mời mới (FR-027).
+- Q: Lời mời đang chờ (chưa được chấp nhận) có tính vào giới hạn 2 cộng tác viên của tài khoản không?
+  → A: Có. Cộng tác viên đang hoạt động + lời mời đang chờ ≤ 2; muốn mời người khác thì hủy lời mời cũ
+  hoặc chờ nó hết hạn sau 7 ngày (FR-021).
+- Q: Khi người được mời chọn tham gia bằng Google hoặc Facebook, tài khoản đó có bắt buộc phải có email
+  trùng với email được mời không? → A: Bắt buộc trùng. Email khác thì từ chối kèm hướng dẫn; Facebook
+  không trả email thì vẫn nhận, vì liên kết mời đã chứng minh người đó giữ email được mời (FR-022).
+- Q: Việc xử lý thông báo từ Meta khi người dùng gỡ ứng dụng hoặc yêu cầu xóa dữ liệu ở phía Facebook
+  có làm ngay trong tính năng này không? → A: Làm phần tối thiểu: nhận thông báo, gỡ cách đăng nhập
+  Facebook của người đó, trả mã xác nhận và trang trạng thái cho Meta, ghi kiểm toán. Xóa toàn bộ dữ
+  liệu tài khoản vẫn thuộc FR-14 (FR-009a).
+- Q: Người dùng không còn thuộc tài khoản nào thì hệ thống giữ thông tin đăng nhập của họ (email, tên,
+  các cách đăng nhập) trong bao lâu? → A: 90 ngày kể từ lúc không còn thuộc tài khoản nào, gửi email
+  báo trước 7 ngày, rồi xóa. Tên người tạo trên bài cũ vẫn giữ theo quy tắc nhật ký 12 tháng (FR-028a).
+- Q: Email do Facebook trả về có được coi là đã xác minh không? → A: Có (chủ sản phẩm chốt 2026-11-14,
+  thay cho lựa chọn "luôn chưa xác minh" trước đó; research R3). Facebook chỉ trả email mà người dùng đã
+  xác nhận với Facebook, nên email Facebook có trả về được xử lý như email Google đã xác minh: người mới
+  vào ngay, trùng email thì hiện màn hình xác nhận. Khi Facebook **không** trả email, hoặc Google ghi
+  rõ email chưa xác minh, người dùng tự nhập email và phải xác minh qua thư; màn hình khi đó luôn là
+  "Hãy kiểm tra email" dù email đã có người dùng hay chưa (FR-004, FR-010a).
+- Q: Có cho đăng nhập bằng số điện thoại không? → A: Chưa. Để sau, thành một tính năng riêng (cần dịch
+  vụ gửi mã OTP); ngoài phạm vi 009.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Vào ứng dụng bằng tài khoản Google hoặc Facebook (Priority: P1)
@@ -47,18 +76,21 @@ nhập "Google"; đăng xuất rồi đăng nhập lại bằng Google → vào 
 
 **Acceptance Scenarios**:
 
-1. **Given** tài khoản Google có email đã được Google xác nhận và chưa có trong hệ thống, **When** người
-   dùng hoàn tất đăng nhập Google và tích ô đồng ý điều khoản, **Then** hệ thống tạo cùng lúc tài khoản
-   khách hàng, người dùng, vai trò chủ và cách đăng nhập "Google"; email được coi là đã xác minh; thời
-   điểm và phiên bản điều khoản đã đồng ý được ghi lại; người dùng được đăng nhập.
+1. **Given** tài khoản Google có email đã được Google xác nhận, hoặc tài khoản Facebook có trả email, và
+   email đó chưa có trong hệ thống, **When** người dùng hoàn tất đăng nhập ở nhà cung cấp và tích ô đồng
+   ý điều khoản, **Then** hệ thống tạo cùng lúc tài khoản khách hàng, người dùng, vai trò chủ và cách
+   đăng nhập tương ứng; email được coi là đã xác minh; thời điểm và phiên bản điều khoản đã đồng ý được
+   ghi lại; người dùng được đăng nhập.
 2. **Given** người dùng đã có cách đăng nhập "Google" gắn với tài khoản Google đó, **When** đăng nhập
    bằng Google, **Then** vào thẳng tài khoản của mình với đúng vai trò hiện tại, không hỏi lại điều khoản.
 3. **Given** người dùng chưa tích ô đồng ý hoặc đóng trình duyệt ở bước xác nhận, **When** quay lại sau,
    **Then** chưa có tài khoản, người dùng hay cách đăng nhập nào được tạo.
-4. **Given** tài khoản Facebook **không trả về email**, **When** hoàn tất đăng nhập Facebook lần đầu,
-   **Then** ứng dụng yêu cầu nhập email và gửi thư xác minh; chỉ sau khi bấm liên kết xác minh người dùng
-   mới dùng được ứng dụng; nếu email nhập vào trùng người dùng đã có thì áp dụng luồng xác nhận của User
-   Story 2.
+4. **Given** đăng nhập Facebook lần đầu mà Facebook **không trả email** (người dùng đăng ký Facebook bằng
+   số điện thoại hoặc từ chối chia sẻ email), **When** quay về ứng dụng, **Then** ứng dụng hiện bước nhập
+   email, tên và ô đồng ý, rồi gửi thư và hiện "Hãy kiểm tra email"; chỉ sau khi bấm liên kết trong thư
+   mới có tài khoản và người dùng mới vào được ứng dụng. Nếu email tự nhập trùng người dùng đã có, màn
+   hình vẫn giống hệt; thư gửi đi là thư xác nhận liên kết, bấm vào thì Facebook được gắn vào người dùng
+   đã có (FR-010a).
 5. **Given** người dùng bấm "Hủy" ở màn hình của nhà cung cấp, từ chối chia sẻ thông tin, hoặc nhà cung
    cấp gặp sự cố, **When** quay lại ứng dụng, **Then** thấy thông báo tiếng Việt đời thường ("Bạn chưa
    hoàn tất đăng nhập bằng Facebook") kèm nút "Thử lại" và "Đăng nhập bằng email"; không có dữ liệu nào
@@ -90,9 +122,12 @@ không được đăng nhập, không có người dùng thứ hai; nhập đún
 
 **Acceptance Scenarios**:
 
-1. **Given** người dùng đã có (email đã xác minh, có mật khẩu) và một tài khoản Google/Facebook cùng email
-   chưa được liên kết, **When** đăng nhập bằng tài khoản đó, **Then** không tạo phiên đăng nhập, không tạo
-   người dùng mới; hiện màn hình xác nhận với hai lựa chọn "Nhập mật khẩu" và "Gửi liên kết qua email".
+1. **Given** người dùng đã có (email đã xác minh, có mật khẩu) và một tài khoản Google (email đã được
+   Google xác minh) hoặc Facebook (có trả email) cùng email chưa được liên kết, **When** đăng nhập bằng
+   tài khoản đó, **Then** không tạo phiên đăng nhập, không tạo người dùng mới; hiện màn hình xác nhận với
+   hai lựa chọn "Nhập mật khẩu" và "Gửi liên kết qua email". Với email người dùng tự nhập (Facebook
+   không trả email) hoặc email Google chưa xác minh: không hiện màn hình này mà xác nhận qua thư theo
+   FR-010a.
 2. **Given** màn hình xác nhận, **When** nhập đúng mật khẩu, **Then** cách đăng nhập mới được gắn vào
    người dùng đã có, người dùng được đăng nhập và nhận email "Tài khoản của bạn vừa được thêm cách đăng
    nhập bằng Google" kèm hướng dẫn nếu không phải họ làm.
@@ -101,9 +136,9 @@ không được đăng nhập, không có người dùng thứ hai; nhập đún
 4. **Given** người dùng chọn "Gửi liên kết qua email", **When** mở liên kết còn hạn (dùng một lần, 30
    phút), **Then** cách đăng nhập được liên kết và người dùng được đăng nhập; liên kết đã dùng, quá hạn
    hoặc đã có liên kết mới hơn → bị từ chối kèm nút "Gửi lại".
-5. **Given** người dùng đã có chỉ đăng nhập bằng Google (không có mật khẩu), **When** đăng nhập bằng
-   Facebook cùng email, **Then** màn hình xác nhận chỉ có lựa chọn "Gửi liên kết qua email" và gợi ý "hoặc
-   đăng nhập bằng Google rồi thêm Facebook trong Cài đặt".
+5. **Given** người dùng đã có chỉ đăng nhập bằng Facebook (không có mật khẩu), **When** đăng nhập bằng
+   Google cùng email, **Then** màn hình xác nhận chỉ có lựa chọn "Gửi liên kết qua email" và gợi ý "hoặc
+   đăng nhập bằng Facebook rồi thêm Google trong Cài đặt".
 6. **Given** người dùng đã có nhưng **email chưa xác minh** (ai đó đã đăng ký bằng email này mà chưa từng
    bấm thư xác minh), **When** chủ thật của email đăng nhập bằng Google/Facebook cùng email, **Then** chỉ
    cho xác nhận qua email; xác nhận xong, mật khẩu cũ bị gỡ, mọi phiên cũ bị thu hồi, email được đánh dấu
@@ -249,8 +284,12 @@ cuối cùng → bị từ chối.
   người dùng phía nhà cung cấp, không theo email); email trong ứng dụng không tự đổi.
 - Google trả email nhưng ghi rõ **chưa xác nhận** → coi như chưa có email đáng tin: yêu cầu xác minh qua
   thư trước khi dùng, và không dùng email đó làm căn cứ liên kết.
-- Người dùng thu hồi quyền của ứng dụng ở phía Google/Facebook → lần đăng nhập sau nhà cung cấp hỏi lại
-  quyền; cách đăng nhập khác (nếu có) không bị ảnh hưởng.
+- Người dùng thu hồi quyền của ứng dụng ở phía Google → lần đăng nhập sau Google hỏi lại quyền; cách
+  đăng nhập khác (nếu có) không bị ảnh hưởng. Ở phía Facebook → Meta gửi thông báo, cách đăng nhập
+  Facebook bị gỡ (FR-009a); người dùng đăng nhập Facebook lại sau đó thì đi qua luồng trùng email như
+  một tài khoản Facebook chưa liên kết.
+- Thông báo của Meta đến cho người dùng mà Facebook là cách đăng nhập duy nhất → cách đó vẫn bị gỡ, người
+  dùng và dữ liệu tài khoản giữ nguyên; email thông báo hướng dẫn vào lại bằng "Quên mật khẩu".
 - Người dùng bị vô hiệu hóa hoặc tài khoản đã yêu cầu xóa (FR-14) đăng nhập bằng Google/Facebook → bị từ
   chối như với mật khẩu; không tạo người dùng mới thay thế.
 - Tài khoản bị tạm dừng/hết hạn gói → vẫn đăng nhập, vẫn quản lý cách đăng nhập và thành viên được (chặn
@@ -264,8 +303,20 @@ cuối cùng → bị từ chối.
   hoàn tất; sau đó mọi yêu cầu bị từ chối.
 - Lời mời đang chờ khi tài khoản bị yêu cầu xóa → mọi lời mời hết hiệu lực ngay.
 - Gửi quá nhiều thư mời/thư xác nhận tới một email → giới hạn theo FR-020; không làm lộ email có tồn tại.
+- Người không thuộc tài khoản nào chấp nhận lời mời hoặc tạo tài khoản riêng ở ngày thứ 89 → không bị
+  xóa; thư báo trước đã gửi không còn hiệu lực. Lời mời đang chờ gửi tới email của họ **không** làm dừng
+  mốc 90 ngày – chỉ việc chấp nhận mới dừng.
+- Việc xóa định kỳ chạy hai lần hoặc bị ngắt giữa chừng → không xóa nhầm người vừa tham gia lại, không
+  gửi trùng thư báo trước.
 - Người bị gỡ chọn "Tạo tài khoản kinh doanh của riêng tôi" rồi lại được mời → áp dụng quy tắc "một người
   dùng thuộc đúng một tài khoản": không chấp nhận được lời mời.
+- Email trùng một người dùng **đã liên kết sẵn một tài khoản khác của cùng nhà cung cấp** (vd đã gắn
+  Facebook A, nay đăng nhập bằng Facebook B cùng email) → không liên kết được (mỗi loại tối đa một –
+  FR-014): email do nhà cung cấp xác minh thì báo "Email này đã liên kết với một tài khoản Facebook khác"
+  kèm nút đăng nhập bằng cách vẫn dùng; email tự nhập thì màn hình vẫn là "Hãy kiểm tra email" và người
+  dùng đã có nhận thư thông tin (không có liên kết) báo có người vừa thử đăng nhập.
+- Xoay phiên (tạo tài khoản riêng, tham gia lại qua lời mời) không được tính là xác nhận lại danh tính
+  (FR-012): phiên mới giữ mốc xác nhận của phiên cũ.
 
 ## Requirements *(mandatory)*
 
@@ -283,9 +334,11 @@ cuối cùng → bị từ chối.
   **một thao tác nguyên vẹn**: tài khoản khách hàng, người dùng, vai trò chủ, cách đăng nhập tương ứng,
   thời điểm + phiên bản điều khoản đã đồng ý.
 - **FR-004**: Email do nhà cung cấp trả về kèm xác nhận "đã được xác minh" MUST được coi là đã xác minh
-  trong ứng dụng. Nếu nhà cung cấp không trả email (Facebook) hoặc trả email chưa xác minh, hệ thống MUST
-  yêu cầu người dùng nhập/xác nhận email và xác minh qua thư theo quy tắc xác minh email của 004 trước khi
-  dùng các chức năng khác.
+  trong ứng dụng: với Google là khi Google khẳng định email đã xác minh; với Facebook là mọi email
+  Facebook có trả về (Facebook chỉ trả email người dùng đã xác nhận). Nếu nhà cung cấp không trả email
+  hoặc trả email chưa xác minh, hệ thống MUST yêu cầu người dùng nhập/xác nhận email và xác minh qua thư
+  theo quy tắc xác minh email của 004; khi đó tài khoản và người dùng MUST chỉ được tạo sau khi liên kết
+  trong thư được mở. Email đã xác minh theo quy tắc này vẫn MUST NOT là căn cứ để tự liên kết (FR-010).
 - **FR-005**: Đăng nhập Facebook MUST chỉ xin thông tin cơ bản (tên, email) và MUST tách biệt hoàn toàn
   với kết nối Page để đăng bài (FR-02): đăng nhập không tạo kết nối kênh nào; ngắt kết nối kênh không ảnh
   hưởng cách đăng nhập và ngược lại.
@@ -301,6 +354,15 @@ cuối cùng → bị từ chối.
 - **FR-009**: Khi người dùng hủy, từ chối quyền hoặc nhà cung cấp lỗi, hệ thống MUST hiện thông báo tiếng
   Việt đời thường kèm ít nhất một hành động khắc phục (thử lại, đăng nhập bằng email); mã lỗi gốc chỉ nằm
   trong "Chi tiết cho hỗ trợ". Sự cố của một nhà cung cấp MUST NOT ảnh hưởng các cách đăng nhập khác.
+- **FR-009a**: Hệ thống MUST nhận thông báo của Meta khi người dùng gỡ ứng dụng hoặc yêu cầu xóa dữ liệu
+  ở phía Facebook. Với thông báo đã kiểm tra là thật sự do Meta gửi, hệ thống MUST: gỡ cách đăng nhập
+  Facebook của người dùng tương ứng (xóa mã người dùng, email, tên phía Facebook đã lưu); trả cho Meta
+  một mã xác nhận và địa chỉ trang trạng thái công khai, trang này chỉ hiện trạng thái xử lý theo mã,
+  không hiện dữ liệu cá nhân; ghi kiểm toán; gửi email thông báo bảo mật cho người dùng (FR-013). Thông
+  báo không kiểm tra được nguồn MUST bị từ chối; thông báo lặp lại hoặc cho người dùng không tồn tại
+  MUST được trả lời thành công mà không có tác dụng phụ. Thao tác này MUST NOT xóa người dùng, vai trò
+  thành viên, bài, media hay kết nối kênh – xóa toàn bộ dữ liệu là FR-14. Nếu Facebook là cách đăng
+  nhập cuối cùng, cách đó vẫn bị gỡ và người dùng vào lại bằng "Quên mật khẩu" (FR-017).
 
 **Trùng email – xác nhận trước khi liên kết**
 
@@ -308,7 +370,12 @@ cuối cùng → bị từ chối.
   khách hàng đã có, hệ thống MUST NOT tạo phiên, MUST NOT tạo người dùng mới và MUST NOT tự liên kết; MUST
   yêu cầu xác nhận quyền sở hữu bằng một trong hai cách: (a) mật khẩu hiện tại của người dùng đó, hoặc (b)
   liên kết gửi tới email đó (dùng một lần, hết hạn 30 phút, liên kết mới vô hiệu liên kết cũ). Chỉ sau khi
-  xác nhận thành công mới liên kết và đăng nhập.
+  xác nhận thành công mới liên kết và đăng nhập. Màn hình báo trùng với hai cách (a)/(b) MUST chỉ hiện
+  khi email đã được nhà cung cấp xác minh.
+- **FR-010a**: Khi email chưa được nhà cung cấp xác minh (email người dùng tự nhập vì Facebook không trả
+  email, email Google ghi rõ chưa xác minh), hệ thống MUST phản hồi giống hệt nhau ("Hãy kiểm tra email") dù email đó đã có người dùng hay
+  chưa, và MUST chỉ cho cách (b). Thư gửi đi là thư hoàn tất đăng ký (email chưa có người dùng, liên kết
+  hạn 24 giờ) hoặc thư xác nhận liên kết (email đã có người dùng, hạn 30 phút).
 - **FR-011**: Cách (a) MUST chỉ được đưa ra khi người dùng đã có có mật khẩu **và** email đã xác minh; nhập
   sai MUST tính vào ngưỡng chống dò mật khẩu của 004. Nếu email của người dùng đã có **chưa xác minh**, hệ
   thống MUST chỉ cho cách (b); khi xác nhận thành công MUST gỡ mật khẩu đã đặt trước đó, thu hồi mọi phiên
@@ -328,7 +395,8 @@ cuối cùng → bị từ chối.
 - **FR-015**: Liên kết MUST bị từ chối nếu tài khoản Google/Facebook đó đã gắn với người dùng khác; hệ
   thống MUST NOT chuyển hay gộp người dùng.
 - **FR-016**: Người dùng MUST gỡ được một cách đăng nhập khi còn ít nhất một cách khác dùng được; gỡ cách
-  cuối cùng MUST bị từ chối kể cả khi hai yêu cầu gỡ gửi đồng thời.
+  cuối cùng MUST bị từ chối kể cả khi hai yêu cầu gỡ gửi đồng thời. Ngoại lệ duy nhất: gỡ theo thông báo
+  của Meta (FR-009a).
 - **FR-017**: Người dùng chưa có mật khẩu MUST tạo được mật khẩu qua liên kết gửi tới email đã xác minh
   của mình (cùng chính sách mật khẩu, hạn liên kết và giới hạn thư như đặt lại mật khẩu của 004); "Quên mật
   khẩu" MUST hoạt động cho người dùng chưa có mật khẩu với phản hồi không phân biệt được.
@@ -343,7 +411,7 @@ cuối cùng → bị từ chối.
   bằng chữ + biểu tượng.
 - **FR-020**: Chủ MUST mời được cộng tác viên bằng email. Lời mời: dùng một lần, hết hạn sau 7 ngày, gắn
   với đúng một email và một tài khoản; "Gửi lại" làm vô hiệu liên kết cũ và tính lại hạn. Giới hạn: tối đa
-  3 thư mời/giờ cho một email và 10 lời mời mới/ngày cho một tài khoản (cấu hình được). Thư mời MUST nêu
+  3 thư mời/giờ cho một email và 10 lời mời mới/ngày cho một tài khoản (ngưỡng theo tài khoản cấu hình được). Thư mời MUST nêu
   tên hiển thị của người mời và tên cửa hàng (nếu đã có hồ sơ), vai trò sẽ nhận và hạn của lời mời.
 - **FR-021**: Tổng (cộng tác viên đang hoạt động + lời mời đang chờ) của một tài khoản MUST NOT vượt 2;
   kiểm tra MUST đúng kể cả khi mời/chấp nhận đồng thời. Lời mời bị hủy hoặc quá hạn MUST trả lại chỗ.
@@ -369,17 +437,24 @@ cuối cùng → bị từ chối.
   người tạo vẫn hiển thị trong lịch sử. Người dùng bị gỡ MUST được giữ (cùng các cách đăng nhập) để có thể
   được mời lại hoặc tự tạo tài khoản riêng.
 - **FR-027**: Người dùng không còn thuộc tài khoản nào, khi đăng nhập, MUST chỉ thấy màn hình trung gian
-  với các hành động: tạo tài khoản kinh doanh của riêng mình (trở thành chủ, cần đồng ý điều khoản nếu
-  phiên bản đã thay đổi), mở lời mời đang chờ, quản lý cách đăng nhập, đăng xuất. MUST NOT truy cập được
+  với các hành động: tạo tài khoản kinh doanh của riêng mình (trở thành chủ, cần tích ô đồng ý điều
+  khoản), mở lời mời đang chờ, quản lý cách đăng nhập, đăng xuất. MUST NOT truy cập được
   bất kỳ dữ liệu nào của tài khoản cũ.
 - **FR-028**: Người bị gỡ MUST nhận email thông báo (nêu tên cửa hàng, không nêu lý do).
+- **FR-028a**: Người dùng không thuộc tài khoản nào liên tục 90 ngày MUST bị xóa thông tin đăng nhập
+  (email, tên hiển thị trong hồ sơ người dùng, mọi cách đăng nhập, mọi phiên); hệ thống MUST gửi email báo
+  trước 7 ngày, nêu ngày xóa và cách giữ lại (tạo tài khoản riêng hoặc chấp nhận lời mời). Mốc 90 ngày
+  MUST tính lại từ đầu mỗi khi người đó thuộc một tài khoản rồi lại rời đi. Việc xóa MUST chạy lại được an
+  toàn, MUST ghi kiểm toán không chứa dữ liệu cá nhân, và MUST NOT đổi bài, media hay nhật ký duyệt/đăng
+  của các tài khoản khách hàng: tên người tạo trong các bản ghi đó giữ theo hạn 12 tháng của nhật ký. Sau
+  khi xóa, email đó đăng ký hoặc được mời lại như một người hoàn toàn mới.
 
 **Kiểm toán, bí mật, cô lập**
 
 - **FR-029**: Hệ thống MUST ghi nhật ký kiểm toán (ai, hành động, kết quả, thời điểm, địa chỉ mạng, mã theo
   dõi) cho: đăng nhập Google/Facebook thành công/thất bại, tạo tài khoản qua nhà cung cấp, yêu cầu và kết
-  quả xác nhận trùng email, thêm/gỡ cách đăng nhập, tạo mật khẩu, gửi/gửi lại/hủy/chấp nhận/hết hạn lời
-  mời, gỡ cộng tác viên. Bản ghi MUST NOT chứa mật khẩu, mã phiên, liên kết hay mã do nhà cung cấp cấp.
+  quả xác nhận trùng email, thêm/gỡ cách đăng nhập (kể cả gỡ theo thông báo của Meta – FR-009a), tạo mật khẩu, gửi/gửi lại/hủy/chấp nhận/hết hạn lời
+  mời, gỡ cộng tác viên, xóa người dùng không thuộc tài khoản nào (FR-028a). Bản ghi MUST NOT chứa mật khẩu, mã phiên, liên kết hay mã do nhà cung cấp cấp.
 - **FR-030**: Mã bí mật của ứng dụng với nhà cung cấp, mã do nhà cung cấp cấp trong lượt đăng nhập, liên
   kết mời và liên kết xác nhận MUST NOT xuất hiện trong nhật ký kỹ thuật, chỉ số, thông báo lỗi, phản hồi
   API hay màn hình hỗ trợ; liên kết chỉ được lưu dạng băm.
@@ -404,7 +479,9 @@ cuối cùng → bị từ chối.
 - **Cách đăng nhập (`account.login_identities` – đã có từ 004)**: gắn với một người dùng; loại (mật khẩu /
   Google / Facebook), mã người dùng phía nhà cung cấp (duy nhất theo cặp với loại), email và tên phía nhà
   cung cấp tại thời điểm liên kết, ngày liên kết. Mỗi người dùng tối đa một cách mỗi loại, tối thiểu một
-  cách.
+  cách (trừ khi cách cuối cùng bị gỡ theo thông báo của Meta – FR-009a).
+- **Yêu cầu xóa dữ liệu từ Meta**: mã xác nhận đã trả cho Meta, thời điểm nhận, trạng thái xử lý; không
+  chứa dữ liệu cá nhân, dùng cho trang trạng thái.
 - **Lượt đăng nhập qua nhà cung cấp**: bản ghi ngắn hạn cho một lần chuyển sang Google/Facebook và quay về;
   gắn với trình duyệt đã bắt đầu, mục đích (đăng nhập / liên kết từ Cài đặt / chấp nhận lời mời), hạn 10
   phút, dùng một lần.
@@ -416,14 +493,16 @@ cuối cùng → bị từ chối.
 - **Thành viên (`account.memberships` – đã có từ 004)**: (tài khoản, người dùng, vai trò, trạng thái); đúng
   1 chủ, ≤ 2 cộng tác viên đang hoạt động; trạng thái "đã gỡ" giữ lại để truy vết.
 - **Người dùng (`account.users` – đã có từ 004)**: thêm khả năng tồn tại mà không thuộc tài khoản nào (sau
-  khi bị gỡ) và không có mật khẩu (chỉ đăng nhập qua nhà cung cấp).
+  khi bị gỡ) và không có mật khẩu (chỉ đăng nhập qua nhà cung cấp). Cần biết thời điểm bắt đầu không
+  thuộc tài khoản nào và thời điểm đã gửi thư báo trước, để xóa sau 90 ngày (FR-028a).
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: Người mới vào được màn hình đầu tiên bằng Google hoặc Facebook trong ≤ 1 phút và ≤ 3 thao
-  tác trong ứng dụng (bấm nút, tích ô đồng ý, bấm tạo tài khoản), không phải đặt mật khẩu.
+  tác trong ứng dụng (bấm nút, tích ô đồng ý, bấm tạo tài khoản), không phải đặt mật khẩu. Riêng khi
+  Facebook không trả email: thêm bước nhập email và mở liên kết trong thư, tổng ≤ 3 phút.
 - **SC-002**: Người đã liên kết đăng nhập lại bằng Google/Facebook trong ≤ 5 giây kể từ khi quay về từ nhà
   cung cấp ở 95% lần.
 - **SC-003**: 0 trường hợp tài khoản Google/Facebook chưa liên kết vào được người dùng đã có mà không qua
@@ -443,7 +522,10 @@ cuối cùng → bị từ chối.
   bản ghi kiểm toán tương ứng.
 - **SC-009**: Không người dùng nào tự khóa mình: 100% lần thử gỡ cách đăng nhập cuối cùng bị từ chối, kể
   cả khi gửi đồng thời.
-- **SC-010**: Các màn hình mới đạt WCAG 2.1 AA khi kiểm bằng công cụ tự động và thao tác hết được chỉ bằng
+- **SC-010**: 100% người dùng không thuộc tài khoản nào quá 90 ngày bị xóa thông tin đăng nhập trong
+  vòng 24 giờ sau mốc đó và đã nhận thư báo trước ít nhất 7 ngày; 0 người đang thuộc một tài khoản bị
+  xóa nhầm; 100% thông báo hợp lệ của Meta (FR-009a) được xử lý xong trong ≤ 1 phút.
+- **SC-011**: Các màn hình mới đạt WCAG 2.1 AA khi kiểm bằng công cụ tự động và thao tác hết được chỉ bằng
   bàn phím/trình đọc màn hình ở bề rộng 360 px.
 
 ## Assumptions
@@ -453,20 +535,27 @@ cuối cùng → bị từ chối.
 - **Ngoài phạm vi**: đăng nhập Google/Facebook và bước xác thực thứ hai cho nhân viên nội bộ; chuyển quyền
   chủ tài khoản; cộng tác viên tự rời tài khoản; một người dùng thuộc nhiều tài khoản; đổi email đăng nhập
   chính sau khi đã xác minh; tự gộp hai người dùng; kết nối Page/Instagram/Zalo (FR-02); yêu cầu xóa tài
-  khoản (FR-14) và việc xử lý thông báo "người dùng xóa ứng dụng / yêu cầu xóa dữ liệu" từ Meta (làm cùng
-  FR-14, MUST có trước khi nộp App Review); gói dịch vụ và chặn theo gói; thông báo trong ứng dụng (module
+  khoản (FR-14) – với thông báo "người dùng gỡ ứng dụng / yêu cầu xóa dữ liệu" từ Meta, tính năng này chỉ gỡ
+  cách đăng nhập Facebook (FR-009a), phần xóa toàn bộ dữ liệu làm cùng FR-14; gói dịch vụ và chặn theo gói; thông báo trong ứng dụng (module
   Thông báo) – tính năng này chỉ gửi email qua giao diện gửi thư tối thiểu của 004.
 - **Một người dùng – một tài khoản** (004 FR-004) được giữ nguyên; vì vậy email đang là chủ/cộng tác viên
   ở nơi khác không nhận lời mời được. Người bị gỡ được phép tự tạo tài khoản riêng để email không bị "kẹt"
-  – đây là suy luận hợp lý, chưa có trong tài liệu gốc; nên xác nhận ở `/speckit-clarify`.
-- **Lời mời đang chờ chiếm chỗ** (tính vào giới hạn 2) để "đủ 2 CTV → khóa nút mời" của UI/UX luôn đúng và
+  (đã chốt – Clarifications 2026-11-13).
+- **Lời mời đang chờ chiếm chỗ** (tính vào giới hạn 2; đã chốt – Clarifications 2026-11-13) để "đủ 2 CTV → khóa nút mời" của UI/UX luôn đúng và
   không có lời mời nào được chấp nhận rồi mới báo hết chỗ.
-- **Chấp nhận lời mời bằng Google/Facebook yêu cầu trùng email được mời**, để liên kết mời bị chuyển tiếp
+- **Chấp nhận lời mời bằng Google/Facebook yêu cầu trùng email được mời** (đã chốt – Clarifications
+  2026-11-13), để liên kết mời bị chuyển tiếp
   không cho người khác vào tài khoản; chủ muốn mời email khác thì mời lại.
 - Các giá trị mặc định theo thông lệ, đổi được bằng cấu hình: hạn lời mời 7 ngày; hạn liên kết xác nhận 30
-  phút; hạn lượt đăng nhập qua nhà cung cấp 10 phút; cửa sổ xác nhận lại danh tính 10 phút; giới hạn thư.
-- Email do Facebook trả về được coi là đã xác minh chỉ khi nhà cung cấp khẳng định điều đó; plan xác định
-  tín hiệu cụ thể của từng nhà cung cấp, không chắc chắn → xử lý như chưa xác minh (FR-004).
+  phút; hạn lượt đăng nhập qua nhà cung cấp 10 phút; cửa sổ xác nhận lại danh tính 10 phút; số lời mời mới
+  mỗi ngày của một tài khoản. Các ngưỡng thư theo email (3 thư/giờ) và số lượt bắt đầu đăng nhập theo địa
+  chỉ mạng là hằng số trong mã.
+- Email Facebook có trả về được coi là đã xác minh (đã chốt 2026-11-14 – Clarifications, FR-004). Giả
+  định nền: Facebook chỉ trả qua API email mà người dùng đã xác nhận; Facebook không có cờ "đã xác minh"
+  riêng như Google. Giả định này MUST được kiểm lại với tài liệu hiện hành của Meta và bằng tài khoản
+  thử trước khi phát hành; nếu sai thì quay về xử lý email Facebook như chưa xác minh (FR-010a). Rủi ro
+  còn lại đã chấp nhận: email cũ đã đổi chủ; được giới hạn vì trùng email không bao giờ tự liên kết.
+- Đăng nhập bằng số điện thoại (OTP) ngoài phạm vi, để thành tính năng riêng sau.
 - Đăng nhập Facebook dùng chung ứng dụng Meta đã đăng ký cho đăng bài nhưng chỉ xin quyền cơ bản (T7); ứng
   dụng Google và Meta đã được đăng ký, có trang chính sách quyền riêng tư & điều khoản (P5). Kiểm thử tự
   động dùng nhà cung cấp đăng nhập giả lập, không gọi ra ngoài.

@@ -8,6 +8,7 @@ import {
 } from '../src/core/config/load-config';
 import { resolveAuthConfig } from '../src/core/config/auth-config';
 import { AppConfigSchema, secret } from '../src/core/config/config.schema';
+import { resolveOAuthConfig } from '../src/core/config/oauth-config';
 import { TEST_AUTH_ENV } from './helpers/auth-env';
 
 const DB = { DATABASE_APP_URL: 'postgres://app:x@127.0.0.1:5432/app' };
@@ -64,9 +65,31 @@ describe('loadConfig', () => {
       NOTIFICATIONS_DRIVER: 'fake',
       STORAGE_DRIVER: 'memory',
       FAKE_STATE_STORE: 'memory',
+      // 009: nhà cung cấp đăng nhập giả lập + hạn mặc định.
+      OAUTH_DRIVER: 'fake',
+      FACEBOOK_GRAPH_VERSION: 'v21.0',
+      OAUTH_FLOW_TTL_MINUTES: 10,
+      LINK_CONFIRM_TTL_MINUTES: 30,
+      REAUTH_WINDOW_MINUTES: 10,
+      INVITE_TTL_DAYS: 7,
+      INVITE_MAX_PER_ACCOUNT_PER_DAY: 10,
+      DETACHED_RETENTION_DAYS: 90,
+      DETACHED_NOTICE_DAYS: 7,
       S3_FORCE_PATH_STYLE: false,
       STAGING_ALLOW_FAKES: false,
+      // 012: cấu hình bài viết, duyệt, lịch.
+      POST_MIN_LEAD_MINUTES: 5,
+      POST_SUGGEST_HOURS: '09:00,12:00,19:00',
+      POST_BULK_APPROVE_LIMIT: 100,
+      POST_BULK_SUBMIT_LIMIT: 50,
+      PUBLISH_EXECUTOR: 'none',
       AI_SYSTEM_WEEKLY_CAP_MICRO_USD: 2_000_000,
+      META_GRAPH_VERSION: 'v21.0',
+      META_GRAPH_BASE_URL: 'https://graph.facebook.com',
+      META_GRAPH_TIMEOUT_MS: 25_000,
+      META_FACEBOOK_RECONCILE: 'false',
+      META_INSTAGRAM_RECONCILE: 'false',
+      FACEBOOK_VIDEO_MAX_BYTES: 1_000_000_000,
       PLATFORM_SUBMIT_TIMEOUT_MS: 30_000,
       AI_PROVIDER_TIMEOUT_MS: 40_000,
       AI_FIRST_TOKEN_TIMEOUT_MS: 5_000,
@@ -286,5 +309,91 @@ describe('cấu hình xác thực của API (004)', () => {
       expect(e.message).toContain('SMTP_URL: giá trị chưa hợp lệ');
       expect(e.message).not.toContain('marker');
     }
+  });
+});
+
+describe('cấu hình đăng nhập qua nhà cung cấp (009)', () => {
+  const base = { ...DB, APP_ENV: 'test' };
+  const real = {
+    OAUTH_DRIVER: 'real',
+    GOOGLE_CLIENT_ID: 'gid',
+    GOOGLE_CLIENT_SECRET: 'gsecret_marker',
+    FACEBOOK_APP_ID: 'fid',
+    FACEBOOK_APP_SECRET: 'fsecret_marker',
+  };
+
+  it('development/test mặc định fake, hạn mặc định theo hợp đồng', () => {
+    const oauth = resolveOAuthConfig(loadConfig(base), { requireCredentials: true });
+    expect(oauth).toMatchObject({
+      driver: 'fake',
+      google: null,
+      facebook: null,
+      flowTtlMinutes: 10,
+      linkConfirmTtlMinutes: 30,
+      reauthWindowMinutes: 10,
+      inviteTtlDays: 7,
+      inviteMaxPerAccountPerDay: 10,
+      detachedRetentionDays: 90,
+      detachedNoticeDays: 7,
+    });
+  });
+
+  it('real thiếu khóa → ConfigError nêu đủ tên biến, không lộ giá trị', () => {
+    try {
+      resolveOAuthConfig(
+        loadConfig({ ...base, OAUTH_DRIVER: 'real', GOOGLE_CLIENT_SECRET: 'gsecret_marker' }),
+        { requireCredentials: true },
+      );
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigError);
+      const e = err as ConfigError;
+      expect(e.issues.map((i) => i.variable)).toEqual([
+        'GOOGLE_CLIENT_ID',
+        'FACEBOOK_APP_ID',
+        'FACEBOOK_APP_SECRET',
+      ]);
+      expect(e.message).not.toContain('marker');
+    }
+  });
+
+  it('real đủ khóa → dùng được; Worker (không đòi khóa) không lỗi khi thiếu', () => {
+    const oauth = resolveOAuthConfig(loadConfig({ ...base, ...real }), {
+      requireCredentials: true,
+    });
+    expect(oauth.driver).toBe('real');
+    expect(oauth.google).toEqual({ clientId: 'gid', clientSecret: 'gsecret_marker' });
+    expect(oauth.facebook).toEqual({ appId: 'fid', appSecret: 'fsecret_marker' });
+    expect(resolveOAuthConfig(loadConfig({ ...base, OAUTH_DRIVER: 'real' })).driver).toBe('real');
+  });
+
+  it('fake ở staging/production → từ chối khởi động, kể cả khi STAGING_ALLOW_FAKES=true', () => {
+    const strict = {
+      ...base,
+      PLATFORM_GATEWAY_DRIVER: 'fake',
+      AI_GATEWAY_DRIVER: 'fake',
+      NOTIFICATIONS_DRIVER: 'fake',
+      FAKE_STATE_STORE: 'sandbox',
+      STORAGE_DRIVER: 's3',
+      S3_ENDPOINT: 'https://s3.example.vn',
+      S3_REGION: 'hcm',
+      S3_BUCKET: 'bucket',
+      S3_ACCESS_KEY_ID: 'k',
+      S3_SECRET_ACCESS_KEY: 's',
+      STAGING_ALLOW_FAKES: 'true',
+      OAUTH_DRIVER: 'fake',
+    };
+    expect(() => loadConfig({ ...strict, APP_ENV: 'staging' })).toThrow(/OAUTH_DRIVER=fake/);
+    expect(() => loadConfig({ ...strict, APP_ENV: 'production' })).toThrow(/OAUTH_DRIVER=fake/);
+    // Không đặt ở staging = chưa bật (điểm cuối trả 503), tiến trình vẫn khởi động.
+    const unset: Record<string, string> = { ...strict };
+    delete unset.OAUTH_DRIVER;
+    expect(resolveOAuthConfig(loadConfig({ ...unset, APP_ENV: 'staging' })).driver).toBe('off');
+  });
+
+  it('DETACHED_NOTICE_DAYS phải nhỏ hơn DETACHED_RETENTION_DAYS', () => {
+    expect(() =>
+      loadConfig({ ...base, DETACHED_RETENTION_DAYS: '5', DETACHED_NOTICE_DAYS: '5' }),
+    ).toThrow(/DETACHED_NOTICE_DAYS/);
   });
 });

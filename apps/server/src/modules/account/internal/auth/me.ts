@@ -37,7 +37,8 @@ export async function loadMeInTx(db: Db, userId: string): Promise<MeResponse | n
     },
     account: { id: row.accountId, status: row.accountStatus as MeResponse['account']['status'] },
     role: row.role,
-    permissions: permissionsOf(row.role),
+    // 009: người ở tài khoản chờ giữ ghế chủ về mặt dữ liệu nhưng không có quyền nào.
+    permissions: row.accountStatus === 'unclaimed' ? [] : permissionsOf(row.role),
   };
 }
 

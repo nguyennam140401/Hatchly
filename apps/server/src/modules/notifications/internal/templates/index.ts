@@ -24,7 +24,8 @@ const LABELS: Record<NotificationAction['kind'], string> = {
 
 const PATHS: Record<NotificationAction['kind'], (id?: string) => string> = {
   open_post: (id) => `/posts/${id ?? ''}`,
-  open_attempt: (id) => `/publishing/attempts/${id ?? ''}`,
+  // 013: đích là MÃ BÀI (refs.postId được ưu tiên) → màn hình Tiến trình đăng của bài.
+  open_attempt: (id) => `/posts/${id ?? ''}/progress`,
   reconnect_channel: (id) => `/channels${id === undefined ? '' : `/${id}`}`,
   open_usage: () => '/settings/ai-usage',
   open_plan: (id) => `/plans${id === undefined ? '' : `/${id}`}`,
@@ -51,13 +52,26 @@ function text(event: NotificationEvent): { titleVi: string; bodyVi: string } {
       titleVi: 'Đã tạo xong các bài nháp',
       bodyVi: 'AI đã tạo xong loạt bài nháp bạn yêu cầu. Mở kế hoạch để xem và sửa.',
     }),
-    publish_needs_action: () => ({
-      titleVi: 'Bài cần bạn kiểm tra',
-      bodyVi:
-        event.type === 'publish_needs_action' && event.refs.state === 'needs_check'
-          ? `Chưa rõ ${quote(p.postTitle)} đã lên ${p.channelDisplayName ?? 'kênh'} hay chưa. Hãy kiểm tra trên trang rồi chọn "Đã đăng" hoặc "Đăng lại".`
-          : `${quote(p.postTitle)} chưa đăng được lên ${p.channelDisplayName ?? 'kênh'}. Mở lượt đăng để xem cách khắc phục.`,
-    }),
+    publish_needs_action: () => {
+      const refs = event.type === 'publish_needs_action' ? event.refs : undefined;
+      const channel = p.channelDisplayName ?? 'kênh';
+      if (refs?.state === 'needs_check') {
+        return {
+          titleVi: 'Bài cần bạn kiểm tra',
+          bodyVi: `Chưa rõ ${quote(p.postTitle)} đã lên ${channel} hay chưa. Hãy kiểm tra trên trang rồi chọn "Đã đăng" hoặc "Đăng lại".`,
+        };
+      }
+      const tail =
+        refs?.reason === 'overdue'
+          ? 'Bài đã quá giờ hẹn nên chưa đăng. Mở lượt đăng để đăng lại.'
+          : refs?.reason === 'retries_exhausted'
+            ? 'Hệ thống đã thử lại nhiều lần nhưng chưa được. Mở lượt đăng để xem cách khắc phục.'
+            : 'Mở lượt đăng để xem cách khắc phục.';
+      return {
+        titleVi: 'Bài chưa đăng được',
+        bodyVi: `${quote(p.postTitle)} chưa đăng được lên ${channel}. ${tail}`,
+      };
+    },
     channel_token_expiring: () => ({
       titleVi: 'Kết nối kênh sắp hết hạn',
       bodyVi: `Quyền đăng bài lên ${p.channelDisplayName ?? 'kênh'} sắp hết hạn. Kết nối lại để bài hẹn giờ vẫn đăng được.`,

@@ -19,7 +19,17 @@ export interface ActiveMember {
   displayName: string;
 }
 
+/** Điều kiện để tài khoản được đăng bài (013, ADR-12). */
+export interface PublishingEligibility {
+  /** Gói còn hiệu lực. */
+  planActive: boolean;
+  /** Tài khoản đang trong luồng xóa. */
+  deletionRequested: boolean;
+}
+
 export interface AccountPublicApi {
+  /** Gói còn hạn và tài khoản không bị xóa? Không cache; chạy trong ngữ cảnh tài khoản (API và Worker). */
+  getPublishingEligibility(): Promise<PublishingEligibility>;
   /**
    * Thành viên đang hoạt động (chủ + cộng tác viên) của tài khoản trong ngữ cảnh – đọc qua tenantTx,
    * không nhận mã tài khoản (nguyên tắc I). Thành viên đã gỡ/khóa không có trong danh sách. Có ở cả API
@@ -41,6 +51,15 @@ export interface AccountPublicApi {
   }): Promise<{ userId: string; seat: number }>;
   /** Gỡ cộng tác viên (chủ → OWNER_REQUIRED); thu hồi mọi phiên của người đó. Chỉ kiểm thử/dữ liệu mẫu. */
   removeMember(input: { accountId: string; userId: string; byUserId: string }): Promise<void>;
+  /**
+   * Tạo một lời mời đang chờ, không gửi thư, trả mã lời mời (009 T087). CHỈ cho dữ liệu mẫu/kiểm thử;
+   * người dùng thật mời qua `POST /members/invitations`. Chiếm một ghế như lời mời thật.
+   */
+  createPendingInvitation(input: {
+    accountId: string;
+    invitedByUserId: string;
+    email: string;
+  }): Promise<{ invitationId: string; token: string; seat: number }>;
   /** Khóa cộng tác viên; thu hồi mọi phiên của người đó. Chỉ kiểm thử/dữ liệu mẫu. */
   disableMember(input: { accountId: string; userId: string; byUserId: string }): Promise<void>;
   /**
@@ -55,6 +74,8 @@ export interface AccountPublicApi {
   /**
    * Tên hiển thị và trạng thái của các người dùng thuộc tài khoản trong ngữ cảnh (006).
    * Người không thuộc tài khoản này (hoặc mã không tồn tại) không có trong kết quả.
+   * 009: người đã bị gỡ khỏi tài khoản này vẫn có trong kết quả với `status: 'removed'` và tên lúc bị
+   * gỡ (lấy từ `former_members`).
    * Chạy trong tenantTx của người gọi – không nhận accountId; không ngữ cảnh → TENANT_CONTEXT_MISSING.
    * Tối đa 100 mã mỗi lần (vượt → lỗi lập trình).
    */

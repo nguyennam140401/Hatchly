@@ -20,6 +20,7 @@ import {
   emailNotVerified,
   forbidden,
   ipNotAllowed,
+  noAccount,
   unauthenticated,
 } from './auth-errors';
 import { cidrMatcher, clientIp, userAgentSummary } from './client-ip';
@@ -37,7 +38,8 @@ import { writeStaffRequestAudit } from './staff-audit';
 
 // Lớp chặn quyền toàn cục, MẶC ĐỊNH TỪ CHỐI (FR-012, FR-013, R7, contracts/authz-api.md mục 6).
 // Thứ tự: khai báo → (Public: cho qua) → cookie đúng loại → bộ nhớ đệm/SessionResolver → gắn người
-// gọi + tài khoản → email đã xác nhận → quyền → (nhân viên) dải mạng.
+// gọi + tài khoản → người ở tài khoản chờ (009: NO_ACCOUNT trừ khi allowDetached) → email đã xác nhận
+// → quyền → (nhân viên) dải mạng.
 // Guard KHÔNG đọc path/query/body: mã tài khoản chỉ đến từ phiên đã tra trong CSDL (nguyên tắc I).
 // Đây là nơi DUY NHẤT gọi `bindAccountToRequest` (quy tắc ranh giới `bind-account-restricted`).
 
@@ -160,13 +162,31 @@ export class AccessGuard implements CanActivate, OnModuleInit {
     const actor = await this.safely(() => this.lookupCustomer(hashToken(token)));
     if (actor === null) {
       clearSessionCookie(res, CUSTOMER_SESSION_COOKIE);
-      throw unauthenticated('customer', 'session_invalid');
+      // Phiên có cookie nhưng không còn hiệu lực: hết hạn/thu hồi (lý do chi tiết cần tra CSDL – xem ghi chú 011).
+      throw unauthenticated('customer', 'session_invalid', 'expired');
     }
     bindActorToRequest(actor);
     bindAccountToRequest(actor.accountId);
 
+    // 009 (research R7): mặc định từ chối người không thuộc tài khoản nào – mọi điểm cuối nghiệp vụ
+    // sẵn có tự động bị chặn mà không phải sửa.
+    if (actor.detached && !declaration.allowDetached) {
+      this.logger.warn({
+        msg: 'auth.denied',
+        event: 'auth.denied',
+        trace_id: getExecutionContext()?.traceId ?? null,
+        actor_id: actor.userId,
+        account_id: actor.accountId,
+        required: declaration.permissions,
+        reason: 'detached',
+      });
+      throw noAccount();
+    }
     if (!declaration.allowUnverifiedEmail && !actor.emailVerified) throw emailNotVerified();
-    const missing = declaration.permissions.find((p) => !roleHasPermission(actor.role, p));
+    // Người ở tài khoản chờ không có quyền nào (kể cả khi khai báo sai lọt qua kiểm tra khởi động).
+    const missing = declaration.permissions.find(
+      (p) => actor.detached || !roleHasPermission(actor.role, p),
+    );
     if (missing !== undefined) {
       this.logDenied(actor.userId, actor.accountId, declaration.permissions, missing);
       throw forbidden(missing, actor.role);

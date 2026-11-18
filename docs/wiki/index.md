@@ -19,6 +19,7 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 - [007-terraform-infra-environments.md](features/007-terraform-infra-environments.md) — 007 Hạ tầng Terraform – staging và production ( current)
 - [008-cicd-jenkins-pipeline.md](features/008-cicd-jenkins-pipeline.md) — 008 CI/CD Jenkins cho test và release ( current)
 - [009-social-login-members.md](features/009-social-login-members.md) — 009 Đăng nhập Google/Facebook và thành viên ( draft)
+- [011-ui-architecture-foundation.md](features/011-ui-architecture-foundation.md) — 011 Nền kiến trúc giao diện; **còn T074** ( draft)
 
 ## Module
 
@@ -39,12 +40,14 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 - [ai-budget.md](concepts/ai-budget.md) — Ngân sách AI và Cổng AI ( draft)
 - [auth-rbac.md](concepts/auth-rbac.md) — Xác thực và phân quyền (RBAC) ( current)
 - [ci-cd.md](concepts/ci-cd.md) — CI/CD với Jenkins và cổng chất lượng ( current)
+- [feature-status.md](concepts/feature-status.md) — Danh sách tính năng và trạng thái đáp ứng ( current)
 - [infra-envs.md](concepts/infra-envs.md) — Hạ tầng và môi trường (Terraform, VNG Cloud) ( current)
 - [migrations.md](concepts/migrations.md) — Migration CSDL tương thích ngược ( current)
 - [module-boundaries.md](concepts/module-boundaries.md) — Ranh giới module (modular monolith) ( current)
 - [publish-idempotency.md](concepts/publish-idempotency.md) — Đăng bài không trùng (thiết kế) ( draft)
 - [queues.md](concepts/queues.md) — Hàng chờ và việc nền (pg-boss) ( current)
 - [tenant-rls.md](concepts/tenant-rls.md) — Cô lập tenant bằng RLS ( current)
+- [web-ui.md](concepts/web-ui.md) — Kiến trúc giao diện web: lớp thư mục, token, dữ liệu, biểu mẫu, cổng ( current)
 
 ## Quyết định (ADR)
 

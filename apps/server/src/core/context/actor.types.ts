@@ -10,6 +10,12 @@ export interface CustomerActor {
   role: CustomerRole;
   emailVerified: boolean;
   sessionId: string;
+  /**
+   * 009 (research R6, R7): tài khoản của phiên đang là tài khoản chờ (`accounts.status = 'unclaimed'`)
+   * – người dùng không thuộc tài khoản nào. Không có quyền nào; chỉ vào được điểm cuối khai báo
+   * `allowDetached`.
+   */
+  detached: boolean;
 }
 
 export interface StaffActor {

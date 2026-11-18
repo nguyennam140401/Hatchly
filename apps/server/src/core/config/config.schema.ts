@@ -151,6 +151,24 @@ export const AppConfigSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // ----- Bài viết, duyệt, lịch (012, contracts/module-api.md mục 6) -----
+  /** Giờ đăng tối thiểu kể từ bây giờ, tính bằng phút (FR-011). */
+  POST_MIN_LEAD_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
+  /** "Giờ vàng" gợi ý, giờ UTC+7, dạng `HH:MM` ngăn cách bằng dấu phẩy. */
+  POST_SUGGEST_HOURS: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d(,([01]\d|2[0-3]):[0-5]\d)*$/, 'dạng HH:MM,HH:MM')
+    .default('09:00,12:00,19:00'),
+  /** Tối đa số bài mỗi lần duyệt / trả lại hàng loạt. */
+  POST_BULK_APPROVE_LIMIT: z.coerce.number().int().min(1).max(500).default(100),
+  /** Tối đa số bài mỗi lần gửi duyệt (khớp `postIds ≤ 50` của thông báo). */
+  POST_BULK_SUBMIT_LIMIT: z.coerce.number().int().min(1).max(50).default(50),
+  /**
+   * Bộ thực thi 5 bước của `publishing.run_attempt` (013): `run` chạy đăng thật qua Cổng nền tảng (bộ chuyển đổi
+   * thật hay giả do cấu hình cổng quyết định); `none` (mặc định) hoãn việc 15 phút và không đổi trạng thái;
+   * `fake` = bí danh cũ của 012 (chạy như `run`, vẫn bị từ chối ở production).
+   */
+  PUBLISH_EXECUTOR: z.enum(['none', 'run', 'fake']).default('none'),
   /** Bắt buộc khi `STORAGE_DRIVER=s3`. */
   S3_ENDPOINT: z.url().optional(),
   /** Địa chỉ ký đường dẫn cho trình duyệt/nền tảng; mặc định = S3_ENDPOINT. */
@@ -163,9 +181,51 @@ export const AppConfigSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // ----- Đăng nhập Google/Facebook, lời mời, tài khoản chờ (009, contracts/module-api.md mục 6) -----
+  /**
+   * `real` | `fake`. development/test: thiếu → `fake`. staging/production: `fake` bị từ chối; thiếu →
+   * đăng nhập qua nhà cung cấp chưa bật (điểm cuối trả 503, đăng nhập bằng email vẫn chạy).
+   */
+  OAUTH_DRIVER: z.enum(['real', 'fake']).optional(),
+  /** Bắt buộc ở API khi `OAUTH_DRIVER=real`. */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: secret(z.string().min(1).optional()),
+  FACEBOOK_APP_ID: z.string().min(1).optional(),
+  /** Cũng dùng để kiểm `signed_request` của Meta (FR-009a). */
+  FACEBOOK_APP_SECRET: secret(z.string().min(1).optional()),
+  /** Phiên bản Graph API cho lời gọi `/me` (vd `v21.0`). */
+  FACEBOOK_GRAPH_VERSION: z
+    .string()
+    .regex(/^v\d{1,3}\.\d{1,2}$/)
+    .default('v21.0'),
+  OAUTH_FLOW_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(10),
+  LINK_CONFIRM_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
+  REAUTH_WINDOW_MINUTES: z.coerce.number().int().min(1).max(120).default(10),
+  INVITE_TTL_DAYS: z.coerce.number().int().min(1).max(60).default(7),
+  INVITE_MAX_PER_ACCOUNT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(10),
+  DETACHED_RETENTION_DAYS: z.coerce.number().int().min(2).max(3650).default(90),
+  DETACHED_NOTICE_DAYS: z.coerce.number().int().min(1).max(365).default(7),
   /** Trần chi phí AI việc hệ thống (xu hướng) mỗi tuần, micro-USD. */
   AI_SYSTEM_WEEKLY_CAP_MICRO_USD: z.coerce.number().int().min(0).default(2_000_000),
   /** Hết thời gian chờ phản hồi `submit` → kết quả `unknown` (không bao giờ `transient`). */
+  /**
+   * 013: `real` đăng ký bộ chuyển đổi THẬT của Facebook Page/Instagram (thay bản giả cùng loại kênh); bỏ trống =
+   * theo `PLATFORM_GATEWAY_DRIVER`. Production KHÔNG được dùng bản giả (xem assert-no-fakes).
+   */
+  PLATFORM_ADAPTER_MODE: z.enum(['real', 'fake']).optional(),
+  /** Phiên bản Graph API cố định của Meta. */
+  META_GRAPH_VERSION: z
+    .string()
+    .regex(/^v\d+\.\d+$/)
+    .default('v21.0'),
+  META_GRAPH_BASE_URL: z.url().default('https://graph.facebook.com'),
+  /** Hết thời gian chờ một lời gọi Graph (ms) – PHẢI nhỏ hơn `PLATFORM_SUBMIT_TIMEOUT_MS`. */
+  META_GRAPH_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(25_000),
+  /** Đối soát bằng đọc lại bài gần đây: mặc định tắt cho tới khi POC-2 xác nhận (tắt → "Cần kiểm tra"). */
+  META_FACEBOOK_RECONCILE: z.enum(['true', 'false']).default('false'),
+  META_INSTAGRAM_RECONCILE: z.enum(['true', 'false']).default('false'),
+  /** Giới hạn dung lượng một video Facebook (byte): 1 GB theo quyết định của PO (2026-11-16). */
+  FACEBOOK_VIDEO_MAX_BYTES: z.coerce.number().int().min(1_000_000).default(1_000_000_000),
   PLATFORM_SUBMIT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(120_000).default(30_000),
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(40_000),
   AI_FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5_000),

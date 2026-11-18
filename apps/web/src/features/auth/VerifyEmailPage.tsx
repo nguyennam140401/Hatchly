@@ -1,10 +1,17 @@
 import type { MeResponse } from '@app/shared/auth';
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ApiError } from '../../lib/api-client';
+import { authApi, takeFragmentToken } from '../../lib/api/endpoints/auth';
+import { AppError } from '../../lib/api/errors';
+import { ErrorNotice } from '../../lib/api/ErrorNotice';
+import { objectSchema } from '../../lib/forms/rules';
+import { useAppForm } from '../../lib/forms/useAppForm';
+import { InlineAlert } from '../../ui/alert/InlineAlert';
+import { Button } from '../../ui/button/Button';
+import { Form } from '../../ui/form/Form';
+import { TextField } from '../../ui/form/fields/inputs';
+import { TextLink } from '../../ui/nav/TextLink';
 import { AuthLayout } from './AuthLayout';
-import { authApi, takeFragmentToken } from './auth-api';
-import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 
 // Xác nhận email (US1, FR-008, FR-008a): mã nằm sau `#token=` (không gửi lên máy chủ web, không vào
 // nhật ký truy cập) và được XÓA khỏi thanh địa chỉ trước khi gọi API. Không có mã mà đang đăng nhập
@@ -13,17 +20,29 @@ import { ErrorNotice, InfoNotice, styles, TextField } from './ui';
 type State =
   | { kind: 'checking' }
   | { kind: 'verifying' }
-  | { kind: 'invalid'; error: ApiError }
+  | { kind: 'invalid'; error: AppError }
   | { kind: 'pending'; me: MeResponse }
   | { kind: 'anonymous' };
+
+export interface ChangeEmailValues extends Record<string, unknown> {
+  email: string;
+}
 
 export function VerifyEmailPage() {
   const navigate = useNavigate();
   const [state, setState] = useState<State>({ kind: 'checking' });
   const [notice, setNotice] = useState<string | null>(null);
-  const [newEmail, setNewEmail] = useState('');
-  const [emailError, setEmailError] = useState<string | undefined>(undefined);
   const started = useRef(false);
+
+  const changeEmail = useAppForm<ChangeEmailValues>({
+    schema: objectSchema<ChangeEmailValues>({}),
+    defaultValues: { email: '' },
+    onSubmit: async (values) => {
+      await authApi.changeEmail(values.email);
+      setNotice(`Đã gửi thư xác nhận tới ${values.email.trim()}. Hãy mở thư mới để xác nhận.`);
+      changeEmail.methods.reset({ email: '' });
+    },
+  });
 
   useEffect(() => {
     if (started.current) return; // StrictMode gọi hiệu ứng hai lần – mã chỉ dùng được một lần.
@@ -35,7 +54,7 @@ export function VerifyEmailPage() {
       authApi.verifyEmail(token).then(
         () => void navigate('/', { replace: true }),
         (err: unknown) => {
-          if (err instanceof ApiError) setState({ kind: 'invalid', error: err });
+          if (err instanceof AppError) setState({ kind: 'invalid', error: err });
         },
       );
       return;
@@ -51,23 +70,10 @@ export function VerifyEmailPage() {
     );
   }, [navigate]);
 
-  const resend = (email?: string) =>
-    authApi.resend(email).then(() => {
+  const resend = () =>
+    authApi.resend().then(() => {
       setNotice('Đã gửi lại thư xác nhận. Nếu chưa thấy, hãy xem cả mục Thư rác.');
     });
-
-  async function changeEmail(e: SyntheticEvent) {
-    e.preventDefault();
-    setEmailError(undefined);
-    try {
-      await authApi.changeEmail(newEmail);
-      setNotice(`Đã gửi thư xác nhận tới ${newEmail.trim()}. Hãy mở thư mới để xác nhận.`);
-      setNewEmail('');
-    } catch (err) {
-      if (!(err instanceof ApiError)) throw err;
-      setEmailError(err.fieldErrors().email ?? err.message);
-    }
-  }
 
   switch (state.kind) {
     case 'checking':
@@ -82,20 +88,17 @@ export function VerifyEmailPage() {
     case 'invalid':
       return (
         <AuthLayout title="Liên kết không dùng được">
-          <ErrorNotice error={state.error}>
-            <a href="/login" style={styles.link}>
-              Đăng nhập để gửi lại thư
-            </a>
-          </ErrorNotice>
+          <ErrorNotice
+            error={state.error}
+            actions={[{ kind: 'navigate', label: 'Đăng nhập để gửi lại thư', href: '/login' }]}
+          />
         </AuthLayout>
       );
     case 'anonymous':
       return (
         <AuthLayout title="Xác nhận email">
           <p>Hãy mở liên kết trong thư xác nhận, hoặc đăng nhập để gửi lại thư.</p>
-          <a href="/login" style={styles.link}>
-            Đăng nhập
-          </a>
+          <TextLink to="/login">Đăng nhập</TextLink>
         </AuthLayout>
       );
     case 'pending':
@@ -105,35 +108,23 @@ export function VerifyEmailPage() {
             Chúng tôi đã gửi thư tới <strong>{state.me.user.email}</strong>. Bấm liên kết trong thư
             để tiếp tục.
           </p>
-          {notice !== null && <InfoNotice>{notice}</InfoNotice>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-            <button type="button" style={styles.secondary} onClick={() => void resend()}>
+          {notice !== null && <InlineAlert tone="info">{notice}</InlineAlert>}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => void resend()}>
               Gửi lại thư
-            </button>
-            <button
-              type="button"
-              style={styles.secondary}
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 void authApi.logout().finally(() => void navigate('/login', { replace: true }));
               }}
             >
               Đăng xuất
-            </button>
+            </Button>
           </div>
-          <form onSubmit={(e) => void changeEmail(e)} noValidate>
-            <h2 style={{ fontSize: 18 }}>Sửa email đăng ký</h2>
-            <TextField
-              label="Email mới"
-              type="email"
-              value={newEmail}
-              onChange={setNewEmail}
-              autoComplete="email"
-              error={emailError}
-            />
-            <button type="submit" style={styles.primary}>
-              Lưu và gửi thư mới
-            </button>
-          </form>
+          <Form form={changeEmail} title="Sửa email đăng ký" submitLabel="Lưu và gửi thư mới">
+            <TextField name="email" label="Email mới" type="email" autoComplete="email" />
+          </Form>
         </AuthLayout>
       );
   }

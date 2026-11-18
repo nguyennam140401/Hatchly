@@ -48,6 +48,7 @@
         "trends",
         "ai_gateway",
         "notifications",
+        "platform_gateway",
         "queue"
       ]
     },
@@ -66,7 +67,7 @@
       "kind": "business",
       "schema": "publishing",
       "runsIn": ["api", "worker"],
-      "allowedDeps": ["content", "media", "platform_gateway", "notifications", "queue"]
+      "allowedDeps": ["account", "content", "media", "platform_gateway", "notifications", "queue"]
     },
     {
       "name": "platform_gateway",

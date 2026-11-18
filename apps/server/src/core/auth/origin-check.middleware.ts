@@ -16,8 +16,19 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  */
 const MACHINE_PATHS = ['/api/v1/ops/smoke'];
 
+/**
+ * 009 (FR-009a, research R15): hai điểm cuối do MÁY CHỦ META gọi (thông báo gỡ ứng dụng / xóa dữ liệu).
+ * Danh sách CỐ ĐỊNH TRONG MÃ, khớp CHÍNH XÁC đường dẫn (không theo tiền tố). Thay cho kiểm tra nguồn
+ * gửi: bắt buộc chữ ký HMAC hợp lệ của `signed_request`; hai điểm cuối này không đọc cookie.
+ */
+export const META_CALLBACK_PATHS: readonly string[] = [
+  '/api/v1/auth/facebook/deauthorize',
+  '/api/v1/auth/facebook/data-deletion',
+];
+
 const isMachinePath = (url: string | undefined): boolean => {
   const path = (url ?? '').split('?')[0] ?? '';
+  if (META_CALLBACK_PATHS.includes(path)) return true;
   return MACHINE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 };
 

@@ -106,6 +106,7 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
         }
         const result = await adapter.checkAccount(await this.credential(connection), {
           connectionId,
+          externalId: connection.externalId,
         });
         if (!AccountCheckShape.safeParse(result).success) {
           return {
@@ -163,6 +164,7 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
             media: req.media,
             contentHash: req.contentHash,
             connectionId: connection.id,
+            externalId: connection.externalId,
             signal: controller.signal,
           })
           .then(
@@ -192,7 +194,10 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
           return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
         }
         const value: unknown = await adapter
-          .checkStatus(await this.credential(connection), processingId, { connectionId })
+          .checkStatus(await this.credential(connection), processingId, {
+            connectionId,
+            externalId: connection.externalId,
+          })
           .catch(() => undefined);
         return assertResultShape('checkStatus', connection.channelType, value);
       },
@@ -219,6 +224,7 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
         const value: unknown = await adapter
           .reconcile(await this.credential(connection), {
             connectionId: connection.id,
+            externalId: connection.externalId,
             contentHash: req.contentHash,
             from: req.from,
             to: req.to,
@@ -245,7 +251,10 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
           return { kind: 'failed', error: this.disconnectedError(connection.channelType) };
         }
         const result: unknown = await adapter
-          .refreshToken(await this.credential(connection), { connectionId })
+          .refreshToken(await this.credential(connection), {
+            connectionId,
+            externalId: connection.externalId,
+          })
           .catch(() => undefined);
         const parsed = RefreshTokenShape.safeParse(result);
         if (!parsed.success) {
@@ -266,6 +275,12 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
 
   contentHash(channelType: ChannelType, text: string): string {
     return getAdapter(channelType).contentHash(text);
+  }
+
+  listConnections(): Promise<ChannelConnection[]> {
+    return withGatewayOp('platform_gateway', 'listConnections', {}, async () =>
+      (await this.opts.store.listConnections()).map(toChannelConnection),
+    );
   }
 
   getConnection(connectionId: string): Promise<ChannelConnection | null> {

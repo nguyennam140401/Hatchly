@@ -25,6 +25,8 @@ export const DEFAULT_STEPS = [
   simple('typecheck'),
   simple('lint'),
   simple('check:boundaries'),
+  // 011 (FR-005, FR-032, SC-002): không màu/cỡ chữ/khoảng cách viết cứng, không định dạng tiền ở khu vực khách hàng.
+  simple('check:web-rules'),
   simple('check:secrets'),
   // 008 (R19): phiên bản cố định, lược đồ tham số môi trường, làn, ngoại lệ hợp lệ, helm lint.
   simple('check:pipeline'),
@@ -52,6 +54,8 @@ export const DEFAULT_STEPS = [
   // Kiểm thử trình duyệt (006, nhóm g): Playwright + Chromium trên CSDL tạm, API/web cổng riêng.
   // Cài trình duyệt một lần: pnpm --filter @app/e2e exec playwright install chromium.
   { ...simple('test:e2e'), ...NEEDS_DB },
+  // 011 (SC-003, SC-004): danh mục + khung ứng dụng ở 360/768/1280 px, axe 0 lỗi nghiêm trọng. Không cần CSDL; thiếu Chromium → bỏ qua.
+  simple('test:web-e2e'),
   // 008 (FR-022…024): dựng ảnh phát hành, kiểm nội dung, chạy ba vai migrate → api → worker.
   { ...simple('check:image'), ...NEEDS_DB },
 ];

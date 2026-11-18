@@ -41,7 +41,8 @@ describe('StartPage', () => {
     expect(screen.getByRole('img', { name: 'Cảnh báo' })).toHaveTextContent('⚠');
 
     const retry = screen.getByRole('button', { name: 'Thử lại' });
-    expect(retry).toHaveStyle({ minWidth: '44px', minHeight: '44px' });
+    // Vùng chạm ≥ 44 px nay do lớp token `min-h-touch`/`min-w-touch` đảm bảo (không còn style nội tuyến).
+    expect(retry).toHaveClass('min-h-touch', 'min-w-touch');
 
     fetchMock.mockImplementation(() => json(healthy));
     fireEvent.click(retry);

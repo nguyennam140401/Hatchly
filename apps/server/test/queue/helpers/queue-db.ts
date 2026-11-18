@@ -75,7 +75,7 @@ export async function setQueueSettings(
 export async function resetQueueSettings(): Promise<void> {
   const seed: [string, number, number | null, number, number, string, number, number[], number][] =
     [
-      ['publish', 10, 3, 120, 30, 'handler', 5, [60], 1000],
+      ['publish', 10, 3, 120, 30, 'handler', 20, [60], 1000],
       ['media', 2, 1, 900, 30, 'schedule', 3, [60, 300, 900], 5000],
       ['ai_batch', 5, 3, 180, 30, 'schedule', 2, [30, 120], 2000],
       ['trends', 2, 1, 600, 30, 'schedule', 3, [3600, 14400], 5000],

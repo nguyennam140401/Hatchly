@@ -1,0 +1,69 @@
+{
+  "$comment": "Giá trị thiết kế trích từ Figma 'Nhịp – Thư viện thiết kế' (specs/011-ui-architecture-foundation/figma-extract.md mục 1–3). Sửa tệp này rồi chạy `node tooling/sync-design-tokens.mjs` – khối @theme trong tokens.css được sinh lại.",
+  "fontFamily": "\"Be Vietnam Pro\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+  "colors": {
+    "surface-0": "#FFFFFF",
+    "surface-100": "#F7F6F2",
+    "surface-200": "#EEECE6",
+    "line": "#DAD7CF",
+    "line-strong": "#8C887E",
+    "ink": "#1C1B19",
+    "ink-muted": "#5E5B54",
+    "brand": "#0E6F60",
+    "brand-strong": "#0A584C",
+    "brand-soft": "#DCEFEA",
+    "on-brand": "#FFFFFF",
+    "spark": "#E8912A",
+    "spark-soft": "#FCEBD3",
+    "spark-ink": "#8A4B05",
+    "success": "#1E7A3A",
+    "success-soft": "#E1F2E5",
+    "warning": "#7A4F00",
+    "warning-soft": "#FFF1CC",
+    "danger": "#B42318",
+    "danger-soft": "#FDE4E1",
+    "info": "#1D5FA8",
+    "info-soft": "#E2ECF8"
+  },
+  "fontSizes": {
+    "display": { "size": 32, "lineHeight": 40, "weight": 700 },
+    "title": { "size": 24, "lineHeight": 32, "weight": 700 },
+    "heading": { "size": 18, "lineHeight": 26, "weight": 600 },
+    "body": { "size": 16, "lineHeight": 24, "weight": 400 },
+    "body-sm": { "size": 14, "lineHeight": 20, "weight": 400 },
+    "label": { "size": 14, "lineHeight": 20, "weight": 600 },
+    "caption": { "size": 12, "lineHeight": 16, "weight": 500 }
+  },
+  "spacing": {
+    "0": 0,
+    "px": 1,
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "6": 24,
+    "8": 32
+  },
+  "sizes": {
+    "touch": 44,
+    "topbar": 56,
+    "navbar": 64,
+    "sidebar": 248,
+    "gutter": 16,
+    "phone": 390
+  },
+  "radius": {
+    "sm": 6,
+    "md": 10,
+    "lg": 16,
+    "pill": 999
+  },
+  "breakpoints": {
+    "lg": 1024
+  },
+  "motion": {
+    "duration-fast": 120,
+    "duration-base": 200,
+    "ease-standard": "cubic-bezier(0.2, 0, 0, 1)"
+  }
+}

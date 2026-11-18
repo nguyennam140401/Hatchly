@@ -42,13 +42,16 @@
     "test:infra": "pnpm --filter @app/server test:infra",
     "test:queue-soak": "pnpm --filter @app/server test:queue-soak",
     "test:e2e": "pnpm --filter @app/e2e test:e2e",
-    "queue:sql": "pnpm --filter @app/server queue:sql"
+    "queue:sql": "pnpm --filter @app/server queue:sql",
+    "check:web-rules": "node tooling/check-web-rules.mjs",
+    "test:web-e2e": "node tooling/run-web-e2e.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@types/node": "24.19.2",
     "dependency-cruiser": "18.7.2",
     "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.14.0",
     "prettier": "3.9.10",

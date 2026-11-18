@@ -8,6 +8,8 @@ export const TEST_AUTH_ENV = {
   MAIL_TRANSPORT: 'memory',
   ARGON2_MEMORY_KIB: '64',
   ARGON2_TIME_COST: '1',
+  // 009: nhà cung cấp đăng nhập giả lập – kiểm thử không gọi ra ngoài.
+  OAUTH_DRIVER: 'fake',
 } as const;
 
 /** Nguồn (Origin) hợp lệ cho yêu cầu thay đổi dữ liệu trong kiểm thử. */

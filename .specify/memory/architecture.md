@@ -1,13 +1,15 @@
 # Đặc tả kiến trúc triển khai – Ứng dụng AI tạo & đăng nội dung MXH
 
-- Phiên bản: 1.4 (2026-11-10) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
+- Phiên bản: 1.6 (2026-11-16) · Trạng thái: tổng hợp từ tài liệu đã duyệt; v1.1 cập nhật theo tính năng
   001 (kho mã nguồn chia module): `platform_gateway` có schema riêng, `approval` có schema dành sẵn;
   v1.2 theo tính năng 002 (lớp CSDL): vai trò `system` đặt được ngữ cảnh tenant và chịu RLS, biểu thức
   RLS dùng `account.current_account_id()`, thêm thuật ngữ lớp CSDL ở mục 11; v1.3 theo tính năng 003
   (lớp hàng chờ): bảng `queue_settings`, `dead_jobs`, `schedule_slots` + schema `pgboss` (mục 4), ghi chú
   hiện thực hàng chờ (mục 6), thuật ngữ hàng chờ (mục 11); v1.4 theo tính năng 004
   (xác thực tối thiểu): chốt T7 (bộ thư viện nhỏ thay khung trọn gói, lý do RLS), lớp chặn quyền ở API
-  (mục 5), dữ liệu cá nhân mới, thuật ngữ xác thực ở mục 11
+  (mục 5), dữ liệu cá nhân mới, thuật ngữ xác thực ở mục 11; v1.6 theo tính năng 012 (bài, duyệt, lịch):
+  bảng của `content`/`publishing` (mục 4), `content → platform_gateway` trong tệp kê khai, thuật ngữ
+  bài/duyệt/lịch (mục 11)
 - Nguồn: `TaiLieuDacTa/` – Đặc tả yêu cầu v1.7, ADD tổng thể v1.2, ADD module Worker v1.1 /
   Đăng bài v1.1 / Cổng AI v1.0, ADR-01…10, Kiến trúc dữ liệu & cache v1.2, Lựa chọn công nghệ v1.1
 - Vai trò: tài liệu tham chiếu kỹ thuật cho `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`.
@@ -140,16 +142,22 @@ thành job trong cùng giao dịch. CI tự động kiểm tra phụ thuộc gi�
 | Business Context (`context`) | `context` | `business_profiles`, `profile_versions`, `context_files` | Hồ sơ kinh doanh có phiên bản | FR-01 |
 | Media Library (`media`) | `media` | `media`, `media_labels` | Presigned URL, chuẩn hóa, gán nhãn, tìm theo nhãn, không xử lý lại tệp trùng | FR-03 |
 | Trends (`trends`) | `trends` | `industries`, `industry_trends`, `account_keywords` | Xu hướng theo ngành hằng tuần (dùng chung); từ khóa riêng + RSS khi tạo kế hoạch | FR-04 |
-| Content (`content`) | `content` | `content_plans`, `topics`, `posts`, `channel_variants`, `generations` | Kế hoạch, chủ đề, bài, mỗi kênh một phiên bản, tạo lại ≤ 5 lần; trạng thái duyệt nằm trên `posts` | FR-04, 05, 06 |
+| Content (`content`) | `content` | `posts`, `channel_variants`, `post_events`, `channel_rules` (012); `content_plans`, `topics`, `generations` (sau) | Kế hoạch, chủ đề, bài, mỗi kênh một phiên bản, tạo lại ≤ 5 lần; trạng thái duyệt nằm trên `posts` | FR-04, 05, 06 |
 | Approval & Schedule (`approval`) | `approval` (dành sẵn, để trống) | — | Thao tác duyệt bài và xếp lịch; chỉ chạy ở API. Thêm bảng vào schema này cần đặc tả mới | FR-06 |
-| Publishing (`publishing`) | `publishing` | `publish_attempts`, `publish_steps`, `error_mappings` | Lượt đăng 5 bước, phân loại lỗi, đối soát; module duy nhất được gọi `platform_gateway` | FR-06–10 |
+| Publishing (`publishing`) | `publishing` | `publish_attempts` (012: mục lịch đăng); `publish_steps`, `error_mappings` (013) | Lượt đăng 5 bước, phân loại lỗi, đối soát; module duy nhất được gọi `platform_gateway` | FR-06–10 |
 | Platform Gateway (`platform_gateway`) | `platform_gateway` | `channel_connections` | Kết nối kênh, mã quyền truy cập mã hóa (chỉ module này giải mã), bộ chuyển đổi từng nền tảng sau giao diện chung (ADR-05) | FR-02, 07 |
 | AI Gateway (`ai_gateway`) | `ai_gateway` | `ai_budgets`, `ai_cost_ledger`, `model_prices` | Điểm duy nhất gọi AI; giữ chỗ/quyết toán ngân sách; chọn mô hình; ghi sổ chi phí | FR-11, 12 |
 | Notifications (`notifications`) | `notifications` | `notifications` | Thông báo trong ứng dụng + email, chống gửi lặp, gộp tin trong 10 phút | FR-09 |
 | Queue – hạ tầng (`queue`) | `infra` (+ schema thư viện `pgboss`) | `queue_settings`, `dead_jobs`, `schedule_slots`, `audit_log` (+ `pgboss.job_common`, `pgboss.queue` của pg-boss 12.38.0) | Bọc hàng chờ (pg-boss sau giao diện riêng), giới hạn theo tenant, việc hỏng, việc định kỳ, nhật ký kiểm toán | — |
 
 "Duyệt & lịch" (FR-06) có schema `approval` dành sẵn, chưa có bảng: trạng thái duyệt nằm trên
-`content.posts`, giờ đăng nằm trên `publishing.publish_attempts`.
+`content.posts`, giờ đăng nằm trên `publishing.publish_attempts`. Từ 012, `approval` là NƠI ĐIỀU PHỐI duy
+nhất: mọi thao tác đổi trạng thái bài hoặc đụng lịch (duyệt, trả lại, hủy lịch, đổi giờ, sửa bài đã duyệt)
+chạy trong MỘT `tenantTx` qua hàm công khai nhận `tx` của `content` và `publishing`. `content` KHÔNG gọi
+`publishing`/`approval` (tránh vòng); điểm cuối cần cả hai (`GET /posts/:id` kèm trạng thái đăng, `GET
+/calendar`) nằm ở `approval`. Tệp kê khai thêm mũi tên `content → platform_gateway` (chọn kênh đang hoạt
+động, quy tắc media lúc soạn). `channel_rules` là bảng dùng chung, ứng dụng chỉ đọc (đổi bằng cập nhật
+dòng, không cần phát hành); `post_events` chỉ thêm (thu hồi UPDATE/DELETE).
 
 Danh sách module, schema, phía chạy (`api`/`worker`) và phụ thuộc được phép nằm trong tệp kê khai
 `apps/server/src/modules/modules.manifest.json`; `pnpm check:boundaries` sinh quy tắc từ tệp này.
@@ -451,6 +459,59 @@ Thuật ngữ hạ tầng (môi trường, stack, bản xem trước, bản ghi 
 `specs/007-terraform-infra-environments/data-model.md` mục 1.
 
 Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đổi (cùng PR).
+
+### 11.x Bổ sung v1.5 – tính năng 009 (đăng nhập Google/Facebook, lời mời, tài khoản chờ)
+
+- **Bảng mới của schema `account`**: tenant – `invitations` (lời mời cộng tác viên), `former_members`
+  (tên thành viên đã gỡ); dùng chung (chỉ qua `authTx`) – `oauth_flows` (lượt đăng nhập qua nhà cung
+  cấp), `meta_deletion_requests` (yêu cầu của Meta, chỉ HMAC). `memberships.user_id` không còn khóa
+  ngoại tới `users` (mã tham chiếu).
+- **Trạng thái tài khoản `unclaimed`** ("tài khoản chờ"): của người không thuộc tài khoản kinh doanh
+  nào; không có gói, hồ sơ, kênh. **Mọi báo cáo đếm tài khoản và mọi việc quét tài khoản (mở chu kỳ,
+  kiểm tra gói) phải lọc `status <> 'unclaimed'`.**
+- **Loại việc**: `account.mail_notice` (`notify`, tenant), `account.auth_housekeeping` (`scheduled`,
+  system, mỗi 10 phút), `account.detached_users` (`scheduled`, system, mỗi giờ).
+- **Bên nhận dữ liệu ở nước ngoài mới**: Google và Meta (đăng nhập) – nhận về tên, email, mã người
+  dùng; gửi đi chỉ tham số giao thức. Phải có trong danh sách chuyển dữ liệu xuyên biên giới.
+- **Thuật ngữ Việt → Anh**: tài khoản chờ → `unclaimed` account / `detached` (người gọi); lời mời →
+  `invitation`; ghế → `seat`; cách đăng nhập → `login_identity` / login method; lượt đăng nhập →
+  `oauth_flow`; xác nhận lại danh tính → `reauth`; nhận tài khoản → `claim`; gỡ thành viên →
+  `member_detach`; thành viên đã gỡ → `former_member`; nhà cung cấp đăng nhập → `identity provider`.
+
+### 11.y Bổ sung v1.6 – tính năng 012 (soạn bài tay, duyệt, lịch, Chờ duyệt)
+
+- **Bảng mới**: tenant – `content.posts` (khóa lạc quan cấp bài `version`), `content.channel_variants`,
+  `content.post_events` (chỉ thêm), `publishing.publish_attempts` (chỉ mục duy nhất có điều kiện
+  `(account_id, post_id, channel_connection_id) WHERE status <> 'cancelled'` là chốt chặn cuối chống đăng
+  trùng); dùng chung – `content.channel_rules`. Migration 0017–0018 (chỉ thêm).
+- **Loại việc**: `publishing.run_attempt` (`publish`, tenant, `dedupeKey = publish:{attemptId}`, payload
+  `{ attemptId }`). Bộ thực thi TẠM (`PUBLISH_EXECUTOR`: `none` hoãn 15 phút / `fake` ở dev/test/thử
+  nghiệm) – 013 thay thân hàm, giữ hợp đồng.
+- **Thông báo dùng nguyên danh mục 005**: `post_pending_review` (một lần gửi nhiều bài → một thông báo +
+  một email theo `submissionId`), `post_returned`, `approved_post_rescheduled`.
+- **Kiểm toán** (`infra.audit_log`, metadata chỉ mã): `post.submit|withdraw|approve|return|unschedule|
+  reschedule|edit_after_approval|delete_draft`.
+- **Thuật ngữ Việt → Anh**: bài → `post`; phiên bản kênh → `channel_variant`; sự kiện bài → `post_event`;
+  giới hạn kênh → `channel_rules`; mục lịch đăng → `publish_attempt`; gửi duyệt → `submit`; lần gửi duyệt →
+  `submission` (`submissionId`); rút lại → `withdraw`; trả lại → `return`; hủy lịch → `unschedule`; đổi giờ →
+  `reschedule`; giờ gợi ý → `suggested time`; giờ đã qua → `time_passed`; nguồn tạo → `source`
+  (`manual`|`ai`); tên gợi nhớ → `internal_name`.
+- **Chưa có ở 012** (ghi nhận): cổng kiểm tra gói còn hạn (`PLAN_GATE`, chưa có mô hình gói ở `account`)
+  và cổng mô tả media (`MEDIA_DESCRIBER`, chưa có thư viện media) – thiếu cổng thì kênh bắt buộc media
+  báo "chưa thể lên lịch".
+
+### 11.y Bổ sung v1.7 – tính năng 013 (đăng bài 5 bước)
+
+- lượt đăng → `publish_attempt`; bước đăng → `publish_step` (bảng nhật ký `publish_steps`); ánh xạ lỗi →
+  `error_mapping`; giai đoạn lượt đăng → `phase` (`none` | `submitted_awaiting_response` |
+  `awaiting_processing` | `finished`); lần chạy → `run_no`; lý do cần xử lý → `needs_reason`; đối soát thử
+  lại một lần → `reconcile_retry_used`; ngưỡng quá giờ hẹn → `publish.max_late_sec`.
+- 8 trạng thái: chờ đến giờ / đang xử lý / chờ thử lại / không xác định / cần người dùng / cần kiểm tra /
+  thành công / đã hủy → `scheduled` / `processing` / `retry_wait` / `unknown` / `needs_user` / `needs_check` /
+  `succeeded` / `cancelled`.
+- 5 bước: kiểm tra trước / chuẩn bị media / gửi / chờ xử lý / xác nhận → `precheck` / `prepare_media` /
+  `submit` / `await_processing` / `confirm`.
+- Giữ nguyên tên của 012: loại việc `publishing.run_attempt`, cột `channel_connection_id`, `content_version`.
 
 ## 12. Việc còn mở ảnh hưởng triển khai
 

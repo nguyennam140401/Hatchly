@@ -23,6 +23,12 @@ const DEV_PATHS = [
   ['post', '/api/v1/dev/fakes/storage/upload-url'],
   ['get', '/api/v1/dev/fakes/notifications'],
   ['get', '/api/v1/dev/fake-oauth/facebook_page/authorize?state=x&redirect_uri=y'],
+  // 009: trang đăng nhập Google/Facebook giả lập chỉ có khi OAUTH_DRIVER=fake (dev/test).
+  ['get', '/api/v1/dev/oauth/fake/authorize?provider=google&state=x'],
+  [
+    'get',
+    '/api/v1/dev/oauth/fake/authorize?provider=facebook&state=x&scenario=facebook_with_email',
+  ],
 ] as const;
 
 describe('shouldRegisterDevRoutes', () => {
@@ -121,5 +127,20 @@ describeDb('APP_ENV=test – route có, gắn tài khoản của phiên', () => 
     );
     expect(fakePage.status).toBe(200);
     expect(fakePage.text).toContain('Đồng ý');
+    // 009: trang chọn kịch bản của nhà cung cấp đăng nhập giả lập (không có scenario → HTML).
+    const loginPage = await actors.anonymous.get(
+      '/api/v1/dev/oauth/fake/authorize?provider=google&state=abc',
+    );
+    expect(loginPage.status).toBe(200);
+    expect(loginPage.text).toContain('Google – email đã xác minh');
+    expect(loginPage.text).not.toContain('Facebook – có trả email');
+    // Chỉ chuyển về đường quay lại của chính ứng dụng.
+    const redirect = await actors.anonymous.get(
+      '/api/v1/dev/oauth/fake/authorize?provider=google&state=abc&scenario=cancel',
+    );
+    expect(redirect.status).toBe(302);
+    expect(redirect.headers.location).toBe(
+      'http://app.test/api/v1/auth/oauth/google/callback?state=abc&error=access_denied',
+    );
   });
 });

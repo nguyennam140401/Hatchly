@@ -8,6 +8,11 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 export const CUSTOMER_SESSION_COOKIE = '__Host-sid';
 export const STAFF_SESSION_COOKIE = '__Host-staff_sid';
 
+/** 009: gắn lượt đăng nhập qua nhà cung cấp với trình duyệt (contracts/auth-http-api.md mục 9). */
+export const OAUTH_FLOW_COOKIE = '__Host-oauth';
+/** 30 phút – đủ cho bước chờ trên trình duyệt; lượt kết thúc thì xóa. */
+export const OAUTH_FLOW_COOKIE_MAX_AGE_SECONDS = 30 * 60;
+
 const COOKIE_NAME = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const COOKIE_VALUE = /^[A-Za-z0-9_-]*$/;
 

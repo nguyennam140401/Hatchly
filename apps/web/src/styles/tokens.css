@@ -1,0 +1,86 @@
+/* Giá trị thiết kế của ứng dụng (011, FR-002). Phần giữa BEGIN/END sinh từ figma-tokens.json. */
+
+/* BEGIN figma-tokens – sinh bởi tooling/sync-design-tokens.mjs, KHÔNG sửa tay */
+@theme static {
+  /* Đặt lại bảng mặc định của Tailwind: chỉ dùng được giá trị của Figma. */
+  --color-*: initial;
+  --text-*: initial;
+  --spacing-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --breakpoint-*: initial;
+
+  --font-sans: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-surface-0: #FFFFFF;
+  --color-surface-100: #F7F6F2;
+  --color-surface-200: #EEECE6;
+  --color-line: #DAD7CF;
+  --color-line-strong: #8C887E;
+  --color-ink: #1C1B19;
+  --color-ink-muted: #5E5B54;
+  --color-brand: #0E6F60;
+  --color-brand-strong: #0A584C;
+  --color-brand-soft: #DCEFEA;
+  --color-on-brand: #FFFFFF;
+  --color-spark: #E8912A;
+  --color-spark-soft: #FCEBD3;
+  --color-spark-ink: #8A4B05;
+  --color-success: #1E7A3A;
+  --color-success-soft: #E1F2E5;
+  --color-warning: #7A4F00;
+  --color-warning-soft: #FFF1CC;
+  --color-danger: #B42318;
+  --color-danger-soft: #FDE4E1;
+  --color-info: #1D5FA8;
+  --color-info-soft: #E2ECF8;
+
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 700;
+  --text-title: 24px;
+  --text-title--line-height: 32px;
+  --text-title--font-weight: 700;
+  --text-heading: 18px;
+  --text-heading--line-height: 26px;
+  --text-heading--font-weight: 600;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-body--font-weight: 400;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+  --text-label: 14px;
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 600;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-px: 1px;
+  --spacing-touch: 44px;
+  --spacing-topbar: 56px;
+  --spacing-navbar: 64px;
+  --spacing-sidebar: 248px;
+  --spacing-gutter: 16px;
+  --spacing-phone: 390px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --breakpoint-lg: 1024px;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+/* END figma-tokens */
