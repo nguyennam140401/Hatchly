@@ -132,13 +132,22 @@ export interface ErrorMappingRow {
   remedies: ClassifiedError['remedies'];
 }
 
+/**
+ * Hạn của quyền truy cập (010 R2): `none` = nền tảng không có mốc hạn cố định (Meta, sẽ báo ngay nếu bị thu hồi);
+ * `token` = hạn của mã quyền; `data_access` = hạn truy cập dữ liệu (mốc nhỏ hơn quyết định).
+ */
+export type ExpiryInfo = { kind: 'none' } | { kind: 'token' | 'data_access'; expiresAt: Date };
+
 export type AccountCheckResult =
   | {
       kind: 'eligible';
       accountType: string;
       grantedScopes: string[];
       quotaRemaining: number | null;
+      /** Giữ cho 005/012/013; với `expiry.kind='none'` là mốc xa mặc định – dùng `expiry` khi có. */
       tokenExpiresAt: Date;
+      /** 010: hạn chính xác. Thiếu = bộ chuyển đổi cũ, hiểu là `{kind:'token', expiresAt: tokenExpiresAt}`. */
+      expiry?: ExpiryInfo;
     }
   | { kind: 'ineligible'; error: ClassifiedError };
 

@@ -133,6 +133,12 @@ export const FAKE_ERROR_TABLE: ErrorTable = {
       'Nền tảng báo lỗi sau khi đã nhận bài. Chưa rõ bài đã lên hay chưa – vui lòng kiểm tra trên trang.',
     remedies: [{ action: 'check_on_platform', labelVi: 'Kiểm tra trên trang' }],
   },
+  FAKE_ROLE_TOO_LOW: {
+    category: 'user_action',
+    messageVi:
+      'Tài khoản Facebook của bạn chưa có vai trò đủ quyền đăng bài trên Page này. Hãy nhờ quản trị viên Page cấp lại vai trò.',
+    remedies: [{ action: 'check_on_platform', labelVi: 'Kiểm tra vai trò trên Page' }],
+  },
   FAKE_NOT_PROFESSIONAL: {
     category: 'user_action',
     messageVi: 'Tài khoản này không phải tài khoản chuyên nghiệp nên không đăng bài tự động được.',
@@ -145,6 +151,8 @@ export interface FakePage {
   externalId: string;
   displayName: string;
   eligible: boolean;
+  sourceExternalId?: string | undefined;
+  accountType?: string | undefined;
 }
 
 export function defaultFakePages(channelType: ChannelType): FakePage[] {

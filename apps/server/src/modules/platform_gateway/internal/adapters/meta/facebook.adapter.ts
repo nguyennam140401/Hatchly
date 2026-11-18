@@ -3,6 +3,7 @@ import type {
   ChannelCapabilities,
   CheckStatusResult,
   ClassifiedError,
+  ExpiryInfo,
   MediaRules,
   ReconcileResult,
   RefreshTokenResult,
@@ -15,6 +16,7 @@ import type {
   AdapterSubmit,
   ConnectionCandidate,
   PlatformAdapter,
+  RevokeResult,
 } from '../adapter';
 import { makeClassifier } from '../classify';
 import { contentHashOf } from '../content-hash';
@@ -214,6 +216,16 @@ export class FacebookAdapter implements PlatformAdapter {
         remedies: [{ action: 'reconnect', labelVi: 'Kết nối lại Trang' }],
       },
     });
+  }
+
+  /** 010: thu hồi quyền – bộ chuyển đổi thật (T073) gọi API thu hồi; hiện chưa hỗ trợ. */
+  revoke(): Promise<RevokeResult> {
+    return Promise.resolve('unsupported');
+  }
+
+  /** 010: hạn – dùng mốc tạm cho tới khi T039/T044 đo bằng `debug_token`. */
+  expiryOf(): Promise<ExpiryInfo> {
+    return Promise.resolve({ kind: 'token', expiresAt: new Date(Date.now() + 60 * 86_400_000) });
   }
 
   authorizeUrl(): string {

@@ -1,5 +1,6 @@
 import type {
   AccountCheckResult,
+  ExpiryInfo,
   ChannelCapabilities,
   ChannelType,
   CheckStatusResult,
@@ -55,7 +56,21 @@ export interface ConnectionCandidate {
   /** Mã quyền thô của ứng viên – chỉ dùng để mã hóa ngay bằng CredentialVault. */
   accessToken: string;
   tokenExpiresAt: Date;
+  // ----- 010 (đều tùy chọn – bộ chuyển đổi cũ vẫn hợp lệ) -----
+  avatarUrl?: string | undefined;
+  /** `page`, `instagram_business`, `instagram_creator`, `tiktok_creator`… */
+  accountType?: string | undefined;
+  grantedScopes?: string[] | undefined;
+  /** Instagram: mã Page nguồn (FR-042). */
+  sourceExternalId?: string | undefined;
+  /** Mã người dùng dài hạn (Meta) / refresh_token (TikTok) – cũng chỉ để mã hóa ngay. */
+  refreshToken?: string | undefined;
+  /** Hạn chính xác; thiếu → `{kind:'token', expiresAt: tokenExpiresAt}`. */
+  expiry?: ExpiryInfo | undefined;
 }
+
+/** Kết quả thu hồi quyền phía nền tảng. KHÔNG ném: lỗi → `failed`; nền tảng không có API thu hồi → `unsupported`. */
+export type RevokeResult = 'done' | 'failed' | 'unsupported';
 
 export interface PlatformAdapter {
   readonly channelType: ChannelType;
@@ -72,6 +87,10 @@ export interface PlatformAdapter {
   reconcile(cred: DecryptedCredential, q: AdapterReconcile): Promise<ReconcileResult>;
   classifyError(rawCode: string): ClassifiedError;
   refreshToken(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RefreshTokenResult>;
+  /** 010: thu hồi quyền phía nền tảng khi ngắt kết nối (FR-017). Không ném; thời gian chờ ≤ 5 giây do bên gọi đặt. */
+  revoke(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RevokeResult>;
+  /** 010: hạn hiện tại của quyền (đo lại bằng lời gọi nền tảng khi cần). Dạng `none` khi không có mốc hạn cố định. */
+  expiryOf(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<ExpiryInfo>;
   // Luồng kết nối (bản thật WBS 2.2 dùng OAuth):
   authorizeUrl(state: string, redirectUri: string): string;
   exchangeCallback(params: CallbackParams): Promise<{ candidates: ConnectionCandidate[] }>;
@@ -86,6 +105,8 @@ export const ADAPTER_OPERATIONS = [
   'reconcile',
   'classifyError',
   'refreshToken',
+  'revoke',
+  'expiryOf',
   'contentHash',
   'authorizeUrl',
   'exchangeCallback',
