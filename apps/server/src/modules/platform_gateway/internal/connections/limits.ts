@@ -29,7 +29,7 @@ export async function lockAndCountUsed(
         ne(channelConnections.status, 'disconnected'),
       ),
     );
-  return Number(rows[0]?.n ?? 0);
+  return rows[0]?.n ?? 0;
 }
 
 /** Số chỗ còn lại (không âm). */
