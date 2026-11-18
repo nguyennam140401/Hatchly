@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { uuidV7 } from '../../src/core/ids/uuid-v7';
 import { loc } from '../../src/core/storage';
 import { MemoryObjectStorage } from '../../src/core/storage/memory/memory-storage';
@@ -117,7 +117,7 @@ describeDb('Việc media.process – tệp trùng nội dung', () => {
     asOwner(async (c) =>
       Number(
         (
-          await c.query(
+          await c.query<{ u: string }>(
             'SELECT used_bytes::text AS u FROM media.storage_quotas WHERE account_id = $1',
             [acc],
           )
@@ -167,8 +167,12 @@ describeDb('Việc media.process – tệp trùng nội dung', () => {
     // tên hiển thị của tệp có sẵn giữ nguyên
     const name = await asOwner(
       async (c) =>
-        (await c.query('SELECT display_name FROM media.media WHERE id = $1', [first])).rows[0]
-          .display_name as string,
+        (
+          await c.query<{ display_name: string }>(
+            'SELECT display_name FROM media.media WHERE id = $1',
+            [first],
+          )
+        ).rows[0]?.display_name,
     );
     expect(name).toBe('Áo dài.png');
   });

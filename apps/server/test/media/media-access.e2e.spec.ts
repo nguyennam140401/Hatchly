@@ -2,7 +2,7 @@
 // hiến pháp I, VI: quyền kiểm ở API). Mở rộng khi thêm điểm cuối (T050 part-urls, T076 chi tiết/bài đang dùng).
 import { StartUploadResponse } from '@app/shared/media';
 import { uuidV7 } from '../../src/core/ids/uuid-v7';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { QueueLifecycle } from '../../src/modules/queue';
 import { collaboratorOf, staffAgent } from '../auth/helpers/actors';
 import {
@@ -121,7 +121,7 @@ describeDb('Quyền và truy cập chéo của thư viện media (e2e)', () => {
       const random = await call(stranger.agent, uuidV7());
       expectError(real, 404, 'NOT_FOUND');
       expect(real.body, name).toEqual({
-        error: { ...(real.body as { error: object }).error, support: expect.anything() },
+        error: { ...(real.body as { error: object }).error, support: expect.anything() as unknown },
       });
       expect((real.body as { error: { message: string } }).error.message).toBe(
         (random.body as { error: { message: string } }).error.message,

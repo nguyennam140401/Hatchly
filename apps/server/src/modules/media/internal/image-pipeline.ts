@@ -68,9 +68,9 @@ export async function processImage(
     throw classify(err);
   }
   if ((meta.pages ?? 1) > 1) throw new ImagePipelineError('animated');
-  const w = meta.width ?? 0;
-  const h = meta.height ?? 0;
-  if (w <= 0 || h <= 0) throw new ImagePipelineError('corrupt');
+  const w = meta.width;
+  const h = meta.height;
+  if (!(w > 0) || !(h > 0)) throw new ImagePipelineError('corrupt');
   if (w * h > MEDIA_LIMITS.imageMaxPixels) throw new ImagePipelineError('too_many_pixels');
   // Hướng EXIF 5–8 hoán đổi rộng/cao (chỉ áp cho nguồn không phải HEIC đã giải mã).
   const swap = !isRaw(source) && (meta.orientation ?? 1) >= 5;

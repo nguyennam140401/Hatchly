@@ -123,12 +123,7 @@ export class MediaPublicApiImpl implements MediaPublicApi {
       return Promise.all(
         mediaIds.map(async (mediaId) => {
           const row = rows.get(mediaId);
-          if (
-            row === undefined ||
-            row.deleted_at !== null ||
-            row.status !== 'ready' ||
-            this.storage === null
-          ) {
+          if (row?.deleted_at !== null || row.status !== 'ready' || this.storage === null) {
             return { mediaId, thumbUrl: null, expiresAt: null };
           }
           // LUÔN loại `preview` hạn ≤ 1 giờ – giao diện không bao giờ nhận đường dẫn công khai (FR-017).

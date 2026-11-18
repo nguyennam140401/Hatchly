@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ERROR_CODES } from '@app/shared/core';
 import {
+  UNPROCESSABLE_CODES,
   UNPROCESSABLE_MESSAGES,
   type ListQuery,
   type ListResponse,
@@ -26,6 +27,7 @@ import { purgeDedupeKey, purgeMediaFiles } from '../jobs';
 import { mediaItems, type MediaRow } from './db/schema';
 import { mediaError, mediaNotFound } from './media-errors';
 import { normalizedLoc, originalLoc, thumbLoc } from './media-keys';
+import { recordStorageBytes } from './metrics';
 import { QuotaStore } from './quota.store';
 import { findUsagesOrEmpty, hasBlockingUsage, type MediaUsageRef } from './usage-registry';
 
@@ -105,8 +107,11 @@ export class LibraryService {
       rows.map(async (row): Promise<MediaItem> => {
         const failure =
           row.status === 'unprocessable' && row.failure_code !== null
-            ? (UNPROCESSABLE_MESSAGES[row.failure_code as UnprocessableCode] ??
-              UNPROCESSABLE_MESSAGES.corrupt)
+            ? UNPROCESSABLE_MESSAGES[
+                (UNPROCESSABLE_CODES as readonly string[]).includes(row.failure_code)
+                  ? (row.failure_code as UnprocessableCode)
+                  : 'corrupt'
+              ]
             : null;
         return {
           id: row.id,
@@ -159,12 +164,11 @@ export class LibraryService {
       }
       if (cursor !== null) {
         const at = new Date(cursor.c);
-        where.push(
-          or(
-            sql`${mediaItems.created_at} < ${at}`,
-            and(sql`${mediaItems.created_at} = ${at}`, sql`${mediaItems.id} < ${cursor.i}`),
-          ) as SQL,
+        const older = or(
+          sql`${mediaItems.created_at} < ${at}`,
+          and(sql`${mediaItems.created_at} = ${at}`, sql`${mediaItems.id} < ${cursor.i}`),
         );
+        if (older !== undefined) where.push(older);
       }
       const found = await db
         .select()
@@ -282,6 +286,8 @@ export class LibraryService {
         await this.quota.refundUsed(db, done.bytes);
       }
       await enqueue(purgeMediaFiles, { mediaId: row.id }, { dedupeKey: purgeDedupeKey(row.id) });
+      // Chỉ số dung lượng theo loại: media `ready` đã được cộng khi xử lý xong, nay trừ đi.
+      if (done.status === 'ready') recordStorageBytes(row.kind === 'video' ? 'video' : 'image', -done.bytes);
     });
     this.logger.log({ msg: 'media.delete', result: 'ok' });
   }

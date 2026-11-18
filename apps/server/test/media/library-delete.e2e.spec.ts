@@ -20,7 +20,7 @@ import {
 import { asOwner, describeDb } from '../db/helpers/db';
 import { MEDIA, expectError, jobCount, quotaRow } from './helpers';
 
-type Seed = {
+interface Seed {
   kind?: 'image' | 'video';
   status?: 'ready' | 'processing' | 'unprocessable' | 'uploading';
   name: string;
@@ -28,7 +28,7 @@ type Seed = {
   createdAt?: string;
   bytes?: number;
   deleted?: boolean;
-};
+}
 
 describeDb('Xem, tìm, xóa media (e2e)', () => {
   let t: TestApp;
@@ -82,8 +82,12 @@ describeDb('Xem, tìm, xóa media (e2e)', () => {
   const deletedAt = (id: string) =>
     asOwner(
       async (c) =>
-        (await c.query('SELECT deleted_at FROM media.media WHERE id = $1', [id])).rows[0]
-          ?.deleted_at as Date | null,
+        (
+          await c.query<{ deleted_at: Date | null }>(
+            'SELECT deleted_at FROM media.media WHERE id = $1',
+            [id],
+          )
+        ).rows[0]?.deleted_at ?? null,
     );
   const list = async (qs = '', agent = owner.agent) => {
     const res = await agent.get(`${MEDIA}${qs}`);

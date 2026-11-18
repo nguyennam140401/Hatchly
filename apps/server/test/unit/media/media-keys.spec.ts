@@ -55,6 +55,7 @@ describe('normalizeDisplayName', () => {
 
   it('cắt còn 255 ký tự theo điểm mã (emoji tính 1)', () => {
     const long = '😀'.repeat(300);
+    // eslint-disable-next-line @typescript-eslint/no-misused-spread -- đếm theo điểm mã (emoji = 1)
     expect([...normalizeDisplayName(long)]).toHaveLength(255);
     expect(normalizeDisplayName('x'.repeat(1000))).toHaveLength(255);
   });

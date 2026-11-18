@@ -37,8 +37,8 @@ export function normalizeDisplayName(raw: string): string {
     .normalize('NFC')
     // Tab/xuống dòng thành dấu cách TRƯỚC khi bỏ ký tự điều khiển để không dính chữ.
     .replace(/\s+/g, ' ')
-    // eslint-disable-next-line no-control-regex -- cố ý loại ký tự điều khiển (C0/C1) và ký tự định dạng vô hình
-    .replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]/g, '')
+    // Loại ký tự điều khiển (Cc: C0/C1) và ký tự định dạng vô hình (Cf: zero-width, đảo chiều, BOM).
+    .replace(/[\p{Cc}\p{Cf}]/gu, '')
     .replace(/[/\\]/g, '')
     .replace(/\s+/g, ' ')
     .trim();

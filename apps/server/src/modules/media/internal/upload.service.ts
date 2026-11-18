@@ -33,6 +33,7 @@ import { enqueue } from '../../queue';
 import { processDedupeKey, processMedia } from '../jobs';
 import { mediaItems, uploadSessions, type UploadSessionRow } from './db/schema';
 import { mediaError, mediaNotFound } from './media-errors';
+import { recordUpload } from './metrics';
 import { InvalidDisplayNameError, normalizeDisplayName, originalLoc } from './media-keys';
 import { QuotaExceededError, QuotaStore } from './quota.store';
 import { SNIFF_HEAD_BYTES, sniffMedia } from './sniff';
@@ -217,6 +218,7 @@ export class UploadService {
         expires_at: expiresAt,
       });
       this.logger.log({ msg: 'media.upload.started', mode, kind });
+      recordUpload('started');
 
       const session = (
         await db.select().from(uploadSessions).where(eq(uploadSessions.id, sessionId))
@@ -350,11 +352,13 @@ export class UploadService {
       );
       return 'done' as const;
     });
-    if (outcome === 'done')
+    if (outcome === 'done') {
       this.logger.log({
         msg: 'media.upload.completed',
         kind: mediaKindOf(session.declared_content_type),
       });
+      recordUpload('completed');
+    }
     return { uploadId: session.id, mediaId: session.media_id, state: 'completed' };
   }
 
@@ -446,6 +450,7 @@ export class UploadService {
     );
     await this.discardObjects(session);
     this.logger.warn({ msg: 'media.upload.rejected', failureCode: code });
+    recordUpload('rejected');
     throw mediaError('UPLOAD_REJECTED', { extra: { failureCode: code }, detail: code });
   }
 
@@ -541,6 +546,7 @@ export class UploadService {
     if (closed !== null) {
       await this.discardObjects(closed);
       this.logger.log({ msg: 'media.upload.cancelled' });
+      recordUpload('cancelled');
     }
   }
 

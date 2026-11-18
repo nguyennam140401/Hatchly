@@ -161,8 +161,11 @@ describeDb('Việc media.cleanup / media.sweep', () => {
   const mediaCount = (mediaId: string) =>
     asOwner(
       async (c) =>
-        (await c.query('SELECT count(*)::int AS n FROM media.media WHERE id = $1', [mediaId]))
-          .rows[0].n as number,
+        (
+          await c.query<{ n: number }>('SELECT count(*)::int AS n FROM media.media WHERE id = $1', [
+            mediaId,
+          ])
+        ).rows[0]?.n ?? 0,
     );
   const openMultipart = () =>
     withAccount(accountId, () => Promise.resolve(storage.openMultipartCount()));
@@ -245,8 +248,12 @@ describeDb('Việc media.cleanup / media.sweep', () => {
       expect(await exists(mediaId, 'thumb')).toBe(false);
       const purged = await asOwner(
         async (c) =>
-          (await c.query('SELECT files_purged_at FROM media.media WHERE id = $1', [mediaId]))
-            .rows[0].files_purged_at as Date | null,
+          (
+            await c.query<{ files_purged_at: Date | null }>(
+              'SELECT files_purged_at FROM media.media WHERE id = $1',
+              [mediaId],
+            )
+          ).rows[0]?.files_purged_at ?? null,
       );
       expect(purged).not.toBeNull();
     });

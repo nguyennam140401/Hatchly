@@ -174,7 +174,7 @@ describeDb('Việc media.process', () => {
         expect(normalized).not.toBeNull();
         expect(thumb).not.toBeNull();
         const nm = await sharp(normalized!).metadata();
-        expect(Math.max(nm.width!, nm.height!)).toBeLessThanOrEqual(2048);
+        expect(Math.max(nm.width, nm.height)).toBeLessThanOrEqual(2048);
         expect([nm.width, nm.height]).toEqual([row.width, row.height]); // kích thước đã xoay đúng chiều
         expect(nm.exif).toBeUndefined();
         expect(

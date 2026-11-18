@@ -1,6 +1,6 @@
 // US2 – tải nhiều phần, tiếp tục khi gián đoạn (014 contracts/media-http-api.md mục 2–4, FR-004/005/006/009).
 import { CompleteUploadResponse, PartUrlsResponse, StartUploadResponse } from '@app/shared/media';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { QueueLifecycle } from '../../src/modules/queue';
 import {
   createTestApp,

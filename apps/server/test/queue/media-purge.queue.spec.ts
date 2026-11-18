@@ -269,7 +269,7 @@ describeDb('Việc media.purge_files và quét tuần media.cleanup', () => {
             rows: await asOwner(
               async (c) =>
                 (
-                  await c.query(
+                  await c.query<{ status: string; d: boolean }>(
                     'SELECT status, deleted_at IS NOT NULL AS d FROM media.media WHERE account_id = $1 ORDER BY status, d',
                     [accountId],
                   )

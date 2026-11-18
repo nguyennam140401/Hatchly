@@ -1,7 +1,7 @@
 // FR-017 (014 T070): KHÔNG điểm cuối HTTP nào trả đường dẫn CÔNG KHAI. Mọi URL trong phản hồi là loại `preview` hạn ≤ 1 giờ và chỉ cho
 // media của tài khoản trong phiên. Quét mọi phản hồi của luồng đầy đủ + theo dõi mọi lời gọi `signedUrl` của kho.
 import { loc } from '../../src/core/storage';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { runWithJobContext } from '../../src/core/context/bind-account';
 import { uuidV7 } from '../../src/core/ids/uuid-v7';
 import { QueueLifecycle } from '../../src/modules/queue';

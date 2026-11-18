@@ -3,6 +3,7 @@ import { tenantTx } from '../../../core';
 import type { ObjectStorage } from '../../../core/storage';
 import { mediaItems, storageQuotas, uploadSessions, type UploadSessionRow } from './db/schema';
 import { originalLoc } from './media-keys';
+import { recordQuotaDrift, recordUpload } from './metrics';
 import { deleteMediaObjects } from './purge.handler';
 import type { QuotaStore } from './quota.store';
 import { closeSession } from './upload-sessions';
@@ -92,6 +93,7 @@ export function createCleanupHandler(deps: CleanupDeps) {
           () => undefined,
         );
         deps.log.info({ msg: 'media.upload.expired' });
+        recordUpload('expired');
       }
       result.expired += progressed;
       if (progressed === 0) return;
@@ -239,6 +241,7 @@ export function createCleanupHandler(deps: CleanupDeps) {
     });
     if (drift > 0) {
       result.drift += drift;
+      recordQuotaDrift(drift);
       deps.onDrift?.(drift);
       deps.log.warn({ msg: 'media.quota.drift', bytes: drift });
     }

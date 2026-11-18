@@ -22,6 +22,7 @@ import '../../src/modules/context/internal/db/schema';
 // 012: bài viết, phiên bản kênh, lịch sử sự kiện, bộ giới hạn theo kênh, mục lịch đăng.
 import '../../src/modules/content/internal/db/schema';
 import '../../src/modules/publishing/internal/db/schema';
+import '../../src/modules/media/internal/db/schema';
 import '../../src/modules/publishing/internal/db/publish-steps.log-table';
 
 const FIXTURES = join(__dirname, 'fixtures', 'conventions');

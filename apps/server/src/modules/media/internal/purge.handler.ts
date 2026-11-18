@@ -57,7 +57,7 @@ export function createPurgeFilesHandler(deps: PurgeDeps) {
       return { ...media, multipart: session?.upload ?? null };
     });
     // Không có dòng (đã xóa hẳn) hoặc chưa xóa mềm ⇒ không động tới tệp; đã purge ⇒ xong.
-    if (row === null || row.deleted === null || row.purged !== null) return;
+    if (!row?.deleted || row.purged !== null) return;
 
     await deleteMediaObjects(deps.storage, mediaId, row.multipart);
     await tenantTx((db) =>

@@ -108,11 +108,11 @@ describeDb('Giới hạn dung lượng (e2e)', () => {
     const sessionsBefore = await asOwner(
       async (c) =>
         (
-          await c.query(
+          await c.query<{ n: number }>(
             'SELECT count(*)::int AS n FROM media.upload_sessions WHERE account_id = $1',
             [accountId],
           )
-        ).rows[0].n as number,
+        ).rows[0]?.n ?? 0,
     );
     const res = await startVideo(300 * MIB);
     const error = expectError(res, 409, 'MEDIA_QUOTA_EXCEEDED');
@@ -128,11 +128,11 @@ describeDb('Giới hạn dung lượng (e2e)', () => {
     const sessionsAfter = await asOwner(
       async (c) =>
         (
-          await c.query(
+          await c.query<{ n: number }>(
             'SELECT count(*)::int AS n FROM media.upload_sessions WHERE account_id = $1',
             [accountId],
           )
-        ).rows[0].n as number,
+        ).rows[0]?.n ?? 0,
     );
     expect(sessionsAfter).toBe(sessionsBefore);
     expect((await quotaRow(accountId))!.reserved).toBe(0); // không giữ chỗ

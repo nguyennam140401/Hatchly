@@ -309,7 +309,9 @@ describe('cổng "bài nào đang dùng media" (R10)', () => {
     resetMediaUsageProviderForTests();
     expect(await findUsagesOrEmpty(['m'])).toEqual([]);
     registerMediaUsageProvider({ findUsages: () => Promise.resolve([ref('draft', '  ')]) });
-    expect(() => registerMediaUsageProvider({ findUsages: () => Promise.resolve([]) })).toThrow();
+    expect(() => {
+      registerMediaUsageProvider({ findUsages: () => Promise.resolve([]) });
+    }).toThrow();
     expect((await findUsagesOrEmpty(['m']))[0]!.postTitle).toBe('Bài chưa đặt tên');
     resetMediaUsageProviderForTests();
   });

@@ -1,6 +1,6 @@
 // Bộ đếm dung lượng 5 GB (014 T061, FR-008/028, SC-005, SC-009, hiến pháp III-V): giữ chỗ bằng UPDATE có điều kiện nên KHÔNG BAO
 // GIỜ vượt trần dù nhiều yêu cầu cùng lúc; chốt / trả giữ chỗ / trả dung lượng chạy lại không âm; CHECK là chốt chặn cuối.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { tenantTx } from '../../src/core/db/transaction';
 import { QuotaExceededError, QuotaStore } from '../../src/modules/media/internal/quota.store';
 import {
@@ -53,8 +53,7 @@ describeDb('Bộ đếm dung lượng media – đồng thời và hoàn dung l�
     const rejected = results.filter((r) => r.status === 'rejected');
     expect(ok).toBe(12); // floor(5 GiB / 400 MiB) = 12
     expect(rejected).toHaveLength(13);
-    for (const r of rejected)
-      expect((r as PromiseRejectedResult).reason).toBeInstanceOf(QuotaExceededError);
+    for (const r of rejected) expect(r.reason).toBeInstanceOf(QuotaExceededError);
     const q = (await row(acc))!;
     expect(q.reserved).toBe(12 * 400 * MIB);
     expect(q.used + q.reserved).toBeLessThanOrEqual(q.limit);

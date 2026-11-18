@@ -199,7 +199,6 @@ describeDb('Tải lên một lần (e2e)', () => {
         expect((await mediaRows(accountId)).find((r) => r.id === start.mediaId)).toBeUndefined();
         if (start.mode === 'single') {
           const key = start.post.fields.key!;
-          expect(storageOf(t).keyOf).toBeDefined();
           const exists = await asKeyExists(t, start.mediaId);
           expect(exists, `tệp dở của ${key} phải bị xóa`).toBe(false);
         }
@@ -234,14 +233,10 @@ describeDb('Tải lên một lần (e2e)', () => {
         resumed: true,
         uploadId: (first.body as { uploadId: string }).uploadId,
       });
-      expect((await quotaRow(accountId))!.reserved).toBe(reservedUnchanged(reserved));
+      expect((await quotaRow(accountId))!.reserved).toBe(reserved);
     });
   });
 });
-
-function reservedUnchanged(n: number): number {
-  return n;
-}
 
 /** Tệp gốc của media còn trong kho memory không (kiểm bằng `stat` trong ngữ cảnh tài khoản của khóa). */
 async function asKeyExists(t: TestApp, mediaId: string): Promise<boolean> {

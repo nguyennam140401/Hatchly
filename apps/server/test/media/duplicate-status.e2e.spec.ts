@@ -1,7 +1,7 @@
 // US7 qua API (014 contracts/media-http-api.md mục 5): sau khi Worker phát hiện trùng, `GET /media/uploads/:id` trả `duplicate` kèm tệp đã có,
 // thư viện chỉ còn MỘT ô và dung lượng tính một lần.
 import { UploadStatusResponse } from '@app/shared/media';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
 import { OBJECT_STORAGE } from '../../src/core/storage';
 import { createProcessMediaHandler } from '../../src/modules/media/internal/process.handler';
 import { QuotaStore } from '../../src/modules/media/internal/quota.store';

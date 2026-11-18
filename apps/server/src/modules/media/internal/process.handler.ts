@@ -15,6 +15,7 @@ import { mediaItems, uploadSessions } from './db/schema';
 import { ImagePipelineError } from './image-errors';
 import { processImage, thumbnailOf } from './image-pipeline';
 import { normalizedLoc, originalLoc, thumbLoc } from './media-keys';
+import { recordProcessed, recordStorageBytes } from './metrics';
 import type { QuotaStore } from './quota.store';
 import { extractFrame, probeVideo, VideoPipelineError } from './video-pipeline';
 
@@ -95,6 +96,7 @@ export function createProcessMediaHandler(deps: ProcessDeps) {
       if (row !== undefined) await deps.quota.refundUsed(db, row.bytes);
     });
     deps.log.warn({ msg: 'media.process.unprocessable', failureCode: code });
+    recordProcessed('unprocessable');
   }
 
   /**
@@ -140,6 +142,7 @@ export function createProcessMediaHandler(deps: ProcessDeps) {
       await enqueue(purgeMediaFiles, { mediaId }, { dedupeKey: purgeDedupeKey(mediaId) });
     });
     deps.log.info({ msg: 'media.process.duplicate' });
+    recordProcessed('duplicate');
   }
 
   const handler = async (
@@ -153,7 +156,7 @@ export function createProcessMediaHandler(deps: ProcessDeps) {
         (await db.select().from(mediaItems).where(eq(mediaItems.id, mediaId)).limit(1))[0],
     );
     // Đã xóa / không còn `processing` (xử lý rồi, trùng, hết lần thử) ⇒ bỏ qua – chạy lại an toàn.
-    if (row === undefined || row.deleted_at !== null || row.status !== 'processing') return;
+    if (row?.deleted_at !== null || row.status !== 'processing') return;
 
     const dir = await mkdtemp(join(deps.tmpRoot?.() ?? tmpdir(), `media-${mediaId.slice(0, 8)}-`));
     try {
@@ -242,6 +245,9 @@ export function createProcessMediaHandler(deps: ProcessDeps) {
       );
       if (done.length > 0) {
         deps.log.info({ msg: 'media.process.ready', kind: row.kind, ms: now() - started });
+        const kind = row.kind === 'video' ? 'video' : 'image';
+        recordProcessed('ready', kind, (now() - started) / 1000);
+        recordStorageBytes(kind, row.original_bytes);
       }
       return;
     } catch (err) {
