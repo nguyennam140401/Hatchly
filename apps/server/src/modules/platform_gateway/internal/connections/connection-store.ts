@@ -89,6 +89,8 @@ export interface NewConnection {
   grantedScopes?: string[];
   quotaRemaining?: number | null;
   sourceConnectionId?: string | null;
+  /** Instagram: `external_id` của Page nguồn (để liên kết về sau nếu Page chưa có trong tài khoản – T045). */
+  sourceExternalId?: string | null;
   /** Giới hạn mỗi nền tảng: có → store tự khóa + đếm trong cùng giao dịch chèn (R8). */
   maxPerPlatform?: number;
 }

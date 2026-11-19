@@ -137,12 +137,12 @@ description: "Danh sách việc cho tính năng 010 – Kết nối kênh Facebo
 ### Tests for User Story 2
 
 - [X] T042 [P] [US2] Hợp đồng `InstagramAdapter` trong `PGT/adapter-contract.spec.ts`: `exchangeCallback` Page có `instagram_business_account` ⇒ ứng viên IG (`externalId=ig_user_id`, `displayName=@username`, `sourceExternalId`=mã Page); Page không IG ⇒ không có ứng viên + `PAGE_NOT_LINKED`; `checkAccount` `BUSINESS|MEDIA_CREATOR` ⇒ eligible, `PERSONAL` ⇒ `NOT_PROFESSIONAL`; `revoke` ⇒ `unsupported`
-- [ ] T043 [P] [US2] `PGT/instagram-source.db.spec.ts`: `source_connection_id` được gán khi đã có Page nguồn trong tài khoản; chưa có ⇒ NULL (IG độc lập, US2-6); sau này kết nối Page đó ⇒ liên kết trong cùng giao dịch `confirm`
+- [X] T043 [P] [US2] `PGT/instagram-source.db.spec.ts`: `source_connection_id` được gán khi đã có Page nguồn trong tài khoản; chưa có ⇒ NULL (IG độc lập, US2-6); sau này kết nối Page đó ⇒ liên kết trong cùng giao dịch `confirm`
 
 ### Implementation for User Story 2
 
 - [X] T044 [US2] `InstagramAdapter` (`PG/internal/adapters/meta/instagram.adapter.ts`): `authorizeUrl` (`CHANNEL_SCOPES_INSTAGRAM`; dùng lại quyền đã cấp khi đủ – `include_granted_scopes`, chỉ `rerequest` phần thiếu), `exchangeCallback` (ứng viên = Page có IG; ghi nhận Page không có IG để hiện `PAGE_NOT_LINKED`), `checkAccount` (`GET /{ig_user_id}?fields=username,account_type`; hạn mức đăng 24 giờ ⇒ `quotaRemaining`), `expiryOf`/`refreshToken` dùng mã Page nguồn, `revoke` ⇒ `unsupported` (không thu hồi quyền người dùng dùng chung)
-- [ ] T045 [US2] Liên kết Page nguồn trong `confirm`: gán `source_connection_id` nếu Page nguồn có trong tài khoản, và khi sau đó kết nối Page thì cập nhật các Instagram `source_connection_id IS NULL` cùng `sourceExternalId` (cùng giao dịch); chỉ mục `(account_id, source_connection_id)` dùng ở `pg-connection-store.ts`
+- [X] T045 [US2] Liên kết Page nguồn trong `confirm`: gán `source_connection_id` nếu Page nguồn có trong tài khoản, và khi sau đó kết nối Page thì cập nhật các Instagram `source_connection_id IS NULL` cùng `sourceExternalId` (cùng giao dịch); chỉ mục `(account_id, source_connection_id)` dùng ở `pg-connection-store.ts`
 - [ ] T046 [P] [US2] Web: ứng viên Instagram `blocked` hiện hướng dẫn 3 bước ngắn (chuyển sang tài khoản chuyên nghiệp, liên kết với Page) + nút "Kiểm tra lại"; thẻ Instagram hiện "Liên kết qua Page: *tên Page*" + cảnh báo khi Page nguồn hỏng (trong `WEB/ChannelCard.tsx` sẽ tạo ở US6 – tạm đặt thành phần con `WEB/SourcePageNote.tsx`)
 
 **Checkpoint**: US2 – Instagram chạy độc lập và cùng Facebook.

@@ -116,6 +116,7 @@ export class PgConnectionStore implements ConnectionStore {
           granted_scopes: c.grantedScopes ?? [],
           quota_remaining: c.quotaRemaining ?? null,
           source_connection_id: c.sourceConnectionId ?? null,
+          source_external_id: c.sourceExternalId ?? null,
           token_ciphertext: c.tokenCiphertext,
           refresh_ciphertext: c.refreshCiphertext ?? null,
           token_issued_at: now,
@@ -129,6 +130,20 @@ export class PgConnectionStore implements ConnectionStore {
         })
         .returning();
       if (inserted[0] !== undefined) {
+        // T045: Page vừa được kết nối ⇒ gắn các Instagram đã kết nối trước đó (chưa có Page nguồn) vào Page này, cùng giao dịch.
+        if (c.channelType === 'facebook_page') {
+          await db
+            .update(channelConnections)
+            .set({ source_connection_id: inserted[0].id })
+            .where(
+              and(
+                eq(channelConnections.channel_type, 'instagram'),
+                eq(channelConnections.source_external_id, c.externalId),
+                isNull(channelConnections.source_connection_id),
+                ne(channelConnections.status, 'disconnected'),
+              ),
+            );
+        }
         return { connection: toStoredConnection(inserted[0]), created: true };
       }
       // Không chèn được: đua với chính tài khoản này (đọc lại) hoặc tài khoản khác đang giữ (RLS che dòng đó).

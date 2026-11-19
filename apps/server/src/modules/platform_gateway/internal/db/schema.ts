@@ -79,6 +79,8 @@ export const channelConnections = tenantTable(
     quota_remaining: integer('quota_remaining'),
     /** Chỉ Instagram: Page nguồn (FR-042). Cùng module nên được phép có khóa ngoại. */
     source_connection_id: uuid('source_connection_id'),
+    /** Chỉ Instagram: `external_id` của Page nguồn lúc kết nối – để liên kết về sau khi Page được kết nối (T045). */
+    source_external_id: text('source_external_id'),
     /** Bản mã (`v1 | keyId | wrappedDek | iv | tag | ciphertext`). NULL chỉ khi `status='disconnected'`. */
     token_ciphertext: bytea('token_ciphertext'),
     refresh_ciphertext: bytea('refresh_ciphertext'),

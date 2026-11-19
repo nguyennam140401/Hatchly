@@ -1,0 +1,1 @@
+ALTER TABLE "platform_gateway"."channel_connections" ADD COLUMN "source_external_id" text;

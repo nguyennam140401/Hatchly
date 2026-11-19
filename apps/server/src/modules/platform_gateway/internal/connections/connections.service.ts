@@ -596,6 +596,7 @@ export class ConnectionsService {
       grantedScopes: check.grantedScopes,
       quotaRemaining: check.quotaRemaining,
       sourceConnectionId: sourceId,
+      sourceExternalId: candidate.sourceExternalId ?? null,
       maxPerPlatform,
     });
   }
