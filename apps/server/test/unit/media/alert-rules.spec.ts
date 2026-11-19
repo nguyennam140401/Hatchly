@@ -46,7 +46,8 @@ describe('ops/alerts/media.rules.yml', () => {
     for (const rule of rules) {
       const referenced = rule.expr.match(/\bmedia_[a-z0-9_]+\b/g) ?? [];
       expect(referenced.length, rule.alert).toBeGreaterThan(0);
-      for (const metric of referenced) expect(METRICS, `${rule.alert}: ${metric}`).toContain(metric);
+      for (const metric of referenced)
+        expect(METRICS, `${rule.alert}: ${metric}`).toContain(metric);
       expect(rule.expr).not.toMatch(/account_id|media_id|file_name/);
       expect(rule.annotations.description.length).toBeGreaterThan(20);
       expect(['warning', 'critical']).toContain(rule.labels.severity);
@@ -58,7 +59,11 @@ describe('ops/alerts/media.rules.yml', () => {
       resolve(process.cwd(), 'src', 'modules', 'media', 'internal', 'metrics.ts'),
       'utf8',
     );
-    for (const name of ['media_quota_drift_total', 'media_processed_total', 'media_process_duration_seconds']) {
+    for (const name of [
+      'media_quota_drift_total',
+      'media_processed_total',
+      'media_process_duration_seconds',
+    ]) {
       expect(src, name).toContain(`'${name}'`);
     }
   });

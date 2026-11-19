@@ -72,10 +72,43 @@ function text(event: NotificationEvent): { titleVi: string; bodyVi: string } {
         bodyVi: `${quote(p.postTitle)} chưa đăng được lên ${channel}. ${tail}`,
       };
     },
-    channel_token_expiring: () => ({
-      titleVi: 'Kết nối kênh sắp hết hạn',
-      bodyVi: `Quyền đăng bài lên ${p.channelDisplayName ?? 'kênh'} sắp hết hạn. Kết nối lại để bài hẹn giờ vẫn đăng được.`,
-    }),
+    channel_token_expiring: () => {
+      const stage = event.type === 'channel_token_expiring' ? event.refs.stage : undefined;
+      const channel = p.channelDisplayName ?? 'kênh';
+      if (stage === 'expired') {
+        return {
+          titleVi: 'Kết nối kênh đã hết hạn',
+          bodyVi: `Quyền đăng bài lên ${channel} đã hết hạn nên bài hẹn giờ sẽ không đăng được. Kết nối lại để tiếp tục.`,
+        };
+      }
+      const when = stage === 'd1' ? 'chỉ còn 1 ngày là' : 'sắp';
+      return {
+        titleVi: 'Kết nối kênh sắp hết hạn',
+        bodyVi: `Quyền đăng bài lên ${channel} ${when} hết hạn. Kết nối lại để bài hẹn giờ vẫn đăng được.`,
+      };
+    },
+    channel_needs_reconnect: () => {
+      const reason = event.type === 'channel_needs_reconnect' ? event.refs.reason : undefined;
+      const channel = p.channelDisplayName ?? 'kênh';
+      const why =
+        reason === 'token_revoked'
+          ? 'Quyền đăng bài đã bị thu hồi trên nền tảng'
+          : reason === 'scope_missing'
+            ? 'Ứng dụng đang thiếu một số quyền cần thiết'
+            : reason === 'source_page_lost'
+              ? 'Page liên kết với kênh này không còn dùng được'
+              : reason === 'not_eligible'
+                ? 'Tài khoản chưa đủ điều kiện để đăng bài'
+                : 'Quyền đăng bài đã hết hạn';
+      const impact =
+        p.affectedPosts !== undefined && p.affectedPosts > 0
+          ? ` ${p.affectedPosts} bài đã lên lịch sẽ không đăng được cho đến khi bạn kết nối lại.`
+          : '';
+      return {
+        titleVi: 'Kênh cần kết nối lại',
+        bodyVi: `${why} (${channel}).${impact} Hãy kết nối lại để tiếp tục đăng bài.`,
+      };
+    },
     ai_usage_80: () => ({
       titleVi: 'Bạn đã dùng 80% giới hạn AI của chu kỳ',
       bodyVi:

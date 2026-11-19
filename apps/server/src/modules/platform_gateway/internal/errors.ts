@@ -9,6 +9,27 @@ export class ConnectionNotFoundError extends Error {
   }
 }
 
+/** Vượt số kết nối tối đa mỗi nền tảng (010 FR-007). Bên gọi đổi thành `409 LIMIT_REACHED`. */
+export class ConnectionLimitError extends Error {
+  readonly code = 'LIMIT_REACHED';
+  constructor(
+    readonly used: number,
+    readonly limit: number,
+  ) {
+    super('Đã đủ số kết nối cho nền tảng này');
+    this.name = 'ConnectionLimitError';
+  }
+}
+
+/** Page/tài khoản đã được kết nối ở MỘT TÀI KHOẢN KHÁC (chỉ mục duy nhất toàn cục – FR-006). Không lộ thêm chi tiết. */
+export class ChannelOwnedByAnotherAccountError extends Error {
+  readonly code = 'OWNED_BY_ANOTHER_ACCOUNT';
+  constructor() {
+    super('Kênh này đang được kết nối ở tài khoản khác');
+    this.name = 'ChannelOwnedByAnotherAccountError';
+  }
+}
+
 /** Loại kênh chưa có bộ chuyển đổi đăng ký – không có hành vi mặc định ngầm (US2-AS3). */
 export class ChannelNotSupportedError extends Error {
   readonly code = 'CHANNEL_NOT_SUPPORTED';

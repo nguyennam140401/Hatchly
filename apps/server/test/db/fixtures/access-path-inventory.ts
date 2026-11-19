@@ -9,6 +9,10 @@ export const ACCESS_PATH_INVENTORY: Record<string, AccessPathEntry> = {
   // ---- (a) khung nhìn ----
   'view:infra.support_dead_jobs_detail': { proof: 'test/db/dead-jobs-isolation.db.spec.ts' },
   'view:infra.support_dead_jobs_search': { proof: 'test/db/dead-jobs-isolation.db.spec.ts' },
+  // 010: khung nhìn hỗ trợ kênh – lọc theo ngữ cảnh tenant, không có cột bản mã.
+  'view:platform_gateway.support_channel_view': {
+    proof: 'test/db/platform-gateway/support-view.db.spec.ts',
+  },
   'view:sandbox.support_note_detail': { proof: 'test/db/support-context.db.spec.ts' },
   'view:sandbox.support_note_search': { proof: 'test/db/support-context.db.spec.ts' },
   // ---- (b) hàm SECURITY DEFINER `app` được gọi ----

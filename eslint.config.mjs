@@ -214,6 +214,30 @@ export default tseslint.config(
     },
   },
   {
+    // Hiến pháp VII: mã quyền nền tảng chỉ được giải mã trong module Cổng nền tảng – và trong đó chỉ ở bộ chuyển
+    // đổi (`internal/adapters/**`, gồm meta và tiktok), kho mã quyền (`internal/vault/**`), bản giả lập
+    // (`internal/fake/**`) và tầng dịch vụ kết nối (`internal/connections/**`, `internal/maintenance/**`) ngay
+    // trước lời gọi nền tảng. Mọi nơi khác nhập `revealCredential` là lỗi.
+    files: ['apps/server/src/**/*.ts'],
+    ignores: [
+      'apps/server/src/modules/platform_gateway/internal/adapters/**',
+      'apps/server/src/modules/platform_gateway/internal/vault/**',
+      'apps/server/src/modules/platform_gateway/internal/fake/**',
+      'apps/server/src/modules/platform_gateway/internal/connections/**',
+      'apps/server/src/modules/platform_gateway/internal/maintenance/**',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "ImportSpecifier[imported.name='revealCredential']",
+          message:
+            'revealCredential chỉ được dùng trong platform_gateway (adapters, vault, connections, maintenance) – Hiến pháp VII.',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: { globals: globals.node },
   },

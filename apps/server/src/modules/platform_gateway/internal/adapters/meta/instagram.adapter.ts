@@ -3,24 +3,29 @@ import type {
   ChannelCapabilities,
   CheckStatusResult,
   ClassifiedError,
+  ExpiryInfo,
   MediaRules,
   ReconcileResult,
   RefreshTokenResult,
   SubmitResult,
 } from '../../../public-api';
-import type { DecryptedCredential } from '../../vault/credential-vault';
+import { revealCredential, type DecryptedCredential } from '../../vault/credential-vault';
 import type {
   AdapterCallContext,
   AdapterReconcile,
   AdapterSubmit,
+  CallbackParams,
   ConnectionCandidate,
   PlatformAdapter,
+  RenewTokenResult,
+  RevokeResult,
 } from '../adapter';
 import { makeClassifier } from '../classify';
 import { contentHashOf } from '../content-hash';
 import { toClassified } from './facebook.adapter';
 import { GraphClient, GraphError } from './graph-client';
 import { INSTAGRAM_ERROR_TABLE } from './meta-errors';
+import { expiryFromDebug, REQUIRED_PUBLISH_SCOPES, type MetaOAuth } from './meta-oauth';
 
 // Bộ chuyển đổi Instagram (tài khoản chuyên nghiệp) – 013 US6. Quy trình HAI giai đoạn:
 //   1. `submit`: tạo "container" media → trả `processing` + `processingId` (mã container);
@@ -31,7 +36,14 @@ import { INSTAGRAM_ERROR_TABLE } from './meta-errors';
 export interface InstagramAdapterOptions {
   client: GraphClient;
   reconcile: boolean;
+  /** 010: luồng OAuth/đo hạn; `null`/thiếu ⇒ chưa cấu hình ứng dụng Meta (013 chạy độc lập). */
+  oauth?: MetaOAuth | null;
+  /** 010 T061: bật làm mới mã quyền bằng việc nền (`META_TOKEN_REFRESH_ENABLED`). */
+  tokenRefresh?: boolean;
 }
+
+/** Tiền tố `externalId` của ứng viên GIỮ CHỖ cho Page chưa liên kết Instagram (hiện "Page chưa liên kết", không kết nối được). */
+export const UNLINKED_PREFIX = 'unlinked:';
 
 const classify = makeClassifier('instagram', INSTAGRAM_ERROR_TABLE);
 
@@ -48,7 +60,7 @@ export class InstagramAdapter implements PlatformAdapter {
     this.capabilities = {
       reconcile: opts.reconcile,
       asyncProcessing: true,
-      tokenRefresh: false,
+      tokenRefresh: opts.tokenRefresh ?? false,
       reportsQuota: true,
       maxReconcileWindowHours: 24,
     };
@@ -87,6 +99,10 @@ export class InstagramAdapter implements PlatformAdapter {
     cred: DecryptedCredential,
     ctx: AdapterCallContext,
   ): Promise<AccountCheckResult> {
+    // Ứng viên giữ chỗ của Page chưa liên kết Instagram: kết luận khẳng định, KHÔNG gọi nền tảng.
+    if (ctx.externalId?.startsWith(UNLINKED_PREFIX) === true) {
+      return { kind: 'ineligible', error: classify('IG:PAGE_NOT_LINKED') };
+    }
     try {
       const id = this.igId(ctx);
       const info = await this.opts.client.call<{ account_type?: string }>(cred, 'GET', id, {
@@ -109,12 +125,30 @@ export class InstagramAdapter implements PlatformAdapter {
       } catch {
         // Không đọc được hạn mức: bỏ qua (null = không biết); hạn mức cục bộ của 012 vẫn là chốt chặn.
       }
+      const oauth = this.opts.oauth ?? null;
+      if (oauth === null) {
+        return {
+          kind: 'eligible',
+          accountType: 'professional',
+          grantedScopes: [],
+          quotaRemaining,
+          tokenExpiresAt: new Date(Date.now() + 60 * 86_400_000),
+        };
+      }
+      // Quyền bắt buộc + hạn (debug_token của mã Page nguồn).
+      const debug = await oauth.debugToken(revealCredential(cred));
+      if (!debug.isValid) return { kind: 'ineligible', error: classify('IG:190') };
+      const missing = REQUIRED_PUBLISH_SCOPES.instagram.filter((x) => !debug.scopes.includes(x));
+      if (missing.length > 0) return { kind: 'ineligible', error: classify('IG:SCOPE_MISSING') };
+      const expiry = expiryFromDebug(debug);
       return {
         kind: 'eligible',
         accountType: 'professional',
-        grantedScopes: [],
+        grantedScopes: debug.scopes,
         quotaRemaining,
-        tokenExpiresAt: new Date(Date.now() + 60 * 86_400_000),
+        tokenExpiresAt:
+          expiry.kind === 'none' ? new Date(Date.now() + 3650 * 86_400_000) : expiry.expiresAt,
+        expiry,
       };
     } catch (e) {
       return { kind: 'ineligible', error: toClassified(asGraphError(e), classify) };
@@ -243,11 +277,95 @@ export class InstagramAdapter implements PlatformAdapter {
     });
   }
 
-  authorizeUrl(): string {
-    throw new Error('Luồng OAuth thuộc tính năng kết nối kênh (010).');
+  /**
+   * Làm mới thật (T061): mã người dùng dài hạn → Page chứa tài khoản Instagram này → mã Page mới (Instagram đăng bằng mã
+   * Page nguồn). Lỗi phân loại theo bảng lỗi Instagram.
+   */
+  async renewToken(
+    refreshCred: DecryptedCredential,
+    ctx: AdapterCallContext,
+    signal?: AbortSignal,
+  ): Promise<RenewTokenResult> {
+    const oauth = this.opts.oauth ?? null;
+    if (oauth === null || ctx.externalId === undefined) {
+      return { kind: 'failed', error: classify('IG:REFRESH_UNSUPPORTED') };
+    }
+    try {
+      const { userToken } = await oauth.renewUserToken(revealCredential(refreshCred), signal);
+      const page = (await oauth.listPages(userToken, signal)).find(
+        (p) => p.instagram?.id === ctx.externalId,
+      );
+      if (page === undefined) return { kind: 'failed', error: classify('IG:PAGE_NOT_LINKED') };
+      const expiry = expiryFromDebug(await oauth.debugToken(page.accessToken, signal));
+      return { kind: 'renewed', accessToken: page.accessToken, refreshToken: userToken, expiry };
+    } catch (e) {
+      return { kind: 'failed', error: toClassified(asGraphError(e), classify) };
+    }
   }
 
-  exchangeCallback(): Promise<{ candidates: ConnectionCandidate[] }> {
-    return Promise.reject(new Error('Luồng OAuth thuộc tính năng kết nối kênh (010).'));
+  /** 010: thu hồi quyền – bộ chuyển đổi thật (T073) gọi API thu hồi; hiện chưa hỗ trợ. */
+  revoke(): Promise<RevokeResult> {
+    return Promise.resolve('unsupported');
+  }
+
+  /** Hạn đo lại bằng `debug_token` của mã Page nguồn (bỏ mốc 0 ⇒ không có hạn cố định). */
+  async expiryOf(cred?: DecryptedCredential): Promise<ExpiryInfo> {
+    const oauth = this.opts.oauth ?? null;
+    if (oauth === null || cred === undefined) {
+      return { kind: 'token', expiresAt: new Date(Date.now() + 60 * 86_400_000) };
+    }
+    return expiryFromDebug(await oauth.debugToken(revealCredential(cred)));
+  }
+
+  authorizeUrl(state: string, redirectUri: string, opts?: { rerequest?: boolean }): string {
+    const oauth = this.opts.oauth ?? null;
+    if (oauth === null) throw new Error('Chưa cấu hình ứng dụng Meta (FACEBOOK_APP_ID/SECRET).');
+    return oauth.authorizeUrl('instagram', state, redirectUri, opts);
+  }
+
+  /**
+   * Ứng viên = Page CÓ `instagram_business_account`: `externalId = ig_user_id`, `displayName = @username`,
+   * `sourceExternalId` = mã Page; `accessToken` = mã Page (Instagram đăng bằng mã Page nguồn), `refreshToken` = mã
+   * người dùng dài hạn. Page KHÔNG có Instagram ⇒ ứng viên GIỮ CHỖ `unlinked:<pageId>` (mã quyền rỗng) để màn hình
+   * chọn hiện "Page chưa liên kết" kèm hướng dẫn (US2-3) – `checkAccount` kết luận `PAGE_NOT_LINKED`, không kết nối được.
+   */
+  async exchangeCallback(params: CallbackParams): Promise<{ candidates: ConnectionCandidate[] }> {
+    const oauth = this.opts.oauth ?? null;
+    if (oauth === null) throw new Error('Chưa cấu hình ứng dụng Meta (FACEBOOK_APP_ID/SECRET).');
+    if (params.error !== undefined || params.code === undefined || params.code === '') {
+      return { candidates: [] };
+    }
+    const { userToken } = await oauth.exchangeCode(params.code, params.redirectUri ?? '');
+    const [pages, info] = await Promise.all([
+      oauth.listPages(userToken),
+      oauth.debugToken(userToken),
+    ]);
+    const expiry = expiryFromDebug(info);
+    return {
+      candidates: pages.map((p) =>
+        p.instagram === null
+          ? {
+              externalId: `${UNLINKED_PREFIX}${p.id}`,
+              displayName: p.name.slice(0, 120),
+              accessToken: '',
+              tokenExpiresAt: null,
+              accountType: 'page_without_instagram',
+              sourceExternalId: p.id,
+              ...(p.avatarUrl === null ? {} : { avatarUrl: p.avatarUrl }),
+            }
+          : {
+              externalId: p.instagram.id,
+              displayName: `@${p.instagram.username}`.slice(0, 120),
+              accessToken: p.accessToken,
+              refreshToken: userToken,
+              tokenExpiresAt: expiry.kind === 'none' ? null : expiry.expiresAt,
+              expiry,
+              accountType: 'professional',
+              sourceExternalId: p.id,
+              ...(p.avatarUrl === null ? {} : { avatarUrl: p.avatarUrl }),
+              grantedScopes: info.scopes,
+            },
+      ),
+    };
   }
 }

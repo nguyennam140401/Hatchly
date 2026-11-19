@@ -75,6 +75,29 @@ export const FAKE_CHANNELS: Partial<Record<ChannelType, FakeChannelSpec>> = {
     },
     accountType: 'official_account',
   },
+  // 010 T079: TikTok giả cho dev/test – chỉ video, làm mới được; đăng thật chưa có nên bản giả cũng chỉ kết nối/kiểm tra.
+  tiktok: {
+    capabilities: {
+      reconcile: false,
+      asyncProcessing: true,
+      tokenRefresh: true,
+      reportsQuota: false,
+      maxReconcileWindowHours: null,
+    },
+    mediaRules: {
+      maxItems: 1,
+      image: null,
+      video: {
+        formats: ['mp4', 'mov'],
+        maxBytes: 1000 * MB,
+        maxDurationSec: 600,
+        minAspect: 0.5,
+        maxAspect: 2,
+      },
+      allowMixed: false,
+    },
+    accountType: 'creator',
+  },
   // Kênh thứ tư (US2, SC-002): năng lực tối thiểu, quy tắc media khác (chỉ PNG, tối đa 1).
   test_channel: {
     capabilities: {
@@ -133,6 +156,12 @@ export const FAKE_ERROR_TABLE: ErrorTable = {
       'Nền tảng báo lỗi sau khi đã nhận bài. Chưa rõ bài đã lên hay chưa – vui lòng kiểm tra trên trang.',
     remedies: [{ action: 'check_on_platform', labelVi: 'Kiểm tra trên trang' }],
   },
+  FAKE_ROLE_TOO_LOW: {
+    category: 'user_action',
+    messageVi:
+      'Tài khoản Facebook của bạn chưa có vai trò đủ quyền đăng bài trên Page này. Hãy nhờ quản trị viên Page cấp lại vai trò.',
+    remedies: [{ action: 'check_on_platform', labelVi: 'Kiểm tra vai trò trên Page' }],
+  },
   FAKE_NOT_PROFESSIONAL: {
     category: 'user_action',
     messageVi: 'Tài khoản này không phải tài khoản chuyên nghiệp nên không đăng bài tự động được.',
@@ -145,6 +174,8 @@ export interface FakePage {
   externalId: string;
   displayName: string;
   eligible: boolean;
+  sourceExternalId?: string | undefined;
+  accountType?: string | undefined;
 }
 
 export function defaultFakePages(channelType: ChannelType): FakePage[] {

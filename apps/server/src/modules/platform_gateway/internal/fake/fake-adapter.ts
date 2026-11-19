@@ -6,6 +6,7 @@ import type {
   ChannelType,
   CheckStatusResult,
   ClassifiedError,
+  ExpiryInfo,
   MediaRules,
   ReconcileResult,
   RefreshTokenResult,
@@ -18,6 +19,7 @@ import type {
   CallbackParams,
   ConnectionCandidate,
   PlatformAdapter,
+  RevokeResult,
 } from '../adapters/adapter';
 import { makeClassifier } from '../adapters/classify';
 import { contentHashOf } from '../adapters/content-hash';
@@ -133,13 +135,33 @@ export class FakePlatformAdapter implements PlatformAdapter {
     if (verdict === 'missing_permission') {
       return { kind: 'ineligible', error: this.classify('FAKE_PERMISSION_MISSING') };
     }
+    if (verdict === 'role_too_low') {
+      return { kind: 'ineligible', error: this.classify('FAKE_ROLE_TOO_LOW') };
+    }
+    const expiry = await this.expiryOf(cred, ctx);
     return {
       kind: 'eligible',
       accountType: this.spec.accountType,
       grantedScopes: ['pages_manage_posts', 'pages_read_engagement'],
       quotaRemaining: this.capabilities.reportsQuota ? 200 : null,
-      tokenExpiresAt: new Date(Date.now() + 60 * DAY_MS),
+      tokenExpiresAt:
+        expiry.kind === 'none' ? new Date(Date.now() + 3650 * DAY_MS) : expiry.expiresAt,
+      expiry,
     };
+  }
+
+  /** Hạn hiện tại: mặc định `token` +60 ngày; kịch bản `expiry` ép sang `none` / `data_access`. */
+  async expiryOf(_cred: DecryptedCredential, ctx: AdapterCallContext): Promise<ExpiryInfo> {
+    const s = await this.step(ctx.connectionId, 'expiry');
+    const kind = s !== undefined && 'expiry' in s ? s.expiry : 'token';
+    if (kind === 'none') return { kind: 'none' };
+    return { kind, expiresAt: new Date(Date.now() + 60 * DAY_MS) };
+  }
+
+  /** Thu hồi giả: mặc định `done`; kịch bản `revoke` ép `failed`/`unsupported`. Không bao giờ ném. */
+  async revoke(_cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RevokeResult> {
+    const s = await this.step(ctx.connectionId, 'revoke');
+    return s !== undefined && 'revoke' in s ? s.revoke : 'done';
   }
 
   async submit(_cred: DecryptedCredential, req: AdapterSubmit): Promise<SubmitResult> {
@@ -315,6 +337,11 @@ export class FakePlatformAdapter implements PlatformAdapter {
           ? newFakeToken()
           : `${NOT_PROFESSIONAL_PREFIX}${newFakeToken().slice(9)}`,
         tokenExpiresAt: expires,
+        expiry: { kind: 'token' as const, expiresAt: expires },
+        accountType: p.accountType ?? this.spec.accountType,
+        avatarUrl: `https://cdn.example.test/fake/${p.externalId}.jpg`,
+        grantedScopes: ['pages_manage_posts', 'pages_read_engagement'],
+        sourceExternalId: p.sourceExternalId,
       })),
     };
   }

@@ -1,5 +1,6 @@
 import type {
   AccountCheckResult,
+  ExpiryInfo,
   ChannelCapabilities,
   ChannelType,
   CheckStatusResult,
@@ -21,6 +22,14 @@ export interface AdapterCallContext {
   /** Mã Page/tài khoản trên nền tảng (013 – bộ chuyển đổi thật gọi `/{externalId}/…`). */
   externalId?: string | undefined;
 }
+
+/**
+ * 010 T061: kết quả làm mới quyền NỘI BỘ (mang mã mới – KHÔNG đi qua `PlatformGateway` công khai). Bên gọi (việc nền
+ * `check_connection`) mã hóa ngay `accessToken`/`refreshToken` rồi ghi `token_issued_at` mới; không bao giờ ghi nhật ký.
+ */
+export type RenewTokenResult =
+  | { kind: 'renewed'; accessToken: string; refreshToken?: string; expiry: ExpiryInfo }
+  | { kind: 'failed'; error: ClassifiedError };
 
 export interface AdapterSubmit {
   text: string;
@@ -46,6 +55,8 @@ export interface AdapterReconcile {
 export interface CallbackParams {
   code?: string | undefined;
   error?: string | undefined;
+  /** 010: địa chỉ quay về đã dùng ở bước ủy quyền – Meta/TikTok yêu cầu khớp khi đổi `code`. */
+  redirectUri?: string | undefined;
 }
 
 /** Page/tài khoản người dùng có thể chọn sau lượt gọi lại. Mã quyền chỉ đi tiếp vào vault. */
@@ -54,8 +65,23 @@ export interface ConnectionCandidate {
   displayName: string;
   /** Mã quyền thô của ứng viên – chỉ dùng để mã hóa ngay bằng CredentialVault. */
   accessToken: string;
-  tokenExpiresAt: Date;
+  /** `null` khi nền tảng không có mốc hạn cố định (`expiry.kind = 'none'`). */
+  tokenExpiresAt: Date | null;
+  // ----- 010 (đều tùy chọn – bộ chuyển đổi cũ vẫn hợp lệ) -----
+  avatarUrl?: string | undefined;
+  /** `page`, `instagram_business`, `instagram_creator`, `tiktok_creator`… */
+  accountType?: string | undefined;
+  grantedScopes?: string[] | undefined;
+  /** Instagram: mã Page nguồn (FR-042). */
+  sourceExternalId?: string | undefined;
+  /** Mã người dùng dài hạn (Meta) / refresh_token (TikTok) – cũng chỉ để mã hóa ngay. */
+  refreshToken?: string | undefined;
+  /** Hạn chính xác; thiếu → `{kind:'token', expiresAt: tokenExpiresAt}`. */
+  expiry?: ExpiryInfo | undefined;
 }
+
+/** Kết quả thu hồi quyền phía nền tảng. KHÔNG ném: lỗi → `failed`; nền tảng không có API thu hồi → `unsupported`. */
+export type RevokeResult = 'done' | 'failed' | 'unsupported';
 
 export interface PlatformAdapter {
   readonly channelType: ChannelType;
@@ -72,8 +98,22 @@ export interface PlatformAdapter {
   reconcile(cred: DecryptedCredential, q: AdapterReconcile): Promise<ReconcileResult>;
   classifyError(rawCode: string): ClassifiedError;
   refreshToken(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RefreshTokenResult>;
+  /**
+   * 010 T061: làm mới THẬT – nhận mã làm mới đã giải mã (Meta: mã người dùng dài hạn), trả mã mới để tầng kết nối ghi.
+   * Chỉ có khi `capabilities.tokenRefresh`. `signal` ≤ 10 giây do bên gọi đặt.
+   */
+  renewToken?(
+    refreshCred: DecryptedCredential,
+    ctx: AdapterCallContext,
+    signal?: AbortSignal,
+  ): Promise<RenewTokenResult>;
+  /** 010: thu hồi quyền phía nền tảng khi ngắt kết nối (FR-017). Không ném; thời gian chờ ≤ 5 giây do bên gọi đặt. */
+  revoke(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RevokeResult>;
+  /** 010: hạn hiện tại của quyền (đo lại bằng lời gọi nền tảng khi cần). Dạng `none` khi không có mốc hạn cố định. */
+  expiryOf(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<ExpiryInfo>;
   // Luồng kết nối (bản thật WBS 2.2 dùng OAuth):
-  authorizeUrl(state: string, redirectUri: string): string;
+  /** `rerequest`: xin lại đúng quyền bị từ chối (Meta `auth_type=rerequest`) khi kết nối lại. */
+  authorizeUrl(state: string, redirectUri: string, opts?: { rerequest?: boolean }): string;
   exchangeCallback(params: CallbackParams): Promise<{ candidates: ConnectionCandidate[] }>;
 }
 
@@ -86,6 +126,8 @@ export const ADAPTER_OPERATIONS = [
   'reconcile',
   'classifyError',
   'refreshToken',
+  'revoke',
+  'expiryOf',
   'contentHash',
   'authorizeUrl',
   'exchangeCallback',

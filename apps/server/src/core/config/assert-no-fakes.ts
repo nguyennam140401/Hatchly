@@ -32,6 +32,8 @@ export function resolveGatewayDefaults(config: AppConfig): AppConfig {
     out.FAKE_STATE_STORE ??= 'memory';
     // 009: nhà cung cấp đăng nhập giả lập (không gọi ra ngoài).
     out.OAUTH_DRIVER ??= 'fake';
+    // 010: kho mã quyền – dev/test mặc định bản giả.
+    out.CREDENTIAL_VAULT_DRIVER ??= 'fake';
   } else {
     for (const variable of [
       'PLATFORM_GATEWAY_DRIVER',
@@ -52,6 +54,27 @@ export function resolveGatewayDefaults(config: AppConfig): AppConfig {
       'S3_SECRET_ACCESS_KEY',
     ] as const) {
       if (out[variable] === undefined) issues.push({ variable, reason: 'bắt buộc' });
+    }
+  }
+  // 010: kho mã quyền thật cần cấu hình của nó; thông báo chỉ nêu TÊN biến, không bao giờ giá trị.
+  if (out.PLATFORM_GATEWAY_DRIVER === 'real') {
+    if (out.CREDENTIAL_VAULT_DRIVER === undefined) {
+      issues.push({
+        variable: 'CREDENTIAL_VAULT_DRIVER',
+        reason: 'bắt buộc khi PLATFORM_GATEWAY_DRIVER=real',
+      });
+    }
+    if (out.CREDENTIAL_VAULT_DRIVER === 'kms' && out.KMS_KEY_ID === undefined) {
+      issues.push({ variable: 'KMS_KEY_ID', reason: 'bắt buộc khi CREDENTIAL_VAULT_DRIVER=kms' });
+    }
+    if (
+      out.CREDENTIAL_VAULT_DRIVER === 'env-master-key' &&
+      out.CREDENTIAL_MASTER_KEY_B64 === undefined
+    ) {
+      issues.push({
+        variable: 'CREDENTIAL_MASTER_KEY_B64',
+        reason: 'bắt buộc khi CREDENTIAL_VAULT_DRIVER=env-master-key',
+      });
     }
   }
   if (out.DETACHED_NOTICE_DAYS >= out.DETACHED_RETENTION_DAYS) {
@@ -78,6 +101,8 @@ export function fakeSelections(config: AppConfig): string[] {
   if (config.PLATFORM_ADAPTER_MODE === 'fake') found.push('PLATFORM_ADAPTER_MODE=fake');
   // 009: bản giả lập cho phép đăng nhập bằng danh tính tùy ý → KHÔNG nằm trong ngoại lệ thử nghiệm.
   if (config.OAUTH_DRIVER === 'fake') found.push('OAUTH_DRIVER=fake');
+  // 010: kho mã quyền không mã hóa thật (khóa cố định trong mã) – không bao giờ ở production.
+  if (config.CREDENTIAL_VAULT_DRIVER === 'fake') found.push('CREDENTIAL_VAULT_DRIVER=fake');
   if (config.FAKE_STATE_STORE !== undefined) {
     found.push(`FAKE_STATE_STORE=${config.FAKE_STATE_STORE}`);
   }
@@ -92,6 +117,7 @@ const STAGING_ALLOWED_FAKES = new Set([
   'FAKE_STATE_STORE=sandbox',
   'PUBLISH_EXECUTOR=fake',
   'PLATFORM_ADAPTER_MODE=fake',
+  'CREDENTIAL_VAULT_DRIVER=fake',
 ]);
 
 /**
@@ -102,6 +128,32 @@ const STAGING_ALLOWED_FAKES = new Set([
 function isAllowedStagingFake(config: AppConfig, entry: string): boolean {
   return (
     config.APP_ENV === 'staging' && config.STAGING_ALLOW_FAKES && STAGING_ALLOWED_FAKES.has(entry)
+  );
+}
+
+/**
+ * 010 (ADR-13, R2): khóa chủ lấy từ biến môi trường chỉ để chạy staging khi chưa có KMS. Production TỪ CHỐI;
+ * staging chỉ cho phép khi `STAGING_ALLOW_ENV_MASTER_KEY=true`.
+ */
+function assertEnvMasterKeyAllowed(config: AppConfig): void {
+  if (config.CREDENTIAL_VAULT_DRIVER !== 'env-master-key') return;
+  const allowed = config.APP_ENV === 'staging' && config.STAGING_ALLOW_ENV_MASTER_KEY;
+  if (allowed) return;
+  throw new ConfigError(
+    [
+      {
+        variable: 'CREDENTIAL_VAULT_DRIVER',
+        reason:
+          config.APP_ENV === 'production'
+            ? 'env-master-key không dùng được ở production (cần kms)'
+            : 'env-master-key ở staging cần STAGING_ALLOW_ENV_MASTER_KEY=true',
+      },
+    ],
+    `Môi trường ${config.APP_ENV} không được dùng khóa chủ lấy từ biến môi trường: CREDENTIAL_VAULT_DRIVER=env-master-key${
+      config.APP_ENV === 'staging'
+        ? ' (staging cần STAGING_ALLOW_ENV_MASTER_KEY=true)'
+        : ' (cần kms)'
+    }`,
   );
 }
 
@@ -118,6 +170,7 @@ export function stagingFakesInUse(config: AppConfig): string[] {
  */
 export function assertNoFakesInProduction(config: AppConfig): void {
   if (!isProductionLike(config.APP_ENV)) return;
+  assertEnvMasterKeyAllowed(config);
   const found = fakeSelections(config).filter((entry) => !isAllowedStagingFake(config, entry));
   if (found.length === 0) return;
   throw new ConfigError(

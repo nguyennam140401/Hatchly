@@ -1,7 +1,7 @@
 // Hiện thực `PublishingPublicApi` (012 contracts/module-api.md mục 2). Mọi thao tác ghi chạy TRONG giao
 // dịch của người gọi (`approval`): duyệt + mục lịch đăng + việc là MỘT giao dịch (Hiến pháp II).
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, min } from 'drizzle-orm';
 import type { ChannelType, Remedy } from '@app/shared/content';
 import { worstAttemptStatus } from '@app/shared/publishing';
 import { tenantTx, type Db } from '../../../core';
@@ -164,6 +164,33 @@ export class PublishingService implements PublishingPublicApi {
       await cancelJob({ queue: 'publish', dedupeKey: runAttemptDedupeKey(id) });
     }
     return { cancelled: cancelled.length };
+  }
+
+  async countScheduledByConnections(
+    connectionIds: readonly string[],
+  ): Promise<Map<string, { count: number; nextAt: Date | null }>> {
+    const out = new Map<string, { count: number; nextAt: Date | null }>(
+      connectionIds.map((id) => [id, { count: 0, nextAt: null }]),
+    );
+    if (connectionIds.length === 0) return out;
+    const rows = await tenantTx((db) =>
+      db
+        .select({
+          id: publishAttempts.channel_connection_id,
+          n: count(),
+          next: min(publishAttempts.scheduled_at),
+        })
+        .from(publishAttempts)
+        .where(
+          and(
+            inArray(publishAttempts.channel_connection_id, [...connectionIds]),
+            inArray(publishAttempts.status, ['scheduled', 'retry_wait']),
+          ),
+        )
+        .groupBy(publishAttempts.channel_connection_id),
+    );
+    for (const r of rows) out.set(r.id, { count: r.n, nextAt: r.next });
+    return out;
   }
 
   async statusesByPosts(postIds: readonly string[]): Promise<Map<string, PostPublishState>> {

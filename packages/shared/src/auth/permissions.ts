@@ -16,6 +16,13 @@ export const PERMISSIONS = {
   'context.edit': { owner: true, collaborator: false, support: false, admin: false },
   /** Kết nối/ngắt kênh (FR-02). */
   'channel.manage': { owner: true, collaborator: false, support: false, admin: false },
+  /** Xem màn hình Kênh kết nối – chủ và cộng tác viên, chỉ đọc (010 FR-027). */
+  'channel.view': { owner: true, collaborator: true, support: false, admin: false },
+  /**
+   * Đổi công tắc tính năng theo tài khoản/mặc định hệ thống (010 FR-037) – chỉ quản trị nội bộ;
+   * `support` KHÔNG có (chỉ xem), chủ/CTV không bao giờ tự bật.
+   */
+  'feature.manage': { owner: false, collaborator: false, support: false, admin: true },
   /** Soạn, sửa bài (FR-05). */
   'post.edit': { owner: true, collaborator: true, support: false, admin: false },
   /** Tải media (FR-03). */

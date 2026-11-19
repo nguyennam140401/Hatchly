@@ -3,6 +3,7 @@ import { parseArgs } from 'node:util';
 import { ConfigError, loadConfig, resolveAuthConfig } from '../core';
 import { DatabaseService, setActiveDatabase } from '../core/db/database';
 import { createStaffOps, StaffInputError } from '../modules/account';
+import { runStaffFeatureCli } from './staff-feature';
 
 // Lệnh vận hành nhân viên nội bộ (004, contracts/auth-ops.md mục 2):
 //   pnpm staff create --email <e> --name <tên> --role support|admin   (mật khẩu đọc từ stdin)
@@ -24,6 +25,7 @@ const USAGE = `Cách dùng:
   staff disable --email <email>
   staff reset-password --email <email>
   staff list
+  staff feature get|set-default|set …   (công tắc tính năng – xem staff feature để biết tham số)
 Mật khẩu đọc từ stdin (ẩn ký tự khi chạy ở terminal).`;
 
 /** Đọc một dòng mật khẩu: terminal → ẩn ký tự; ống dẫn → dòng đầu của stdin. */
@@ -67,6 +69,8 @@ export async function runStaffCli(
   const stdout = io.stdout ?? process.stdout;
   const stderr = io.stderr ?? process.stderr;
   const [command, ...rest] = argv;
+  // 010 T082: `staff feature …` – công tắc tính năng (cùng kiểm toán với điểm cuối nhân viên).
+  if (command === 'feature') return runStaffFeatureCli(rest, io);
   let database: DatabaseService | undefined;
   try {
     const { values } = parseArgs({

@@ -9,7 +9,16 @@
  * Bên gọi rẽ nhánh theo `capabilities`, không theo tên nền tảng.
  */
 
-export const CHANNEL_TYPES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel'] as const;
+import type { Db } from '../../core/db';
+
+// 'tiktok' được thêm cùng bộ chuyển đổi TikTok (010 T079) – test `us2.spec` bắt buộc mọi loại kênh đều có bộ chuyển đổi.
+export const CHANNEL_TYPES = [
+  'facebook_page',
+  'instagram',
+  'zalo_oa',
+  'test_channel',
+  'tiktok',
+] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
 export interface ChannelCapabilities {
@@ -132,13 +141,22 @@ export interface ErrorMappingRow {
   remedies: ClassifiedError['remedies'];
 }
 
+/**
+ * Hạn của quyền truy cập (010 R2): `none` = nền tảng không có mốc hạn cố định (Meta, sẽ báo ngay nếu bị thu hồi);
+ * `token` = hạn của mã quyền; `data_access` = hạn truy cập dữ liệu (mốc nhỏ hơn quyết định).
+ */
+export type ExpiryInfo = { kind: 'none' } | { kind: 'token' | 'data_access'; expiresAt: Date };
+
 export type AccountCheckResult =
   | {
       kind: 'eligible';
       accountType: string;
       grantedScopes: string[];
       quotaRemaining: number | null;
+      /** Giữ cho 005/012/013; với `expiry.kind='none'` là mốc xa mặc định – dùng `expiry` khi có. */
       tokenExpiresAt: Date;
+      /** 010: hạn chính xác. Thiếu = bộ chuyển đổi cũ, hiểu là `{kind:'token', expiresAt: tokenExpiresAt}`. */
+      expiry?: ExpiryInfo;
     }
   | { kind: 'ineligible'; error: ClassifiedError };
 
@@ -154,10 +172,22 @@ export interface ChannelConnection {
   /** ≤ 120 ký tự. */
   displayName: string;
   externalId: string;
+  /** Luôn là một trong 4 giá trị cũ (R3): mọi trạng thái không dùng được ánh xạ về `expired`/`disconnected`. */
   status: ChannelConnectionStatus;
-  tokenExpiresAt: Date;
+  /** `null` ⇔ `expiry.kind = 'none'` (Meta không có mốc hạn cố định). */
+  tokenExpiresAt: Date | null;
   connectedAt: Date;
+  // ----- 010 (tùy chọn – bên gọi cũ bỏ qua) -----
+  /** Trạng thái hiển thị đầy đủ (FR-025). */
+  state?: ConnectionState;
+  reasonCode?: string | null;
+  expiry?: ExpiryInfo;
+  /** Chỉ Instagram: Page nguồn (FR-042). */
+  sourceConnectionId?: string | null;
 }
+
+export type ConnectionState =
+  'active' | 'expiring' | 'needs_reconnect' | 'ineligible' | 'suspended' | 'disconnected';
 
 export interface PlatformGatewayPublicApi {
   // --- 7 thao tác ADR-05, theo kết nối kênh ---
@@ -173,8 +203,43 @@ export interface PlatformGatewayPublicApi {
   capabilities(channelType: ChannelType): ChannelCapabilities;
   contentHash(channelType: ChannelType, text: string): string;
   getConnection(connectionId: string): Promise<ChannelConnection | null>;
-  /** 012: mọi kết nối của tài khoản trong ngữ cảnh (kể cả đã ngắt) – không mã quyền. */
-  listConnections(): Promise<ChannelConnection[]>;
+  /**
+   * 012: mọi kết nối của tài khoản trong ngữ cảnh (kể cả đã ngắt) – không mã quyền, không gọi nền tảng.
+   * 010: lọc tùy chọn; `usableOnly` chỉ giữ kết nối dùng được để đăng (`state ∈ {active, expiring}`).
+   */
+  listConnections(filter?: {
+    channelTypes?: readonly ChannelType[];
+    usableOnly?: boolean;
+  }): Promise<ChannelConnection[]>;
+  /** 010: như `getConnection` + trạng thái hiển thị đã dẫn xuất; null khi không có/không thuộc tài khoản. */
+  getConnectionState(connectionId: string): Promise<ChannelConnection | null>;
+  /**
+   * 010 FR-023: bên đăng bài báo "quyền hỏng". CHỈ `active → needs_reconnect` (cập nhật có điều kiện, idempotent) và phát
+   * thông báo trong cùng giao dịch; module Đăng bài KHÔNG ghi thẳng vào bảng của cổng.
+   */
+  reportAuthFailure(
+    connectionId: string,
+    report: { rawCode: string; kind: 'token_expired' | 'token_revoked' | 'scope_missing' },
+  ): Promise<void>;
+  /** 010: ngắt mọi kết nối của tài khoản trong ngữ cảnh, xóa mã quyền ngay (xóa tài khoản). */
+  disconnectAllForAccount(): Promise<{ disconnected: number }>;
+  /** 010: công tắc hiệu lực của tài khoản trong ngữ cảnh (ghi đè ?? mặc định); lỗi đọc ⇒ `false`. */
+  isFeatureEnabled(flag: 'channel.tiktok'): Promise<boolean>;
+}
+
+/**
+ * 010 – Cổng ngược cho module tiêu thụ kênh (R7). `platform_gateway` KHÔNG import `publishing` (tránh vòng phụ thuộc);
+ * `publishing` đăng ký bản cài đặt lúc khởi động bằng `registerConnectionConsumers`. Chưa đăng ký → bản rỗng.
+ */
+export interface ConnectionConsumersPort {
+  /** Số bài đã lên lịch (còn hiệu lực) + giờ gần nhất của TỪNG kênh. Chỉ đọc, theo tài khoản của ngữ cảnh. */
+  scheduledImpact(
+    connectionIds: readonly string[],
+  ): Promise<Map<string, { count: number; nextAt: Date | null }>>;
+  /** Gọi TRONG giao dịch ngắt của cổng: hủy lượt CHƯA gửi của kênh. Trả số lượt đã hủy. */
+  onDisconnect(tx: Db, connectionId: string): Promise<{ cancelled: number }>;
+  /** Bảng ánh xạ lỗi cấu hình (FR-032) – đọc từ `publishing.error_mappings`. */
+  errorMappings(): Promise<ErrorMappingRow[]>;
 }
 
 /** Token NestJS của PlatformGatewayPublicApi. */

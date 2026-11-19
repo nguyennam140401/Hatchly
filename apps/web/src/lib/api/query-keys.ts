@@ -36,7 +36,14 @@ export const queryKeys = {
   /** 012: danh sách Chờ duyệt của chủ tài khoản. */
   approvals: { pending: () => ['approvals', 'pending'] as const },
   plan: { current: () => ['plan'] as const },
-  channels: { list: () => ['channels', 'list'] as const },
+  channels: {
+    list: () => ['channels', 'list'] as const,
+    /** 010: màn hình "Kênh kết nối" – chỉ đọc dữ liệu đã lưu; cũng nuôi dấu chỉ báo ở menu (FR-026). */
+    overview: () => ['channels', 'overview'] as const,
+    selection: (selectionId: string) => ['channels', 'selection', selectionId] as const,
+    disconnectPreview: (connectionId: string) =>
+      ['channels', 'disconnect-preview', connectionId] as const,
+  },
   media: {
     lists: () => ['media', 'list'] as const,
     list: (filter: MediaFilter = {}) => ['media', 'list', filter] as const,

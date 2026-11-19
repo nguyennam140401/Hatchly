@@ -15,6 +15,8 @@ Quy tắc chung:
 
 ## 1. Cổng nền tảng (`platform_gateway`) – chỉ `publishing` dùng nhóm thao tác đăng
 
+> Kết nối kênh (OAuth, mã quyền mã hóa, trạng thái dẫn xuất, việc nền, công tắc TikTok): xem [channels.md](./channels.md) (010).
+
 ```ts
 import {
   PLATFORM_GATEWAY,

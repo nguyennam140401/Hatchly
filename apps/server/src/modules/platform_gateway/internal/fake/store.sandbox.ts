@@ -82,7 +82,8 @@ export class SandboxFakePlatformStore implements FakePlatformStore {
           external_id: c.externalId,
           display_name: c.displayName,
           token_ciphertext: c.tokenCiphertext,
-          token_expires_at: c.tokenExpiresAt,
+          // Bản giả luôn có ngày hết hạn; `null` (Meta không hạn cố định) chỉ có ở bản thật.
+          token_expires_at: c.tokenExpiresAt ?? new Date(Date.now() + 3650 * 86_400_000),
         })
         .onConflictDoNothing({
           target: [

@@ -31,29 +31,53 @@ export function revealCredential(cred: DecryptedCredential): string {
   return token;
 }
 
+/**
+ * Dữ liệu xác thực kèm (AAD) của bản mã: ràng buộc bản mã với đúng tài khoản + mục đích + kênh. Đem bản mã sang tài
+ * khoản/kênh khác (hoặc đổi chỗ mã quyền ↔ mã làm mới) thì giải mã THẤT BẠI (nguyên tắc I, VII).
+ * `ref` = `channelType:externalId` – ổn định khi bản mã đi từ phiên chọn Page sang kết nối và khi kết nối lại tại chỗ.
+ */
+export type CredentialPurpose = 'token' | 'refresh';
+
+export function credentialAad(
+  accountId: string,
+  purpose: CredentialPurpose,
+  channelType: string,
+  externalId: string,
+): string {
+  return `${accountId}|${purpose}|${channelType}:${externalId}`;
+}
+
 export interface CredentialVault {
-  encrypt(token: string): Promise<Buffer>;
-  decrypt(ciphertext: Buffer): Promise<DecryptedCredential>;
+  encrypt(token: string, aad: string): Promise<Buffer>;
+  decrypt(ciphertext: Buffer, aad: string): Promise<DecryptedCredential>;
+}
+
+/** Tạo `DecryptedCredential` – CHỈ các bản hiện thực vault gọi. */
+export function wrapDecrypted(token: string): DecryptedCredential {
+  return makeCredential(token);
 }
 
 /**
  * Bản giả CHỈ dev/test: AES-256-GCM với khóa dev cố định (không phải bí mật – dữ liệu là mã quyền giả).
- * Cùng điểm bảo vệ như bản thật: mã quyền không bao giờ rời khỏi vault ở dạng rõ.
+ * Cùng điểm bảo vệ như bản thật: mã quyền không bao giờ rời khỏi vault ở dạng rõ; AAD cũng được kiểm để lỗi nối dây
+ * AAD lộ ra ngay ở môi trường dev/test.
  */
 export class FakeCredentialVault implements CredentialVault {
   private readonly key = createHash('sha256').update('app-dev-only-fake-credential-vault').digest();
 
-  encrypt(token: string): Promise<Buffer> {
+  encrypt(token: string, aad: string): Promise<Buffer> {
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', this.key, iv);
+    cipher.setAAD(Buffer.from(aad, 'utf8'));
     const body = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
     return Promise.resolve(Buffer.concat([iv, cipher.getAuthTag(), body]));
   }
 
-  decrypt(ciphertext: Buffer): Promise<DecryptedCredential> {
+  decrypt(ciphertext: Buffer, aad: string): Promise<DecryptedCredential> {
     const iv = ciphertext.subarray(0, 12);
     const tag = ciphertext.subarray(12, 28);
     const decipher = createDecipheriv('aes-256-gcm', this.key, iv);
+    decipher.setAAD(Buffer.from(aad, 'utf8'));
     decipher.setAuthTag(tag);
     const token = Buffer.concat([decipher.update(ciphertext.subarray(28)), decipher.final()]);
     return Promise.resolve(makeCredential(token.toString('utf8')));

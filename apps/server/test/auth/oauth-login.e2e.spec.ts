@@ -119,6 +119,15 @@ describeDb('Đăng nhập qua nhà cung cấp – US1', () => {
       expect(agent.cookies.has('__Host-oauth')).toBe(false);
       expect(await counts(email)).toEqual({ users: 1, accounts: 1, identities: 1, memberships: 1 });
 
+      // 010 FR-005: đăng nhập Facebook KHÔNG tự tạo kết nối kênh (quyền đăng bài là bước xin riêng).
+      const channels = await asOwner((c) =>
+        c.query<{ n: string }>(
+          'SELECT count(*)::text AS n FROM platform_gateway.channel_connections WHERE account_id = $1',
+          [me.account.id],
+        ),
+      );
+      expect(channels.rows[0]?.n).toBe('0');
+
       const row = await asOwner(async (c) => {
         const u = await c.query<{ terms_version: string; terms_accepted_at: Date | null }>(
           'SELECT terms_version, terms_accepted_at FROM account.users WHERE id = $1',

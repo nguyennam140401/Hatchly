@@ -80,6 +80,11 @@ export class ScriptedGateway {
 function makeApi(self: ScriptedGateway): PlatformGatewayPublicApi {
   {
     return {
+      // 010: các thao tác mới của cổng – kịch bản đăng bài không dùng.
+      getConnectionState: () => Promise.resolve(null),
+      reportAuthFailure: () => Promise.resolve(),
+      disconnectAllForAccount: () => Promise.resolve({ disconnected: 0 }),
+      isFeatureEnabled: () => Promise.resolve(false),
       checkAccount: () =>
         Promise.resolve(
           self.eligible

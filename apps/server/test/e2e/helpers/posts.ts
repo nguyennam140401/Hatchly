@@ -23,12 +23,10 @@ export async function connectChannel(
     `/api/v1/channels/callback/${channelType}?state=${encodeURIComponent(state ?? '')}&code=fake_code_${nth}`,
   );
   expect(cb.status).toBe(302);
-  const selectionId = new URL(cb.headers.location!).searchParams.get('selection');
+  const selectionId = new URL(cb.headers.location!, WEB).pathname.split('/').pop();
   const sel = await owner.get(`/api/v1/channels/selections/${selectionId}`);
-  const eligible = (
-    sel.body as { candidates: { externalId: string; check: { kind: string } }[] }
-  ).candidates.filter((c) => c.check.kind === 'eligible');
-  const pick = eligible[nth];
+  // 010: ứng viên đã kết nối ở lần trước hiện `selectable:false` ("Đã kết nối") nên chọn theo VỊ TRÍ trong danh sách đầy đủ.
+  const pick = (sel.body as { candidates: { externalId: string }[] }).candidates[nth];
   if (pick === undefined) throw new Error(`Không có ứng viên đủ điều kiện thứ ${nth}`);
   const saved = await owner.post('/api/v1/channels', { selectionId, externalId: pick.externalId });
   expect([200, 201]).toContain(saved.status);
