@@ -75,6 +75,29 @@ export const FAKE_CHANNELS: Partial<Record<ChannelType, FakeChannelSpec>> = {
     },
     accountType: 'official_account',
   },
+  // 010 T079: TikTok giả cho dev/test – chỉ video, làm mới được; đăng thật chưa có nên bản giả cũng chỉ kết nối/kiểm tra.
+  tiktok: {
+    capabilities: {
+      reconcile: false,
+      asyncProcessing: true,
+      tokenRefresh: true,
+      reportsQuota: false,
+      maxReconcileWindowHours: null,
+    },
+    mediaRules: {
+      maxItems: 1,
+      image: null,
+      video: {
+        formats: ['mp4', 'mov'],
+        maxBytes: 1000 * MB,
+        maxDurationSec: 600,
+        minAspect: 0.5,
+        maxAspect: 2,
+      },
+      allowMixed: false,
+    },
+    accountType: 'creator',
+  },
   // Kênh thứ tư (US2, SC-002): năng lực tối thiểu, quy tắc media khác (chỉ PNG, tối đa 1).
   test_channel: {
     capabilities: {

@@ -52,7 +52,7 @@ export const CONNECTIONS_SERVICE = Symbol('CONNECTIONS_SERVICE');
 
 // `tiktok` có trong DTO dùng chung nhưng chưa là `ChannelType` của máy chủ cho tới khi có bộ chuyển đổi (T079): giá trị
 // này vẫn đi vào dịch vụ, nơi công tắc chặn trước (403) và registry trả CHANNEL_NOT_SUPPORTED (422) nếu chưa đăng ký.
-const asServerType = (t: z.infer<typeof ChannelTypeSchema>): ChannelType => t as ChannelType;
+const asServerType = (t: z.infer<typeof ChannelTypeSchema>): ChannelType => t;
 const channelParam = z.strictObject({ channelType: ChannelTypeSchema });
 const selectionParam = z.strictObject({ selectionId: z.uuid() });
 const connectionParam = z.strictObject({ connectionId: z.uuid() });

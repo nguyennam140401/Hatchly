@@ -706,8 +706,8 @@ export class ConnectionsService {
     const impact = await connectionConsumers().scheduledImpact(rows.map((r) => r.id));
     const byId = new Map(rows.map((r) => [r.id, r]));
 
+    // Kết nối TikTok ĐÃ CÓ vẫn hiện khi công tắc tắt dưới dạng `suspended` (chỉ Xem/Ngắt – FR-039); chưa có thì không có gì để vẽ.
     const connections = rows
-      .filter((r) => (r.channelType as string) !== 'tiktok' || tiktokOn)
       .map((r) => {
         const source =
           r.sourceConnectionId === undefined || r.sourceConnectionId === null
@@ -791,6 +791,7 @@ export class ConnectionsService {
         requireCustomer();
         const existing = await this.store.getConnection(connectionId);
         if (existing === null || !isLive(existing)) throw connectionNotFound();
+        await this.requireFeatureFor(existing.channelType); // công tắc tắt ⇒ 403, KHÔNG chạm nền tảng (FR-038)
         if (this.store.claimManualCheck === undefined || this.store.updateRow === undefined) {
           throw providerUnavailable();
         }

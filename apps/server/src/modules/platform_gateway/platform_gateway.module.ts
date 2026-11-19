@@ -1,8 +1,11 @@
 import { type DynamicModule, Inject, Injectable, Module, type OnModuleInit } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../../core';
 import { notConfiguredProxy } from '../../core/gateways/not-configured';
+import { guardAdapter } from './internal/adapters/feature-guarded-adapter';
+import { TiktokAdapter } from './internal/adapters/tiktok/tiktok.adapter';
+import { TiktokClient } from './internal/adapters/tiktok/tiktok-client';
 import { registerMetaAdapters } from './internal/adapters/meta/register';
-import { registerDefaultAdapters } from './internal/adapters/registry';
+import { registerAdapter, registerDefaultAdapters } from './internal/adapters/registry';
 import { registerJobHandler } from '../queue';
 import {
   recordFeatureReadFailed,
@@ -26,6 +29,8 @@ import {
   CONNECTIONS_SERVICE,
   ConnectionsController,
 } from './internal/connections/connections.controller';
+import { FEATURES_SERVICE, FeaturesService } from './internal/features/features.service';
+import { StaffFeaturesController } from './internal/features/staff-features.controller';
 import { StaffChannelsController } from './internal/connections/staff-channels.controller';
 import { ConnectionsService } from './internal/connections/connections.service';
 import { PgConnectionStore } from './internal/connections/pg-connection-store';
@@ -65,8 +70,8 @@ const NOT_CONFIGURED_VAULT = notConfiguredProxy<CredentialVault>(
 const providers = [
   {
     provide: PLATFORM_STORE,
-    inject: [APP_CONFIG],
-    useFactory: async (config: AppConfig): Promise<ConnectionStore> => {
+    inject: [APP_CONFIG, FEATURE_GATE],
+    useFactory: async (config: AppConfig, gate: FeatureGate): Promise<ConnectionStore> => {
       // 013: bộ chuyển đổi Meta THẬT (đăng ký sau bản giả để thay thế cùng loại kênh).
       const registerReal = () => {
         if (config.PLATFORM_ADAPTER_MODE !== 'real') return;
@@ -96,9 +101,38 @@ const providers = [
               : null,
         });
       };
+      // 010 T079: TikTok THẬT – luôn bọc `FeatureGuardedAdapter` (công tắc `channel.tiktok` kiểm TRƯỚC khi chạm mạng).
+      const registerTiktok = () => {
+        if (
+          config.PLATFORM_ADAPTER_MODE !== 'real' ||
+          config.TIKTOK_CLIENT_KEY === undefined ||
+          config.TIKTOK_CLIENT_SECRET === undefined
+        ) {
+          return;
+        }
+        const { TIKTOK_CLIENT_KEY: clientKey, TIKTOK_CLIENT_SECRET: clientSecret } = config;
+        registerAdapter('tiktok', () =>
+          guardAdapter(
+            new TiktokAdapter({
+              client: new TiktokClient({
+                baseUrl: config.TIKTOK_BASE_URL,
+                timeoutMs: config.TIKTOK_TIMEOUT_MS,
+              }),
+              clientKey,
+              clientSecret,
+              scopes: (config.CHANNEL_SCOPES_TIKTOK ?? 'user.info.basic,video.publish,video.upload')
+                .split(',')
+                .map((x) => x.trim())
+                .filter((x) => x !== ''),
+            }),
+            (accountId) => gate.isEnabled(accountId, 'channel.tiktok'),
+          ),
+        );
+      };
       // 010: driver `real` = bảng `platform_gateway.channel_connections` thật + bộ chuyển đổi thật.
       if (config.PLATFORM_GATEWAY_DRIVER === 'real') {
         registerReal();
+        registerTiktok();
         return new PgConnectionStore();
       }
       if (config.PLATFORM_GATEWAY_DRIVER !== 'fake') {
@@ -113,6 +147,7 @@ const providers = [
         makeFake: makeFakeAdapterFactory(mode, store),
       });
       registerReal();
+      registerTiktok();
       return store;
     },
   },
@@ -261,9 +296,14 @@ export class PlatformGatewayModule {
       module: PlatformGatewayModule,
       // 012: `content` và `publishing` tiêm PLATFORM_GATEWAY (ranh giới do manifest + check:boundaries kiểm).
       global: true,
-      controllers: [ConnectionsController, StaffChannelsController],
+      controllers: [ConnectionsController, StaffChannelsController, StaffFeaturesController],
       providers: [
         ...providers,
+        {
+          provide: FEATURES_SERVICE,
+          inject: [FEATURE_GATE],
+          useFactory: (gate: FeatureGate): FeaturesService => new FeaturesService(gate),
+        },
         {
           provide: CONNECTIONS_SERVICE,
           inject: [
