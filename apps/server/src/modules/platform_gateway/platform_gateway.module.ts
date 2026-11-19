@@ -4,6 +4,11 @@ import { notConfiguredProxy } from '../../core/gateways/not-configured';
 import { registerMetaAdapters } from './internal/adapters/meta/register';
 import { registerDefaultAdapters } from './internal/adapters/registry';
 import { registerJobHandler } from '../queue';
+import {
+  recordFeatureReadFailed,
+  recordRefresh,
+  registerChannelGauges,
+} from './internal/metrics';
 import { writeChannelAudit } from './internal/connections/channel-audit';
 import { createCheckConnectionHandler } from './internal/maintenance/check-connection.handler';
 import { runCleanupConnectData } from './internal/maintenance/cleanup.handler';
@@ -129,7 +134,15 @@ const providers = [
       return NOT_CONFIGURED_VAULT;
     },
   },
-  { provide: FEATURE_GATE, useFactory: (): FeatureGate => new FeatureGate(new PgFeatureReader()) },
+  {
+    provide: FEATURE_GATE,
+    useFactory: (): FeatureGate =>
+      new FeatureGate(new PgFeatureReader(), {
+        onReadFailed: () => {
+          recordFeatureReadFailed();
+        },
+      }),
+  },
   {
     provide: GATEWAY_SETTINGS,
     useFactory: (): GatewaySettings => new GatewaySettings(new PgGatewaySettingsReader()),
@@ -191,7 +204,18 @@ class PlatformGatewayWorkerHandlers implements OnModuleInit {
       audit: writeChannelAudit,
     });
     registerJobHandler(checkConnection, async (payload) => {
-      await check(payload.connectionId);
+      // Mẫu số tỷ lệ làm mới thành công (SC-005): chỉ đếm khi thật sự đã kiểm tra nền tảng; lỗi hạ tầng của ta ⇒ failed.
+      let channelType = 'unknown';
+      try {
+        const conn = await this.store.getConnection(payload.connectionId);
+        if (conn !== null) channelType = conn.channelType;
+        const outcome = await check(payload.connectionId);
+        if (outcome === 'ok' || outcome === 'changed') recordRefresh(channelType, 'ok');
+        else if (outcome === 'deferred') recordRefresh(channelType, 'deferred');
+      } catch (err) {
+        recordRefresh(channelType, 'failed');
+        throw err;
+      }
     });
     registerJobHandler(channelMaintenance, async () => {
       const cfg = await this.settings.get();
@@ -201,6 +225,7 @@ class PlatformGatewayWorkerHandlers implements OnModuleInit {
       await runCleanupConnectData();
     });
     defineChannelSchedules();
+    registerChannelGauges();
   }
 }
 

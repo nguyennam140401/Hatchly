@@ -32,6 +32,7 @@ import type { ConnectionStore, StoredCandidate, StoredConnection } from './conne
 import { expiryFromJson, expiryToJson } from './connection-store';
 import { limitReached, remainingSlots } from './limits';
 import { hashOauthState, newOauthState, OAUTH_STATE_TTL_MS, SELECTION_TTL_MS } from './oauth-state';
+import { recordConnect } from '../metrics';
 import { toOverviewItem } from './overview-mapper';
 
 // Luồng kết nối kênh (005 + 010 FR-001…FR-008, R6, R8): bắt đầu → trang ủy quyền của nền tảng → gọi lại (kiểm `state`
@@ -258,8 +259,10 @@ export class ConnectionsService {
         channelType,
         result: 'ok',
       });
+      recordConnect(channelType, 'reconnected');
     } else if (outcome.kind === 'error') {
       await this.audit({ action: 'channel.connect_failed', channelType, result: outcome.code });
+      recordConnect(channelType, outcome.code);
     }
     return outcome;
   }
@@ -546,6 +549,7 @@ export class ConnectionsService {
       // Ứng viên không được chọn bị hủy cùng dòng phiên (mã quyền của chúng không được giữ lại).
       await this.dropSelection(selectionId);
       for (const r of results) {
+        recordConnect(sel.channelType, r.outcome);
         await this.audit({
           action: r.outcome === 'created' ? 'channel.connect' : 'channel.connect_failed',
           connectionId: r.connection?.connectionId ?? null,
