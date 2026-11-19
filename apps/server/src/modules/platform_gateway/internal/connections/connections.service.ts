@@ -25,6 +25,7 @@ import type { FeatureGate } from '../features/feature-gate';
 import { toChannelConnection, toChannelConnections } from '../gateway.service';
 import type { GatewaySettings } from '../settings/gateway-settings';
 import { credentialAad, type CredentialVault } from '../vault/credential-vault';
+import type { ChannelAuditEntry, ChannelAuditSink } from './channel-audit';
 import { blockCodeOf, callbackCodeOfBlock, reasonCodeOf } from './connect-errors';
 import { connectionConsumers } from './consumers';
 import type { ConnectionStore, StoredCandidate, StoredConnection } from './connection-store';
@@ -49,6 +50,8 @@ export interface ConnectionsServiceExtras {
   settings?: GatewaySettings;
   /** Gói còn hạn? tài khoản đang bị xóa? (`account.getPublishingEligibility`). Thiếu ⇒ coi như còn hạn. */
   eligibility?: () => Promise<{ planActive: boolean; deletionRequested: boolean }>;
+  /** Ghi kiểm toán thao tác kênh (FR-030). Thiếu ⇒ không ghi (bản dựng cũ/kiểm thử 005). */
+  audit?: ChannelAuditSink;
 }
 
 const DEFAULTS = {
@@ -159,6 +162,16 @@ export class ConnectionsService {
     }
   }
 
+  /** Ghi kiểm toán kiểu "cố gắng hết sức": lỗi ghi không làm hỏng thao tác của khách (nhật ký kỹ thuật tách riêng). */
+  private async audit(entry: ChannelAuditEntry): Promise<void> {
+    if (this.extras.audit === undefined) return;
+    try {
+      await this.extras.audit(entry);
+    } catch {
+      // Không lộ chi tiết; việc ghi lỗi kiểm toán thuộc tầng giám sát.
+    }
+  }
+
   private async requirePlanActive(): Promise<void> {
     const e = await this.extras.eligibility?.();
     if (e !== undefined && (!e.planActive || e.deletionRequested)) throw planExpired();
@@ -231,11 +244,30 @@ export class ConnectionsService {
    * Lượt gọi lại: `state` sai / hết hạn / đã dùng / của tài khoản hay người dùng khác / khác loại kênh ⇒ STATE_INVALID
    * (không tạo gì, không lộ lý do). Người dùng hủy ⇒ CONNECT_CANCELLED. Kết nối lại cùng kênh ⇒ cập nhật tại chỗ.
    */
-  handleCallback(
+  async handleCallback(
     channelType: ChannelType,
     q: { state?: string | undefined; code?: string | undefined; error?: string | undefined },
     /** Địa chỉ quay về đã dùng ở bước ủy quyền (Meta/TikTok yêu cầu khớp khi đổi `code`); bản giả bỏ qua. */
     redirectUri = '',
+  ): Promise<CallbackOutcome> {
+    const outcome = await this.handleCallbackCore(channelType, q, redirectUri);
+    if (outcome.kind === 'reconnected') {
+      await this.audit({
+        action: 'channel.reconnect',
+        connectionId: outcome.connectionId,
+        channelType,
+        result: 'ok',
+      });
+    } else if (outcome.kind === 'error') {
+      await this.audit({ action: 'channel.connect_failed', channelType, result: outcome.code });
+    }
+    return outcome;
+  }
+
+  private handleCallbackCore(
+    channelType: ChannelType,
+    q: { state?: string | undefined; code?: string | undefined; error?: string | undefined },
+    redirectUri: string,
   ): Promise<CallbackOutcome> {
     return withGatewayOp(
       'platform_gateway',
@@ -513,6 +545,14 @@ export class ConnectionsService {
       }
       // Ứng viên không được chọn bị hủy cùng dòng phiên (mã quyền của chúng không được giữ lại).
       await this.dropSelection(selectionId);
+      for (const r of results) {
+        await this.audit({
+          action: r.outcome === 'created' ? 'channel.connect' : 'channel.connect_failed',
+          connectionId: r.connection?.connectionId ?? null,
+          channelType: sel.channelType,
+          result: r.outcome,
+        });
+      }
       return { results };
     });
   }
@@ -767,11 +807,19 @@ export class ConnectionsService {
             error: unknownError(existing.channelType, 'CHECK_FAILED'),
           }));
 
-        const unavailable = async () => ({
-          connection: await this.itemOf(existing, now, cfg.warnDays),
-          result: 'unavailable' as const,
-          messageVi: 'Chưa kiểm tra được, thử lại sau.',
-        });
+        const unavailable = async () => {
+          await this.audit({
+            action: 'channel.recheck',
+            connectionId: existing.id,
+            channelType: existing.channelType,
+            result: 'unavailable',
+          });
+          return {
+            connection: await this.itemOf(existing, now, cfg.warnDays),
+            result: 'unavailable' as const,
+            messageVi: 'Chưa kiểm tra được, thử lại sau.',
+          };
+        };
 
         let patch: Parameters<NonNullable<ConnectionStore['updateRow']>>[2];
         let nextStatus: 'active' | 'needs_reconnect' | 'ineligible';
@@ -817,19 +865,42 @@ export class ConnectionsService {
         }
         const before = existing.rowStatus ?? existing.status;
         const updated = await this.store.updateRow(existing.id, existing.version ?? 1, patch);
+        const result = before === nextStatus ? ('ok' as const) : ('changed' as const);
+        await this.audit({
+          action: 'channel.recheck',
+          connectionId: existing.id,
+          channelType: existing.channelType,
+          result,
+          reasonCode: patch.reason_code ?? null,
+        });
+        if (result === 'changed') {
+          await this.audit({
+            action: 'channel.state_changed',
+            connectionId: existing.id,
+            channelType: existing.channelType,
+            result: `${before}->${nextStatus}`,
+            reasonCode: patch.reason_code ?? null,
+          });
+        }
         return {
           connection: await this.itemOf(updated, now, cfg.warnDays),
-          result: before === nextStatus ? ('ok' as const) : ('changed' as const),
+          result,
         };
       },
     );
   }
 
   async disconnect(connectionId: string): Promise<void> {
+    const existing = await this.store.getConnection(connectionId);
     const ok = await this.store.disconnect(connectionId);
-    if (!ok) {
-      const existing = await this.store.getConnection(connectionId);
-      if (existing === null) throw new ConnectionNotFoundError();
+    if (!ok && existing === null) throw new ConnectionNotFoundError();
+    if (ok) {
+      await this.audit({
+        action: 'channel.disconnect',
+        connectionId,
+        channelType: existing?.channelType ?? null,
+        result: 'ok',
+      });
     }
   }
 }

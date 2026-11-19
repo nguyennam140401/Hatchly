@@ -3,11 +3,13 @@ import { APP_CONFIG, type AppConfig } from '../../core';
 import { notConfiguredProxy } from '../../core/gateways/not-configured';
 import { registerMetaAdapters } from './internal/adapters/meta/register';
 import { registerDefaultAdapters } from './internal/adapters/registry';
+import { writeChannelAudit } from './internal/connections/channel-audit';
 import type { ConnectionStore } from './internal/connections/connection-store';
 import {
   CONNECTIONS_SERVICE,
   ConnectionsController,
 } from './internal/connections/connections.controller';
+import { StaffChannelsController } from './internal/connections/staff-channels.controller';
 import { ConnectionsService } from './internal/connections/connections.service';
 import { PgConnectionStore } from './internal/connections/pg-connection-store';
 import { getFakePlatformStore, makeFakeAdapterFactory } from './internal/fake';
@@ -171,7 +173,7 @@ export class PlatformGatewayModule {
       module: PlatformGatewayModule,
       // 012: `content` và `publishing` tiêm PLATFORM_GATEWAY (ranh giới do manifest + check:boundaries kiểm).
       global: true,
-      controllers: [ConnectionsController],
+      controllers: [ConnectionsController, StaffChannelsController],
       providers: [
         ...providers,
         {
@@ -195,6 +197,7 @@ export class PlatformGatewayModule {
               settings,
               // Gói hết hạn/đang xóa ⇒ dừng kết nối mới (FR-033); module `account` sở hữu dữ liệu này (ADR-13).
               eligibility: () => account.getPublishingEligibility(),
+              audit: writeChannelAudit,
             }),
         },
       ],

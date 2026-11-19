@@ -171,6 +171,31 @@ describeDb('Kiểm tra lại kênh – HTTP (010 US3)', () => {
     expect(r.connection.reasonCode).toBe('SCOPE_MISSING');
   });
 
+  it('T035: kết nối + kiểm tra lại + đổi trạng thái có kiểm toán, metadata không có mã quyền/tên Page', async () => {
+    const rows = await asOwner(
+      async (c) =>
+        (
+          await c.query<{ action: string; metadata: Record<string, unknown> }>(
+            `SELECT action, metadata FROM infra.audit_log
+              WHERE action LIKE 'channel.%' AND metadata->>'connection_id' = $1`,
+            [connectionId],
+          )
+        ).rows,
+    );
+    const actions = new Set(rows.map((r) => r.action));
+    expect(actions.has('channel.connect')).toBe(true);
+    expect(actions.has('channel.recheck')).toBe(true);
+    expect(actions.has('channel.state_changed')).toBe(true);
+    for (const r of rows) {
+      expect(Object.keys(r.metadata).sort()).toEqual(
+        ['channel_type', 'connection_id', 'reason_code', 'result', 'trace_id'].sort(),
+      );
+    }
+    const text = JSON.stringify(rows);
+    expect(text).not.toContain('EAA');
+    expect(text).not.toContain('Tiệm Hoa');
+  });
+
   it('mã hết hạn/bị thu hồi (190) ⇒ changed → needs_reconnect', async () => {
     stub.on(`GET /${PAGE}`, graphError(190, undefined, 401));
     const r = RecheckResponse.parse((await recheck()).body);
