@@ -114,13 +114,13 @@ description: "Danh sách việc cho tính năng 010 – Kết nối kênh Facebo
 
 ### Tests for User Story 3
 
-- [ ] T036 [P] [US3] Hợp đồng `checkAccount` trong `PGT/adapter-contract.spec.ts` cho Facebook/Instagram/TikTok/giả: đủ quyền ⇒ eligible; thiếu quyền; vai trò thấp; IG cá nhân; Page bị xóa – mỗi ca đúng một `reasonCode` + `remedies ≥ 1`; `quotaRemaining = null` không hiện số giả
+- [X] T036 [P] [US3] Hợp đồng `checkAccount` trong `PGT/adapter-contract.spec.ts` cho Facebook/Instagram/TikTok/giả: đủ quyền ⇒ eligible; thiếu quyền; vai trò thấp; IG cá nhân; Page bị xóa – mỗi ca đúng một `reasonCode` + `remedies ≥ 1`; `quotaRemaining = null` không hiện số giả
 - [ ] T037 [P] [US3] `PGT/recheck.http.spec.ts`: `POST /channels/:id/recheck` giới hạn tần suất bằng cập nhật có điều kiện `last_manual_check_at < now() - cooldown` ⇒ `429 RECHECK_TOO_SOON {retryAfterSec}`; nền tảng tạm thời không phản hồi ⇒ `200 {result:'unavailable'}` **không đổi** trạng thái (FR-012, US3-5); mã lạ ⇒ `unknown` không đổi trạng thái
 
 ### Implementation for User Story 3
 
 - [X] T038 [P] [US3] Bảng lỗi kết nối/kiểm tra `PG/internal/errors/connect-errors.ts` (mặc định trong mã; ghi đè bằng `errorMappings()` của cổng ngược): đúng bảng ở `contracts/meta-tiktok-adapters.md` mục 5 (`CONNECT_CANCELLED`, `SCOPE_MISSING`, `TOKEN_EXPIRED/REVOKED`, `ROLE_TOO_LOW`, `PAGE_UNAVAILABLE`, `NOT_PROFESSIONAL`, `PAGE_NOT_LINKED`, `APP_NOT_APPROVED`, `UNKNOWN`); **mã lạ ⇒ `unknown`**, lỗi mạng/5xx khi *kiểm tra* ⇒ `transient`; mỗi dòng có thông điệp tiếng Việt + ≥ 1 hành động; mã gốc chỉ ở `supportDetails.lastErrorCode`
-- [ ] T039 [US3] Hoàn thiện `FacebookAdapter.checkAccount` đủ (a) quyền bắt buộc, (b) vai trò, (c) Page còn tồn tại, (d) `quotaRemaining=null`; `expiryOf` (`debug_token`: bỏ mốc `0`; `none` khi không còn mốc; còn mốc ⇒ `min(expires_at, data_access_expires_at)` kèm `kind`) trong `PG/internal/adapters/meta/facebook.adapter.ts`
+- [X] T039 [US3] Hoàn thiện `FacebookAdapter.checkAccount` đủ (a) quyền bắt buộc, (b) vai trò, (c) Page còn tồn tại, (d) `quotaRemaining=null`; `expiryOf` (`debug_token`: bỏ mốc `0`; `none` khi không còn mốc; còn mốc ⇒ `min(expires_at, data_access_expires_at)` kèm `kind`) trong `PG/internal/adapters/meta/facebook.adapter.ts`
 - [ ] T040 [US3] `connections.service.recheck` + `POST /channels/:connectionId/recheck` (`channel.manage`): đọc → gọi `checkAccount` (+ làm mới nếu hạn gần) **ngoài giao dịch** → ghi `updateVersioned`; trả `{connection, result: 'ok'|'changed'|'unavailable'}`; chỉ kết quả **khẳng định** mới đổi trạng thái (FR-012); chi tiết điều kiện (`conditions`: loại tài khoản, quyền tick/chữ, hạn mức chỉ khi biết) trong `ChannelOverviewItem`
 - [ ] T041 [P] [US3] Web: `WEB/ConditionsPanel.tsx` (loại tài khoản, quyền đã cấp dạng tick + chữ, dòng hạn mức chỉ khi `quotaRemaining ≠ null`) và nút "Kiểm tra lại" có trạng thái đang chạy + đếm ngược khi `429` + thông điệp "Chưa kiểm tra được, thử lại sau" khi `unavailable` (`aria-live="polite"`)
 
@@ -136,12 +136,12 @@ description: "Danh sách việc cho tính năng 010 – Kết nối kênh Facebo
 
 ### Tests for User Story 2
 
-- [ ] T042 [P] [US2] Hợp đồng `InstagramAdapter` trong `PGT/adapter-contract.spec.ts`: `exchangeCallback` Page có `instagram_business_account` ⇒ ứng viên IG (`externalId=ig_user_id`, `displayName=@username`, `sourceExternalId`=mã Page); Page không IG ⇒ không có ứng viên + `PAGE_NOT_LINKED`; `checkAccount` `BUSINESS|MEDIA_CREATOR` ⇒ eligible, `PERSONAL` ⇒ `NOT_PROFESSIONAL`; `revoke` ⇒ `unsupported`
+- [X] T042 [P] [US2] Hợp đồng `InstagramAdapter` trong `PGT/adapter-contract.spec.ts`: `exchangeCallback` Page có `instagram_business_account` ⇒ ứng viên IG (`externalId=ig_user_id`, `displayName=@username`, `sourceExternalId`=mã Page); Page không IG ⇒ không có ứng viên + `PAGE_NOT_LINKED`; `checkAccount` `BUSINESS|MEDIA_CREATOR` ⇒ eligible, `PERSONAL` ⇒ `NOT_PROFESSIONAL`; `revoke` ⇒ `unsupported`
 - [ ] T043 [P] [US2] `PGT/instagram-source.db.spec.ts`: `source_connection_id` được gán khi đã có Page nguồn trong tài khoản; chưa có ⇒ NULL (IG độc lập, US2-6); sau này kết nối Page đó ⇒ liên kết trong cùng giao dịch `confirm`
 
 ### Implementation for User Story 2
 
-- [ ] T044 [US2] `InstagramAdapter` (`PG/internal/adapters/meta/instagram.adapter.ts`): `authorizeUrl` (`CHANNEL_SCOPES_INSTAGRAM`; dùng lại quyền đã cấp khi đủ – `include_granted_scopes`, chỉ `rerequest` phần thiếu), `exchangeCallback` (ứng viên = Page có IG; ghi nhận Page không có IG để hiện `PAGE_NOT_LINKED`), `checkAccount` (`GET /{ig_user_id}?fields=username,account_type`; hạn mức đăng 24 giờ ⇒ `quotaRemaining`), `expiryOf`/`refreshToken` dùng mã Page nguồn, `revoke` ⇒ `unsupported` (không thu hồi quyền người dùng dùng chung)
+- [X] T044 [US2] `InstagramAdapter` (`PG/internal/adapters/meta/instagram.adapter.ts`): `authorizeUrl` (`CHANNEL_SCOPES_INSTAGRAM`; dùng lại quyền đã cấp khi đủ – `include_granted_scopes`, chỉ `rerequest` phần thiếu), `exchangeCallback` (ứng viên = Page có IG; ghi nhận Page không có IG để hiện `PAGE_NOT_LINKED`), `checkAccount` (`GET /{ig_user_id}?fields=username,account_type`; hạn mức đăng 24 giờ ⇒ `quotaRemaining`), `expiryOf`/`refreshToken` dùng mã Page nguồn, `revoke` ⇒ `unsupported` (không thu hồi quyền người dùng dùng chung)
 - [ ] T045 [US2] Liên kết Page nguồn trong `confirm`: gán `source_connection_id` nếu Page nguồn có trong tài khoản, và khi sau đó kết nối Page thì cập nhật các Instagram `source_connection_id IS NULL` cùng `sourceExternalId` (cùng giao dịch); chỉ mục `(account_id, source_connection_id)` dùng ở `pg-connection-store.ts`
 - [ ] T046 [P] [US2] Web: ứng viên Instagram `blocked` hiện hướng dẫn 3 bước ngắn (chuyển sang tài khoản chuyên nghiệp, liên kết với Page) + nút "Kiểm tra lại"; thẻ Instagram hiện "Liên kết qua Page: *tên Page*" + cảnh báo khi Page nguồn hỏng (trong `WEB/ChannelCard.tsx` sẽ tạo ở US6 – tạm đặt thành phần con `WEB/SourcePageNote.tsx`)
 
