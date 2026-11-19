@@ -25,7 +25,7 @@ import type { FeatureGate } from '../features/feature-gate';
 import { toChannelConnection, toChannelConnections } from '../gateway.service';
 import type { GatewaySettings } from '../settings/gateway-settings';
 import { credentialAad, type CredentialVault } from '../vault/credential-vault';
-import { blockCodeOf, callbackCodeOfBlock } from './connect-errors';
+import { blockCodeOf, callbackCodeOfBlock, reasonCodeOf } from './connect-errors';
 import { connectionConsumers } from './consumers';
 import type { ConnectionStore, StoredCandidate, StoredConnection } from './connection-store';
 import { expiryFromJson, expiryToJson } from './connection-store';
@@ -710,6 +710,119 @@ export class ConnectionsService {
       planActive,
       viewerCanManage,
     };
+  }
+
+  /**
+   * "Kiểm tra lại" (FR-011, FR-012): giới hạn tần suất bằng cập nhật có điều kiện, gọi nền tảng NGOÀI giao dịch, rồi
+   * ghi có khóa lạc quan. CHỈ kết quả khẳng định mới đổi trạng thái; lỗi tạm thời/mã lạ ⇒ `unavailable`, giữ nguyên.
+   */
+  recheck(connectionId: string): Promise<{
+    connection: ChannelOverviewItem;
+    result: 'ok' | 'changed' | 'unavailable';
+    messageVi?: string;
+  }> {
+    return withGatewayOp(
+      'platform_gateway',
+      'recheck',
+      { connection_id: connectionId },
+      async () => {
+        requireCustomer();
+        const existing = await this.store.getConnection(connectionId);
+        if (existing === null || !isLive(existing)) throw connectionNotFound();
+        if (this.store.claimManualCheck === undefined || this.store.updateRow === undefined) {
+          throw providerUnavailable();
+        }
+        const cfg = await this.cfg();
+        const cooldown = (await this.extras.settings?.get())?.manualCheckCooldownSec ?? 20;
+        const now = this.now();
+        const claim = await this.store.claimManualCheck(connectionId, now, cooldown);
+        if (!claim.claimed) {
+          throw new AppError({
+            code: 'RECHECK_TOO_SOON',
+            httpStatus: 429,
+            message: 'Bạn vừa kiểm tra xong, hãy thử lại sau ít giây.',
+            actions: [{ kind: 'retry', label: `Chờ ${claim.retryAfterSec} giây` }],
+            retryAfterSeconds: claim.retryAfterSec,
+            extra: { retryAfterSec: claim.retryAfterSec },
+          });
+        }
+
+        const accountId = currentAccountId();
+        if (accountId === null) throw new Error('Thiếu ngữ cảnh tài khoản khi kiểm tra lại');
+        const adapter = getAdapter(existing.channelType);
+        // Ngoài giao dịch: lời gọi mạng không giữ kết nối CSDL.
+        const check: AccountCheckResult = await this.vault
+          .decrypt(
+            existing.tokenCiphertext,
+            credentialAad(accountId, 'token', existing.channelType, existing.externalId),
+          )
+          .then((cred) =>
+            adapter.checkAccount(cred, {
+              connectionId: existing.id,
+              externalId: existing.externalId,
+            }),
+          )
+          .catch(() => ({
+            kind: 'ineligible' as const,
+            error: unknownError(existing.channelType, 'CHECK_FAILED'),
+          }));
+
+        const unavailable = async () => ({
+          connection: await this.itemOf(existing, now, cfg.warnDays),
+          result: 'unavailable' as const,
+          messageVi: 'Chưa kiểm tra được, thử lại sau.',
+        });
+
+        let patch: Parameters<NonNullable<ConnectionStore['updateRow']>>[2];
+        let nextStatus: 'active' | 'needs_reconnect' | 'ineligible';
+        if (check.kind === 'eligible') {
+          nextStatus = 'active';
+          patch = {
+            status: 'active',
+            reason_code: null,
+            last_error_code: null,
+            recheck_required: false,
+            account_type: check.accountType,
+            granted_scopes: check.grantedScopes,
+            quota_remaining: check.quotaRemaining,
+            last_checked_at: now,
+          };
+        } else if (check.error.category !== 'user_action') {
+          return unavailable(); // tạm thời / không xác định ⇒ KHÔNG đổi trạng thái, KHÔNG ghi `last_checked_at`
+        } else if (
+          blockCodeOf(check.error.rawCode) === 'SCOPE_MISSING' ||
+          check.error.remedies.some((r) => r.action === 'reconnect')
+        ) {
+          // Thiếu quyền hoặc mã hỏng: chỉ "Kết nối lại" (cấp lại quyền) mới sửa được ⇒ needs_reconnect.
+          nextStatus = 'needs_reconnect';
+          patch = {
+            status: 'needs_reconnect',
+            reason_code:
+              blockCodeOf(check.error.rawCode) === 'SCOPE_MISSING'
+                ? 'SCOPE_MISSING'
+                : /REVOK/i.test(check.error.rawCode)
+                  ? 'TOKEN_REVOKED'
+                  : 'TOKEN_EXPIRED',
+            last_error_code: check.error.rawCode.replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 64),
+            last_checked_at: now,
+          };
+        } else {
+          nextStatus = 'ineligible';
+          patch = {
+            status: 'ineligible',
+            reason_code: reasonCodeOf(check.error.rawCode),
+            last_error_code: check.error.rawCode.replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 64),
+            last_checked_at: now,
+          };
+        }
+        const before = existing.rowStatus ?? existing.status;
+        const updated = await this.store.updateRow(existing.id, existing.version ?? 1, patch);
+        return {
+          connection: await this.itemOf(updated, now, cfg.warnDays),
+          result: before === nextStatus ? ('ok' as const) : ('changed' as const),
+        };
+      },
+    );
   }
 
   async disconnect(connectionId: string): Promise<void> {

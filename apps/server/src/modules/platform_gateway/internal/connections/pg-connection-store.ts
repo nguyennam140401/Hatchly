@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { currentAccountId, tenantTx, updateVersioned } from '../../../../core/db';
 import { TenantContextError } from '../../../../core/db/errors';
 import { uuidV7 } from '../../../../core/ids/uuid-v7';
@@ -194,6 +194,38 @@ export class PgConnectionStore implements ConnectionStore {
       if (row === undefined) return false;
       if (within !== undefined) await within(toStoredConnection(row), db);
       return true;
+    });
+  }
+
+  async claimManualCheck(
+    id: string,
+    now: Date,
+    cooldownSec: number,
+  ): Promise<{ claimed: true } | { claimed: false; retryAfterSec: number }> {
+    if (!UUID.test(id)) return { claimed: false, retryAfterSec: 0 };
+    return tenantTx(async (db) => {
+      const threshold = new Date(now.getTime() - cooldownSec * 1000);
+      const [won] = await db
+        .update(channelConnections)
+        .set({ last_manual_check_at: now })
+        .where(
+          and(
+            eq(channelConnections.id, id),
+            ne(channelConnections.status, 'disconnected'),
+            or(
+              isNull(channelConnections.last_manual_check_at),
+              lt(channelConnections.last_manual_check_at, threshold),
+            ),
+          ),
+        )
+        .returning({ id: channelConnections.id });
+      if (won !== undefined) return { claimed: true as const };
+      const [row] = await db
+        .select({ at: channelConnections.last_manual_check_at })
+        .from(channelConnections)
+        .where(eq(channelConnections.id, id));
+      const waitMs = row?.at == null ? 0 : row.at.getTime() + cooldownSec * 1000 - now.getTime();
+      return { claimed: false as const, retryAfterSec: Math.max(1, Math.ceil(waitMs / 1000)) };
     });
   }
 

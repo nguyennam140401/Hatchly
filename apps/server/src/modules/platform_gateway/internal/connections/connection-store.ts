@@ -155,6 +155,16 @@ export interface ConnectionStore {
     expectedVersion: number,
     patch: ConnectionPatch,
   ): Promise<StoredConnection>;
+  /**
+   * 010: giành lượt "Kiểm tra lại" bằng MỘT cập nhật có điều kiện `last_manual_check_at IS NULL OR < now - cooldown`
+   * (không tăng `version` để không phá khóa lạc quan của bước ghi kết quả). Chưa đến lượt ⇒ `retryAfterSec` > 0.
+   * Bản giả không cài đặt.
+   */
+  claimManualCheck?(
+    id: string,
+    now: Date,
+    cooldownSec: number,
+  ): Promise<{ claimed: true } | { claimed: false; retryAfterSec: number }>;
   /** 010: xóa HẲN phiên chọn (mã quyền của ứng viên không được chọn bị hủy cùng dòng). */
   deleteSelection?(id: string): Promise<void>;
   /** 010: mọi kết nối chưa ngắt của tài khoản (cho ngắt hàng loạt). */

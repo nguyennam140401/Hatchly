@@ -21,6 +21,7 @@ import {
   type ConfirmResponse,
   type ConnectResponse,
   type OverviewResponse,
+  type RecheckResponse,
   type SelectionResponse,
 } from '@app/shared/platform_gateway';
 import type { Response } from 'express';
@@ -210,6 +211,15 @@ export class ConnectionsController {
     return (await this.connections.listConnections())
       .filter((c) => (c.channelType as string) !== 'tiktok')
       .map(toDto);
+  }
+
+  @Post(':connectionId/recheck')
+  @HttpCode(200)
+  @CustomerAccess('channel.manage')
+  async recheck(
+    @ValidParam(connectionParam) params: z.infer<typeof connectionParam>,
+  ): Promise<RecheckResponse> {
+    return mapErrors(() => this.connections.recheck(params.connectionId));
   }
 
   @Delete(':connectionId')
