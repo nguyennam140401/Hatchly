@@ -158,14 +158,35 @@ export const MUTATIONS = {
     operation: 'connectChannel',
     invalidates: () => [
       queryKeys.channels.list(),
+      queryKeys.channels.overview(),
       queryKeys.overview.all(),
       queryKeys.posts.lists(),
+    ],
+  }),
+  /** 010: xác nhận một/nhiều Page đã chọn sau khi cấp quyền. */
+  confirmChannels: define<unknown, unknown, 'confirmChannels'>({
+    operation: 'confirmChannels',
+    invalidates: () => [
+      queryKeys.channels.list(),
+      queryKeys.channels.overview(),
+      queryKeys.overview.all(),
+      queryKeys.posts.lists(),
+    ],
+  }),
+  /** 010: "Kiểm tra lại" một kênh – có thể đổi trạng thái hiển thị. */
+  recheckChannel: define<unknown, unknown, 'recheckChannel'>({
+    operation: 'recheckChannel',
+    invalidates: () => [
+      queryKeys.channels.list(),
+      queryKeys.channels.overview(),
+      queryKeys.overview.all(),
     ],
   }),
   disconnectChannel: define<unknown, unknown, 'disconnectChannel'>({
     operation: 'disconnectChannel',
     invalidates: () => [
       queryKeys.channels.list(),
+      queryKeys.channels.overview(),
       queryKeys.overview.all(),
       queryKeys.posts.lists(),
     ],

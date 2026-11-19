@@ -81,8 +81,15 @@ describeDb('Việc nền kênh: channel_maintenance + cleanup_connect_data', () 
       const fresh = new Date(NOW.getTime() - 2 * HOUR);
       const never = await seed({}); // chưa kiểm tra bao giờ
       const stale = await seed({ lastCheckedAt: new Date(NOW.getTime() - 21 * HOUR) }); // > 20 giờ
-      const expiring = await seed({ lastCheckedAt: fresh, expiresAt: new Date(NOW.getTime() + 3 * DAY) });
-      const recheck = await seed({ status: 'needs_reconnect', recheck: true, lastCheckedAt: fresh });
+      const expiring = await seed({
+        lastCheckedAt: fresh,
+        expiresAt: new Date(NOW.getTime() + 3 * DAY),
+      });
+      const recheck = await seed({
+        status: 'needs_reconnect',
+        recheck: true,
+        lastCheckedAt: fresh,
+      });
       const okRecent = await seed({ lastCheckedAt: fresh }); // vừa kiểm tra, không hạn ⇒ KHÔNG đến hạn
       const pureNeedsReconnect = await seed({ status: 'needs_reconnect', lastCheckedAt: null });
 
@@ -146,7 +153,9 @@ describeDb('Việc nền kênh: channel_maintenance + cleanup_connect_data', () 
     }
     const count = async (table: string): Promise<number> =>
       asOwner(async (c) => {
-        const r = await c.query<{ n: number }>(`SELECT count(*)::int AS n FROM platform_gateway.${table}`);
+        const r = await c.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM platform_gateway.${table}`,
+        );
         return r.rows[0]?.n ?? 0;
       });
     const counts = async () => ({

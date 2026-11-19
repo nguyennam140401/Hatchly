@@ -7,11 +7,7 @@ import { TiktokClient } from './internal/adapters/tiktok/tiktok-client';
 import { registerMetaAdapters } from './internal/adapters/meta/register';
 import { registerAdapter, registerDefaultAdapters } from './internal/adapters/registry';
 import { registerJobHandler } from '../queue';
-import {
-  recordFeatureReadFailed,
-  recordRefresh,
-  registerChannelGauges,
-} from './internal/metrics';
+import { recordFeatureReadFailed, recordRefresh, registerChannelGauges } from './internal/metrics';
 import { writeChannelAudit } from './internal/connections/channel-audit';
 import { createCheckConnectionHandler } from './internal/maintenance/check-connection.handler';
 import { runCleanupConnectData } from './internal/maintenance/cleanup.handler';

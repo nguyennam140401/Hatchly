@@ -199,7 +199,9 @@ describe('InstagramAdapter – kết nối (US2)', () => {
     stub.on('GET /ig-1', { json: { id: 'ig-1', username: 'u', account_type: 'PERSONAL' } });
     const personal = await instagram().checkAccount(cred, ctx);
     expect(personal.kind === 'ineligible' && personal.error.rawCode).toBe('IG:NOT_PROFESSIONAL');
-    expect(personal.kind === 'ineligible' && personal.error.remedies.length).toBeGreaterThanOrEqual(1);
+    expect(personal.kind === 'ineligible' && personal.error.remedies.length).toBeGreaterThanOrEqual(
+      1,
+    );
   });
 
   it('thiếu quyền Instagram ⇒ SCOPE_MISSING; hạn mức đăng 24 giờ ⇒ quotaRemaining', async () => {
@@ -233,7 +235,12 @@ describe('renewToken – làm mới quyền Meta (T061)', () => {
     stub.on('GET /me/accounts', {
       json: {
         data: [
-          { id: 'page-1', name: 'Tiệm Hoa', access_token: 'EAAnew_page', tasks: ['CREATE_CONTENT'] },
+          {
+            id: 'page-1',
+            name: 'Tiệm Hoa',
+            access_token: 'EAAnew_page',
+            tasks: ['CREATE_CONTENT'],
+          },
         ],
       },
     });

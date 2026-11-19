@@ -60,14 +60,13 @@ describeDb('Hỗ trợ xem kênh khách hàng (010 FR-030)', () => {
     expect(text).not.toContain('ciphertext');
     expect(text).not.toContain(Buffer.from(SECRET).toString('base64'));
 
-    const actions = await asOwner(
-      async (c) =>
-        (
-          await c.query<{ action: string }>(
-            `SELECT action FROM infra.audit_log WHERE account_id = $1 AND action IN ('support.view_account','support.view_channel')`,
-            [accountId],
-          )
-        ).rows.map((r) => r.action),
+    const actions = await asOwner(async (c) =>
+      (
+        await c.query<{ action: string }>(
+          `SELECT action FROM infra.audit_log WHERE account_id = $1 AND action IN ('support.view_account','support.view_channel')`,
+          [accountId],
+        )
+      ).rows.map((r) => r.action),
     );
     expect(actions).toContain('support.view_account');
     expect(actions).toContain('support.view_channel');

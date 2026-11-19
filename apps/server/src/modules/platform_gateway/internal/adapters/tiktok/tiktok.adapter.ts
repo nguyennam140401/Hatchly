@@ -195,7 +195,12 @@ export class TiktokAdapter implements PlatformAdapter {
     } catch (e) {
       const err = asTiktokError(e);
       const code = err.rawCode === 'TT:scope_not_authorized' ? 'TT:SCOPE_MISSING' : err.rawCode;
-      return { kind: 'ineligible', error: toClassified(new TiktokError({ rawCode: code, httpStatus: err.httpStatus, sent: err.sent })) };
+      return {
+        kind: 'ineligible',
+        error: toClassified(
+          new TiktokError({ rawCode: code, httpStatus: err.httpStatus, sent: err.sent }),
+        ),
+      };
     }
   }
 

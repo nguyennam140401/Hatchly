@@ -50,7 +50,11 @@ export class StaffFeaturesController {
   async setForAccount(
     @ValidParam(accountParam) params: z.infer<typeof accountParam>,
     @ValidBody(accountBody) body: z.infer<typeof accountBody>,
-  ): Promise<{ flag: typeof FLAG; value: 'on' | 'off' | 'default'; old: 'on' | 'off' | 'default' }> {
+  ): Promise<{
+    flag: typeof FLAG;
+    value: 'on' | 'off' | 'default';
+    old: 'on' | 'off' | 'default';
+  }> {
     const staff = requireStaff();
     const { old } = await this.features.setForAccount(
       { staffId: staff.staffId, role: staff.role },

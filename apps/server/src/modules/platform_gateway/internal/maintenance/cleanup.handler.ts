@@ -9,7 +9,9 @@ import { systemTx } from '../../../../core';
 const BATCH = 1000;
 const MAX_ROUNDS = 20;
 
-export async function runCleanupConnectData(opts: { now?: Date } = {}): Promise<{ deleted: number }> {
+export async function runCleanupConnectData(
+  opts: { now?: Date } = {},
+): Promise<{ deleted: number }> {
   const now = opts.now ?? new Date();
   let deleted = 0;
   for (let round = 0; round < MAX_ROUNDS; round++) {

@@ -57,7 +57,8 @@ export async function runStaffFeatureCli(
       throw new UsageError('Lệnh con không hợp lệ');
     }
     const account = typeof values.account === 'string' ? values.account : undefined;
-    if (account !== undefined && !UUID.test(account)) throw new UsageError('--account phải là UUID');
+    if (account !== undefined && !UUID.test(account))
+      throw new UsageError('--account phải là UUID');
 
     let config;
     try {
@@ -84,7 +85,12 @@ export async function runStaffFeatureCli(
       logger: { warn: () => undefined, error: () => undefined },
     });
     setActiveDatabase(database);
-    const service = new FeaturesService(new FeatureGate({ readOverride: () => Promise.resolve(null), readDefault: () => Promise.resolve(false) }));
+    const service = new FeaturesService(
+      new FeatureGate({
+        readOverride: () => Promise.resolve(null),
+        readDefault: () => Promise.resolve(false),
+      }),
+    );
 
     if (sub === 'get') {
       stdout.write(`${JSON.stringify(await service.get(FLAG, account))}\n`);
@@ -93,7 +99,8 @@ export async function runStaffFeatureCli(
     const staffId = need(values, 'staff-id');
     if (!UUID.test(staffId)) throw new UsageError('--staff-id phải là UUID');
     const role = values.role ?? 'admin';
-    if (role !== 'admin' && role !== 'support') throw new UsageError('--role phải là admin hoặc support');
+    if (role !== 'admin' && role !== 'support')
+      throw new UsageError('--role phải là admin hoặc support');
     const reason = need(values, 'reason');
     if (reason.length > 500) throw new UsageError('--reason tối đa 500 ký tự');
     const value = need(values, 'value');

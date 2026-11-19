@@ -107,7 +107,9 @@ export function accountsPage(pages: StubPage[], next?: string): StubReply {
           ? {}
           : { instagram_business_account: { id: p.instagram.id, username: p.instagram.username } }),
       })),
-      ...(next === undefined ? {} : { paging: { next: `https://graph.example.test/${next}`, cursors: { after: next } } }),
+      ...(next === undefined
+        ? {}
+        : { paging: { next: `https://graph.example.test/${next}`, cursors: { after: next } } }),
     },
   };
 }

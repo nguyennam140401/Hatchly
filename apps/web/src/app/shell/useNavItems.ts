@@ -7,6 +7,8 @@ import { NAV_ITEMS, type NavItem } from './nav-registry';
 export interface NavCounts {
   pendingReviewCount?: number | undefined;
   unreadCount?: number | undefined;
+  /** 010: số kênh cần chú ý (từ `overview.attention`). */
+  channelAttentionCount?: number | undefined;
 }
 
 export interface NavItems {
@@ -45,9 +47,9 @@ export function selectNavItems(
 
 export function useNavItems(counts: NavCounts = {}): NavItems {
   const { permissions } = useSession().me;
-  const { pendingReviewCount, unreadCount } = counts;
+  const { pendingReviewCount, unreadCount, channelAttentionCount } = counts;
   return useMemo(
-    () => selectNavItems(permissions, { pendingReviewCount, unreadCount }),
-    [permissions, pendingReviewCount, unreadCount],
+    () => selectNavItems(permissions, { pendingReviewCount, unreadCount, channelAttentionCount }),
+    [permissions, pendingReviewCount, unreadCount, channelAttentionCount],
   );
 }

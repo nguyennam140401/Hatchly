@@ -11,7 +11,13 @@ import type { PlatformAdapter } from '../../../src/modules/platform_gateway/inte
 import { ConnectionsService } from '../../../src/modules/platform_gateway/internal/connections/connections.service';
 import { PgConnectionStore } from '../../../src/modules/platform_gateway/internal/connections/pg-connection-store';
 import { FakeCredentialVault } from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
-import { createAccount, describeDb, makeDatabase, withAccount, type TestDatabase } from '../helpers/db';
+import {
+  createAccount,
+  describeDb,
+  makeDatabase,
+  withAccount,
+  type TestDatabase,
+} from '../helpers/db';
 
 const REDIRECT = 'https://app.example.test/api/v1/channels/callback/facebook_page';
 

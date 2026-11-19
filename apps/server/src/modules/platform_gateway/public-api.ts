@@ -12,7 +12,13 @@
 import type { Db } from '../../core/db';
 
 // 'tiktok' được thêm cùng bộ chuyển đổi TikTok (010 T079) – test `us2.spec` bắt buộc mọi loại kênh đều có bộ chuyển đổi.
-export const CHANNEL_TYPES = ['facebook_page', 'instagram', 'zalo_oa', 'test_channel', 'tiktok'] as const;
+export const CHANNEL_TYPES = [
+  'facebook_page',
+  'instagram',
+  'zalo_oa',
+  'test_channel',
+  'tiktok',
+] as const;
 export type ChannelType = (typeof CHANNEL_TYPES)[number];
 
 export interface ChannelCapabilities {

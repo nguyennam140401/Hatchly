@@ -4,7 +4,13 @@ import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { PgConnectionStore } from '../../../src/modules/platform_gateway/internal/connections/pg-connection-store';
 import type { NewConnection } from '../../../src/modules/platform_gateway/internal/connections/connection-store';
-import { createAccount, describeDb, makeDatabase, withAccount, type TestDatabase } from '../helpers/db';
+import {
+  createAccount,
+  describeDb,
+  makeDatabase,
+  withAccount,
+  type TestDatabase,
+} from '../helpers/db';
 
 const token = () => randomBytes(40);
 const uniq = (p: string) => `${p}-${randomBytes(5).toString('hex')}`;
@@ -27,7 +33,11 @@ describeDb('Liên kết Instagram với Page nguồn (lưu trữ)', () => {
     expiryKind: 'none',
     maxPerPlatform: 5,
   });
-  const ig = (externalId: string, sourceExternalId: string, sourceConnectionId?: string): NewConnection => ({
+  const ig = (
+    externalId: string,
+    sourceExternalId: string,
+    sourceConnectionId?: string,
+  ): NewConnection => ({
     channelType: 'instagram',
     externalId,
     displayName: '@ig',
@@ -44,7 +54,9 @@ describeDb('Liên kết Instagram với Page nguồn (lưu trữ)', () => {
     const store = new PgConnectionStore();
     await withAccount(acc, async () => {
       const p = await store.insertConnection(page(uniq('p')));
-      const g = await store.insertConnection(ig(uniq('ig'), p.connection.externalId, p.connection.id));
+      const g = await store.insertConnection(
+        ig(uniq('ig'), p.connection.externalId, p.connection.id),
+      );
       expect(g.connection.sourceConnectionId).toBe(p.connection.id);
     });
   });

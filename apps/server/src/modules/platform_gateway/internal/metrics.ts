@@ -65,9 +65,7 @@ interface StatRow {
  * Đăng ký hai gauge quan sát, đọc `platform_gateway.channel_stats()` (SECURITY DEFINER, chỉ số đếm theo loại × trạng thái,
  * không mã tài khoản) khi bộ thu thập lấy mẫu. CHỈ gọi ở Worker (có bể `system`). Lỗi đọc ⇒ bỏ qua lần lấy mẫu đó.
  */
-export function registerChannelGauges(
-  read: () => Promise<StatRow[]> = defaultRead,
-): () => void {
+export function registerChannelGauges(read: () => Promise<StatRow[]> = defaultRead): () => void {
   const meter = metrics.getMeter('app.platform_gateway');
   const connections = meter.createObservableGauge('channel_connections', {
     description: 'Số kênh kết nối theo trạng thái lưu và loại kênh',
@@ -86,7 +84,10 @@ export function registerChannelGauges(
     }
     const expiringByType = new Map<string, number>();
     for (const r of rows) {
-      result.observe(connections, Number(r.total), { state: r.status, channel_type: r.channel_type });
+      result.observe(connections, Number(r.total), {
+        state: r.status,
+        channel_type: r.channel_type,
+      });
       expiringByType.set(
         r.channel_type,
         (expiringByType.get(r.channel_type) ?? 0) + Number(r.expiring_lt7d),
@@ -105,7 +106,11 @@ export function registerChannelGauges(
 async function defaultRead(): Promise<StatRow[]> {
   return systemTx(
     async (db) =>
-      (await db.execute<StatRow & Record<string, unknown>>(sql`SELECT * FROM platform_gateway.channel_stats()`)).rows,
+      (
+        await db.execute<StatRow & Record<string, unknown>>(
+          sql`SELECT * FROM platform_gateway.channel_stats()`,
+        )
+      ).rows,
     { tenant: 'none' },
   );
 }

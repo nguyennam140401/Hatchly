@@ -44,7 +44,9 @@ describeDb('Quét bí mật sau luồng kết nối kênh (010 SC-003)', () => {
   let accountId = '';
 
   /** Ghi lại thân + tiêu đề của mọi phản hồi để quét. */
-  const track = async <T extends { status: number; headers: unknown; body: unknown; text?: string }>(
+  const track = async <
+    T extends { status: number; headers: unknown; body: unknown; text?: string },
+  >(
     p: Promise<T>,
   ): Promise<T> => {
     const r = await p;
@@ -96,7 +98,8 @@ describeDb('Quét bí mật sau luồng kết nối kênh (010 SC-003)', () => {
       actors.owner.post('/api/v1/channels/connect', { channelType: 'facebook_page' }),
     );
     const state =
-      new URL((start.body as { authorizeUrl: string }).authorizeUrl).searchParams.get('state') ?? '';
+      new URL((start.body as { authorizeUrl: string }).authorizeUrl).searchParams.get('state') ??
+      '';
     const cb = await track(
       actors.owner.get(
         `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state)}&code=c`,
@@ -117,9 +120,11 @@ describeDb('Quét bí mật sau luồng kết nối kênh (010 SC-003)', () => {
     await track(actors.owner.get('/api/v1/channels/overview'));
     await track(actors.owner.get('/api/v1/channels'));
     await track(actors.owner.post(`/api/v1/channels/${connectionId}/recheck`, {}));
-    await track(actors.support.get(
-      `/api/v1/staff/accounts/${accountId}/channels?reason=${encodeURIComponent('Khách báo lỗi kênh')}`,
-    ));
+    await track(
+      actors.support.get(
+        `/api/v1/staff/accounts/${accountId}/channels?reason=${encodeURIComponent('Khách báo lỗi kênh')}`,
+      ),
+    );
   });
 
   it('phản hồi HTTP (thân + tiêu đề) không chứa mã quyền/bí mật', () => {
@@ -171,7 +176,9 @@ describeDb('Quét bí mật sau luồng kết nối kênh (010 SC-003)', () => {
     expect(ct.toString('latin1')).not.toContain(PAGE_TOKEN);
 
     const aad = credentialAad(accountId, 'token', 'facebook_page', row!.ext);
-    const wrongKey = new KmsCredentialVault(new EnvMasterKeyWrapper(randomBytes(32).toString('base64')));
+    const wrongKey = new KmsCredentialVault(
+      new EnvMasterKeyWrapper(randomBytes(32).toString('base64')),
+    );
     await expect(wrongKey.decrypt(ct, aad)).rejects.toThrow('VAULT_');
     const rightKey = new KmsCredentialVault(new EnvMasterKeyWrapper(masterKey));
     await expect(

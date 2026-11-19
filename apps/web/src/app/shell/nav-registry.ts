@@ -30,7 +30,7 @@ export interface NavItem {
   placement: { sidebar: boolean; mobile: 'bottom' | 'more' | 'none' };
   order: number;
   /** Khóa dữ liệu đếm hiển thị trên huy hiệu. */
-  badge?: 'pendingReviewCount' | 'unreadCount';
+  badge?: 'pendingReviewCount' | 'unreadCount' | 'channelAttentionCount';
   /** Nổi bật ở giữa thanh dưới. */
   featured?: boolean;
 }
@@ -102,10 +102,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
     labelKey: 'nav.channelsPlan',
     icon: 'link',
     path: '/channels',
-    permission: 'status.view',
+    // 010: chủ + cộng tác viên xem được; kết nối/ngắt vẫn chỉ chủ (API tự chặn). Dấu chỉ báo kênh cần chú ý ở mọi màn hình (FR-026).
+    permission: 'channel.view',
     area: 'customer',
     placement: { sidebar: true, mobile: 'more' },
     order: 70,
+    badge: 'channelAttentionCount',
   },
   {
     id: 'settings',

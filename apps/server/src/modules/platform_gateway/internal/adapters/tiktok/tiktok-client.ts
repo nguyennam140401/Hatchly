@@ -27,7 +27,8 @@ const clean = (s: string): string => s.replace(/[^A-Za-z0-9_.:-]/g, '').slice(0,
 
 function networkFailure(err: unknown): { code: string; sent: boolean } {
   const name = (err as { name?: string } | null)?.name;
-  if (name === 'AbortError' || name === 'TimeoutError') return { code: 'TIMEOUT_AFTER_SEND', sent: true };
+  if (name === 'AbortError' || name === 'TimeoutError')
+    return { code: 'TIMEOUT_AFTER_SEND', sent: true };
   const code = (err as { cause?: { code?: string } } | null)?.cause?.code ?? '';
   if (['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH'].includes(code)) {
     return { code: 'NET_BEFORE_SEND', sent: false };
@@ -92,7 +93,9 @@ export class TiktokClient {
     const stringErr = typeof body?.error === 'string' && body.error !== '' ? body.error : undefined;
     const failed = stringErr !== undefined || (typeof objCode === 'string' && objCode !== 'ok');
     if (res.ok && !failed) return payload as T;
-    const raw = stringErr ?? (typeof objCode === 'string' && objCode !== 'ok' ? objCode : `HTTP_${res.status}`);
+    const raw =
+      stringErr ??
+      (typeof objCode === 'string' && objCode !== 'ok' ? objCode : `HTTP_${res.status}`);
     throw new TiktokError({ rawCode: `TT:${clean(raw)}`, httpStatus: res.status, sent: true });
   }
 }

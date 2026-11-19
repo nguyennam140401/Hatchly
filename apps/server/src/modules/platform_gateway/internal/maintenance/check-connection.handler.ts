@@ -119,7 +119,8 @@ export function createCheckConnectionHandler(deps: CheckConnectionDeps) {
     } catch (e) {
       if (!isConflict(e)) throw e;
       const fresh = await store.getConnection(row.id);
-      if (fresh === null || (fresh.rowStatus ?? fresh.status) === 'disconnected') return 'lost_race';
+      if (fresh === null || (fresh.rowStatus ?? fresh.status) === 'disconnected')
+        return 'lost_race';
       if ((fresh.tokenIssuedAt?.getTime() ?? 0) > (row.tokenIssuedAt?.getTime() ?? 0)) {
         return 'lost_race';
       }
@@ -373,8 +374,7 @@ export function createCheckConnectionHandler(deps: CheckConnectionDeps) {
         : row.tokenExpiresAt;
 
     // Nhắc hạn: chỉ khi còn hiệu lực/đang trong cửa sổ và làm mới KHÔNG thành công; chỉ phát khi mốc > mốc đã báo.
-    const stage =
-      refreshed || expiresAt === null ? null : stageFor(expiresAt, now, warnDays);
+    const stage = refreshed || expiresAt === null ? null : stageFor(expiresAt, now, warnDays);
     const lastRank = STAGE_RANK[row.lastNotifiedStage ?? 'none'];
     let extra: ((updated: StoredConnection, tx: Db) => Promise<void>) | undefined;
     let becameExpired = false;

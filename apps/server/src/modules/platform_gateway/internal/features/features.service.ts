@@ -40,7 +40,8 @@ export class FeaturesService {
       return r.rows[0];
     });
     const defaultEnabled = row?.default_enabled === true;
-    const override = row?.override_value === 'on' || row?.override_value === 'off' ? row.override_value : null;
+    const override =
+      row?.override_value === 'on' || row?.override_value === 'off' ? row.override_value : null;
     return {
       flag,
       defaultEnabled,

@@ -52,7 +52,9 @@ export class EnvMasterKeyWrapper implements KeyWrapper {
       const decipher = createDecipheriv('aes-256-gcm', key, wrapped.subarray(0, 12));
       decipher.setAAD(aad);
       decipher.setAuthTag(wrapped.subarray(12, 28));
-      return Promise.resolve(Buffer.concat([decipher.update(wrapped.subarray(28)), decipher.final()]));
+      return Promise.resolve(
+        Buffer.concat([decipher.update(wrapped.subarray(28)), decipher.final()]),
+      );
     } catch {
       return Promise.reject(new Error('VAULT_DECRYPT_FAILED'));
     }

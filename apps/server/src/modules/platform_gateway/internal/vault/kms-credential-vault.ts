@@ -1,9 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
-import {
-  wrapDecrypted,
-  type CredentialVault,
-  type DecryptedCredential,
-} from './credential-vault';
+import { wrapDecrypted, type CredentialVault, type DecryptedCredential } from './credential-vault';
 import type { KeyWrapper } from './key-wrapper';
 
 // Kho mã quyền mã hóa PHONG BÌ (T033, ADR-13, nguyên tắc VII): mỗi bản ghi một DEK 256 bit ngẫu nhiên; mã quyền được
@@ -32,7 +28,8 @@ export class KmsCredentialVault implements CredentialVault {
       const tag = cipher.getAuthTag();
       const keyId = Buffer.from(this.wrapper.currentKeyId, 'utf8');
       const wrapped = await this.wrapper.wrap(dek, aadBuf);
-      if (keyId.length > 255 || wrapped.length > 0xffff) throw new Error('VAULT_ENVELOPE_TOO_LARGE');
+      if (keyId.length > 255 || wrapped.length > 0xffff)
+        throw new Error('VAULT_ENVELOPE_TOO_LARGE');
       const wrappedLen = Buffer.alloc(2);
       wrappedLen.writeUInt16BE(wrapped.length);
       return Buffer.concat([

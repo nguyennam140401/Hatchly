@@ -53,9 +53,9 @@ describeDb('Công tắc TikTok theo khách hàng (010 US9)', () => {
     const res = await connect();
     expect(res.status).toBe(403);
     expect((res.body as { error: { code: string } }).error.code).toBe('FEATURE_NOT_ENABLED');
-    expect((await actors.owner.post(`/api/v1/channels/${crypto.randomUUID()}/recheck`, {})).status).toBe(
-      404,
-    );
+    expect(
+      (await actors.owner.post(`/api/v1/channels/${crypto.randomUUID()}/recheck`, {})).status,
+    ).toBe(404);
     const ov = await overview();
     expect(ov.features.tiktok).toBe(false);
     expect(ov.platforms.map((p) => p.channelType)).not.toContain('tiktok');
@@ -63,7 +63,9 @@ describeDb('Công tắc TikTok theo khách hàng (010 US9)', () => {
   });
 
   it('chủ, cộng tác viên, hỗ trợ KHÔNG đổi được công tắc (403); thiếu lý do ⇒ 400, không đổi gì', async () => {
-    expect((await actors.support.put(url(), { value: 'on', reason: 'thử nghiệm' })).status).toBe(403);
+    expect((await actors.support.put(url(), { value: 'on', reason: 'thử nghiệm' })).status).toBe(
+      403,
+    );
     for (const who of [actors.owner, actors.collaborator, actors.support]) {
       const r = await who.put(url(), { value: 'on', reason: 'thử nghiệm' });
       expect([401, 403]).toContain(r.status); // khách hàng không có phiên nhân viên ⇒ 401; nhân viên hỗ trợ thiếu quyền ⇒ 403
@@ -78,25 +80,32 @@ describeDb('Công tắc TikTok theo khách hàng (010 US9)', () => {
     expect(set.status).toBe(200);
     expect((set.body as { old: string }).old).toBe('default');
 
-    const events = await asOwner(async (c) =>
-      (
-        await c.query<{ n: number }>(
-          `SELECT count(*)::int AS n FROM platform_gateway.feature_override_events WHERE account_id = $1`,
-          [accountId],
-        )
-      ).rows[0]?.n,
+    const events = await asOwner(
+      async (c) =>
+        (
+          await c.query<{ n: number }>(
+            `SELECT count(*)::int AS n FROM platform_gateway.feature_override_events WHERE account_id = $1`,
+            [accountId],
+          )
+        ).rows[0]?.n,
     );
     expect(events).toBe(1);
-    const audit = await asOwner(async (c) =>
-      (
-        await c.query<{ metadata: Record<string, unknown> }>(
-          `SELECT metadata FROM infra.audit_log WHERE account_id = $1 AND action = 'feature.set'`,
-          [accountId],
-        )
-      ).rows,
+    const audit = await asOwner(
+      async (c) =>
+        (
+          await c.query<{ metadata: Record<string, unknown> }>(
+            `SELECT metadata FROM infra.audit_log WHERE account_id = $1 AND action = 'feature.set'`,
+            [accountId],
+          )
+        ).rows,
     );
     expect(audit).toHaveLength(1);
-    expect(Object.keys(audit[0]?.metadata ?? {}).sort()).toEqual(['flag', 'new', 'old', 'reason_len']);
+    expect(Object.keys(audit[0]?.metadata ?? {}).sort()).toEqual([
+      'flag',
+      'new',
+      'old',
+      'reason_len',
+    ]);
     expect(JSON.stringify(audit)).not.toContain('Khách thử nghiệm'); // không chép lại lý do vào kiểm toán
 
     expect((await overview()).features.tiktok).toBe(true);
@@ -111,7 +120,8 @@ describeDb('Công tắc TikTok theo khách hàng (010 US9)', () => {
   it('kết nối trọn luồng khi bật; tắt lại ⇒ suspended, ngắt được, kiểm tra lại bị chặn', async () => {
     const start = await connect();
     const state =
-      new URL((start.body as { authorizeUrl: string }).authorizeUrl).searchParams.get('state') ?? '';
+      new URL((start.body as { authorizeUrl: string }).authorizeUrl).searchParams.get('state') ??
+      '';
     const cb = await actors.owner.get(
       `/api/v1/channels/callback/tiktok?state=${encodeURIComponent(state)}&code=tt-code`,
     );
@@ -153,7 +163,10 @@ describeDb('Công tắc TikTok theo khách hàng (010 US9)', () => {
     expect(on.status).toBe(200);
     expect((await overview()).features.tiktok).toBe(false); // ghi đè off thắng mặc định bật
 
-    const back = await actors.admin.put(url(), { value: 'default', reason: 'Theo mặc định hệ thống' });
+    const back = await actors.admin.put(url(), {
+      value: 'default',
+      reason: 'Theo mặc định hệ thống',
+    });
     expect(back.status).toBe(200);
     expect((await overview()).features.tiktok).toBe(true); // theo mặc định đã bật
 

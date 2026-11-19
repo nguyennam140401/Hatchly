@@ -34,14 +34,12 @@ function stubAdapter(pages: () => string[]): PlatformAdapter {
     authorizeUrl: (state: string) => `https://www.facebook.test/dialog/oauth?state=${state}`,
     exchangeCallback: () =>
       Promise.resolve({
-        candidates: pages().map(
-          (id): ConnectionCandidate => ({
-            externalId: id,
-            displayName: `Page ${id}`,
-            accessToken: `tok-${id}`,
-            tokenExpiresAt: null,
-          }),
-        ),
+        candidates: pages().map((id): ConnectionCandidate => ({
+          externalId: id,
+          displayName: `Page ${id}`,
+          accessToken: `tok-${id}`,
+          tokenExpiresAt: null,
+        })),
       }),
     checkAccount: () =>
       Promise.resolve({
@@ -116,10 +114,7 @@ describeDb('Đua kết nối kênh (dịch vụ + Postgres)', () => {
     const acc = await createAccount();
     const user = uuidV7();
     const p = page();
-    const [s1, s2] = [
-      await openSelection(acc, user, [p]),
-      await openSelection(acc, user, [p]),
-    ];
+    const [s1, s2] = [await openSelection(acc, user, [p]), await openSelection(acc, user, [p])];
     const settled = await Promise.allSettled([
       as(acc, user, () => service().confirm(s1, [p])),
       as(acc, user, () => service().confirm(s2, [p])),
@@ -165,10 +160,7 @@ describeDb('Đua kết nối kênh (dịch vụ + Postgres)', () => {
     const user = uuidV7();
     const setA = Array.from({ length: MAX }, page);
     const setB = Array.from({ length: MAX }, page);
-    const [s1, s2] = [
-      await openSelection(acc, user, setA),
-      await openSelection(acc, user, setB),
-    ];
+    const [s1, s2] = [await openSelection(acc, user, setA), await openSelection(acc, user, setB)];
     await Promise.allSettled([
       as(acc, user, () => service().confirm(s1, setA)),
       as(acc, user, () => service().confirm(s2, setB)),

@@ -3,7 +3,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { executionStorage } from '../../src/core/context/execution-storage';
 import { uuidV7 } from '../../src/core/ids/uuid-v7';
-import { guardAdapter, GUARDED } from '../../src/modules/platform_gateway/internal/adapters/feature-guarded-adapter';
+import {
+  guardAdapter,
+  GUARDED,
+} from '../../src/modules/platform_gateway/internal/adapters/feature-guarded-adapter';
 import { TiktokAdapter } from '../../src/modules/platform_gateway/internal/adapters/tiktok/tiktok.adapter';
 import { TiktokClient } from '../../src/modules/platform_gateway/internal/adapters/tiktok/tiktok-client';
 import {
@@ -81,7 +84,9 @@ describe('TiktokAdapter – kết nối (US9)', () => {
     stub.on('POST /v2/post/publish/creator_info/query/', tiktokError('scope_not_authorized'));
     const missing = await adapter().checkAccount(cred);
     expect(missing.kind === 'ineligible' && missing.error.rawCode).toBe('TT:SCOPE_MISSING');
-    expect(missing.kind === 'ineligible' && missing.error.remedies.length).toBeGreaterThanOrEqual(1);
+    expect(missing.kind === 'ineligible' && missing.error.remedies.length).toBeGreaterThanOrEqual(
+      1,
+    );
 
     stub.clear();
     stub.on('POST /v2/post/publish/creator_info/query/', { status: 503, json: {} });

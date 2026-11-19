@@ -41,7 +41,8 @@ export const TIKTOK_ERROR_TABLE: ErrorTable = {
   },
   'TT:POSTING_NOT_AVAILABLE': {
     category: 'user_action',
-    messageVi: 'Tính năng đăng bài lên TikTok chưa mở. Bạn có thể kết nối kênh trước, việc đăng sẽ có sau.',
+    messageVi:
+      'Tính năng đăng bài lên TikTok chưa mở. Bạn có thể kết nối kênh trước, việc đăng sẽ có sau.',
     remedies: [...SUPPORT],
   },
   'TT:REFRESH_UNSUPPORTED': {

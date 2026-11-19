@@ -45,17 +45,15 @@ describeDb('Kết nối lại và ngắt kết nối (dịch vụ + Postgres)', 
       authorizeUrl: (state: string) => `https://www.facebook.test/dialog/oauth?state=${state}`,
       exchangeCallback: () =>
         Promise.resolve({
-          candidates: pages.map(
-            (id): ConnectionCandidate => ({
-              externalId: id,
-              displayName: `Page ${id}`,
-              accessToken: `tok-${id}-${uuidV7().slice(-6)}`,
-              refreshToken: 'usr-shared',
-              tokenExpiresAt: null,
-              expiry: { kind: 'none' },
-              ...(channelType === 'instagram' ? { sourceExternalId: igSource } : {}),
-            }),
-          ),
+          candidates: pages.map((id): ConnectionCandidate => ({
+            externalId: id,
+            displayName: `Page ${id}`,
+            accessToken: `tok-${id}-${uuidV7().slice(-6)}`,
+            refreshToken: 'usr-shared',
+            tokenExpiresAt: null,
+            expiry: { kind: 'none' },
+            ...(channelType === 'instagram' ? { sourceExternalId: igSource } : {}),
+          })),
         }),
       checkAccount: () =>
         Promise.resolve({
@@ -94,8 +92,7 @@ describeDb('Kết nối lại và ngắt kết nối (dịch vụ + Postgres)', 
   const service = () =>
     new ConnectionsService(new PgConnectionStore(), new FakeCredentialVault(), () => new Date(), {
       settings: {
-        get: () =>
-          Promise.resolve({ maxPerPlatform: 5, expiryWarnDays: 7, selectionTtlSec: 900 }),
+        get: () => Promise.resolve({ maxPerPlatform: 5, expiryWarnDays: 7, selectionTtlSec: 900 }),
       } as never,
       notifications: {
         emit: (_tx: unknown, ev: NotificationEvent) => {
@@ -182,8 +179,12 @@ describeDb('Kết nối lại và ngắt kết nối (dịch vụ + Postgres)', 
     expect(out).toEqual({ kind: 'reconnected', connectionId: id });
     const after = await rowOf(id);
     expect(after?.status).toBe('active');
-    expect(after?.token_issued_at.getTime()).toBeGreaterThan(before?.token_issued_at.getTime() ?? 0);
-    expect(after?.token_ciphertext?.equals(before?.token_ciphertext ?? Buffer.alloc(0))).toBe(false);
+    expect(after?.token_issued_at.getTime()).toBeGreaterThan(
+      before?.token_issued_at.getTime() ?? 0,
+    );
+    expect(after?.token_ciphertext?.equals(before?.token_ciphertext ?? Buffer.alloc(0))).toBe(
+      false,
+    );
   });
 
   it('Page khác ⇒ WRONG_CHANNEL và kênh cũ KHÔNG đổi', async () => {

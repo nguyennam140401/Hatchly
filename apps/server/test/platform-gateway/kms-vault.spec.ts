@@ -64,7 +64,7 @@ describe('KmsCredentialVault (phong bì + EnvMasterKeyWrapper)', () => {
     // Vùng dữ liệu mã hóa (cuối), vùng thẻ xác thực/IV (giữa) và vùng DEK đã bọc (đầu, sau tiêu đề).
     for (const pos of [ct.length - 1, ct.length - 10, 50]) {
       const bad = Buffer.from(ct);
-      bad[pos] = (bad[pos]!) ^ 0x01;
+      bad[pos] = bad[pos]! ^ 0x01;
       await expect(vault.decrypt(bad, AAD_A)).rejects.toThrow('VAULT_');
     }
   });

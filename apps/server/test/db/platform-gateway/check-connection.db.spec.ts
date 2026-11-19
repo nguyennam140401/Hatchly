@@ -19,7 +19,10 @@ import {
   credentialAad,
   FakeCredentialVault,
 } from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
-import type { AccountCheckResult, ExpiryInfo } from '../../../src/modules/platform_gateway/public-api';
+import type {
+  AccountCheckResult,
+  ExpiryInfo,
+} from '../../../src/modules/platform_gateway/public-api';
 import {
   asOwner,
   createAccount,
@@ -197,7 +200,10 @@ describeDb('check_connection (nhắc hạn, làm mới, đua, chạy lại)', ()
     currentExpiry = exp;
     await check(acc, a.id);
     expect(events).toHaveLength(1);
-    const ev = events[0] as { refs: { connectionIds?: string[] }; params: { channelDisplayName: string } };
+    const ev = events[0] as {
+      refs: { connectionIds?: string[] };
+      params: { channelDisplayName: string };
+    };
     expect(new Set(ev.refs.connectionIds)).toEqual(new Set([a.id, b.id, d.id]));
     expect(ev.params.channelDisplayName).toContain('và 2 kênh khác');
     await check(acc, b.id);
@@ -274,13 +280,14 @@ describeDb('check_connection (nhắc hạn, làm mới, đua, chạy lại)', ()
     expect(await check(acc, c.id)).toBe('skipped');
     expect(platformCalls).toBe(0);
     expect(events).toHaveLength(0);
-    const flag = await asOwner(async (cl) =>
-      (
-        await cl.query<{ recheck_required: boolean }>(
-          'SELECT recheck_required FROM platform_gateway.channel_connections WHERE id = $1',
-          [c.id],
-        )
-      ).rows[0]?.recheck_required,
+    const flag = await asOwner(
+      async (cl) =>
+        (
+          await cl.query<{ recheck_required: boolean }>(
+            'SELECT recheck_required FROM platform_gateway.channel_connections WHERE id = $1',
+            [c.id],
+          )
+        ).rows[0]?.recheck_required,
     );
     expect(flag).toBe(true);
   });
@@ -322,7 +329,9 @@ describeDb('check_connection (nhắc hạn, làm mới, đua, chạy lại)', ()
     const before = await rowOf(c.id);
     expect(await check(acc, c.id)).toBe('lost_race');
     const after = await rowOf(c.id);
-    expect(after?.token_issued_at.getTime()).toBeGreaterThan(before?.token_issued_at.getTime() ?? 0);
+    expect(after?.token_issued_at.getTime()).toBeGreaterThan(
+      before?.token_issued_at.getTime() ?? 0,
+    );
     expect(after?.last_checked_at?.getTime()).toBe(before?.last_checked_at?.getTime());
   });
 

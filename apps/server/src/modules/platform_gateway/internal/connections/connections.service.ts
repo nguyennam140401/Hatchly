@@ -707,20 +707,19 @@ export class ConnectionsService {
     const byId = new Map(rows.map((r) => [r.id, r]));
 
     // Kết nối TikTok ĐÃ CÓ vẫn hiện khi công tắc tắt dưới dạng `suspended` (chỉ Xem/Ngắt – FR-039); chưa có thì không có gì để vẽ.
-    const connections = rows
-      .map((r) => {
-        const source =
-          r.sourceConnectionId === undefined || r.sourceConnectionId === null
-            ? undefined
-            : (byId.get(r.sourceConnectionId) ?? null);
-        return toOverviewItem(r, {
-          now,
-          warnDays: cfg.warnDays,
-          featureEnabled: tiktokOn,
-          source,
-          scheduledImpact: impact.get(r.id),
-        });
+    const connections = rows.map((r) => {
+      const source =
+        r.sourceConnectionId === undefined || r.sourceConnectionId === null
+          ? undefined
+          : (byId.get(r.sourceConnectionId) ?? null);
+      return toOverviewItem(r, {
+        now,
+        warnDays: cfg.warnDays,
+        featureEnabled: tiktokOn,
+        source,
+        scheduledImpact: impact.get(r.id),
       });
+    });
     const rank = (s: ChannelOverviewItem['state']) =>
       s === 'needs_reconnect'
         ? 0
