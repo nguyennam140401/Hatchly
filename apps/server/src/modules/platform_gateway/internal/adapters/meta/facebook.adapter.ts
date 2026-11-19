@@ -17,6 +17,7 @@ import type {
   CallbackParams,
   ConnectionCandidate,
   PlatformAdapter,
+  RenewTokenResult,
   RevokeResult,
 } from '../adapter';
 import { makeClassifier } from '../classify';
@@ -263,6 +264,30 @@ export class FacebookAdapter implements PlatformAdapter {
         remedies: [{ action: 'reconnect', labelVi: 'Kết nối lại Trang' }],
       },
     });
+  }
+
+  /**
+   * Làm mới thật (T061): mã người dùng dài hạn → mã mới → lấy lại mã Page → đo hạn. Thất bại do thu hồi/hết hạn ⇒ `user_action`
+   * (bảng lỗi), do mạng/5xx ⇒ `transient`. Mã mới chỉ trả cho tầng kết nối để mã hóa, không ghi nhật ký.
+   */
+  async renewToken(
+    refreshCred: DecryptedCredential,
+    ctx: AdapterCallContext,
+    signal?: AbortSignal,
+  ): Promise<RenewTokenResult> {
+    const oauth = this.opts.oauth ?? null;
+    if (oauth === null || ctx.externalId === undefined) {
+      return { kind: 'failed', error: classify('FB:REFRESH_UNSUPPORTED') };
+    }
+    try {
+      const { userToken } = await oauth.renewUserToken(revealCredential(refreshCred), signal);
+      const page = (await oauth.listPages(userToken, signal)).find((p) => p.id === ctx.externalId);
+      if (page === undefined) return { kind: 'failed', error: classify('FB:PAGE_UNAVAILABLE') };
+      const expiry = expiryFromDebug(await oauth.debugToken(page.accessToken, signal));
+      return { kind: 'renewed', accessToken: page.accessToken, refreshToken: userToken, expiry };
+    } catch (e) {
+      return { kind: 'failed', error: toClassified(asGraphError(e), classify) };
+    }
   }
 
   /**

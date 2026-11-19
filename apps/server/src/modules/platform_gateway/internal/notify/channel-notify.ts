@@ -20,6 +20,41 @@ export function utcDay(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
+export type TokenStage = 'd7' | 'd1' | 'expired';
+
+/**
+ * Nhắc hạn quyền (FR-020): mốc `d7 → d1 → expired`, GỘP các kênh cùng tài khoản cùng mốc thành MỘT thông báo
+ * (`connectionIds` ≤ 10). Phát trong giao dịch ghi `last_notified_stage` – hủy giao dịch ⇒ không có thông báo.
+ */
+export async function emitTokenExpiring(
+  notifications: NotificationsPublicApi,
+  tx: Db,
+  input: {
+    connectionIds: readonly string[];
+    channelNames: readonly string[];
+    /** Ngày hết hạn theo lịch UTC+7 (`YYYY-MM-DD`). */
+    expiresOn: string;
+    stage: TokenStage;
+    affectedPosts?: number | undefined;
+  },
+): Promise<void> {
+  const [first, ...rest] = input.connectionIds;
+  if (first === undefined) return;
+  await notifications.emit(tx, {
+    type: 'channel_token_expiring',
+    refs: {
+      connectionId: first,
+      expiresOn: input.expiresOn,
+      stage: input.stage,
+      ...(rest.length > 0 ? { connectionIds: input.connectionIds.slice(0, 10) } : {}),
+    },
+    params: {
+      channelDisplayName: groupedChannelName(input.channelNames),
+      ...(input.affectedPosts !== undefined ? { affectedPosts: input.affectedPosts } : {}),
+    },
+  });
+}
+
 export async function emitNeedsReconnect(
   notifications: NotificationsPublicApi,
   tx: Db,

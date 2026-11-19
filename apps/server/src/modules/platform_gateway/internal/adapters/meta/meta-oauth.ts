@@ -152,6 +152,36 @@ export class MetaOAuth {
     };
   }
 
+  /**
+   * Đổi lại mã người dùng DÀI HẠN đang có lấy mã mới (làm mới – T061). Bí mật (`client_secret`, `fb_exchange_token`) đi trong
+   * THÂN form, không bao giờ trong URL/nhật ký.
+   */
+  async renewUserToken(
+    userToken: string,
+    signal?: AbortSignal,
+  ): Promise<{ userToken: string; expiresInSec: number | null }> {
+    const long = await this.opts.client.callWithToken<Record<string, unknown>>(
+      '',
+      'POST',
+      'oauth/access_token',
+      {
+        form: {
+          grant_type: 'fb_exchange_token',
+          client_id: this.opts.appId,
+          client_secret: this.opts.appSecret,
+          fb_exchange_token: userToken,
+        },
+        ...(signal ? { signal } : {}),
+      },
+    );
+    const token = asString(long.access_token);
+    if (token === undefined) throw new Error('META_NO_TOKEN');
+    return {
+      userToken: token,
+      expiresInSec: typeof long.expires_in === 'number' ? long.expires_in : null,
+    };
+  }
+
   /** Mọi Page người dùng quản lý (có phân trang theo con trỏ, tối đa `MAX_PAGES`). */
   async listPages(userToken: string, signal?: AbortSignal): Promise<MetaPage[]> {
     const pages: MetaPage[] = [];

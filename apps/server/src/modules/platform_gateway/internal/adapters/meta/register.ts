@@ -67,6 +67,7 @@ export function registerMetaAdapters(cfg: MetaAdapterConfig): void {
         client: new GraphClient(common, 'IG'),
         reconcile: cfg.instagramReconcile,
         oauth,
+        tokenRefresh: o?.tokenRefresh ?? false,
       }),
   );
 }

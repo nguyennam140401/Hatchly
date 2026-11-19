@@ -23,6 +23,14 @@ export interface AdapterCallContext {
   externalId?: string | undefined;
 }
 
+/**
+ * 010 T061: kết quả làm mới quyền NỘI BỘ (mang mã mới – KHÔNG đi qua `PlatformGateway` công khai). Bên gọi (việc nền
+ * `check_connection`) mã hóa ngay `accessToken`/`refreshToken` rồi ghi `token_issued_at` mới; không bao giờ ghi nhật ký.
+ */
+export type RenewTokenResult =
+  | { kind: 'renewed'; accessToken: string; refreshToken?: string; expiry: ExpiryInfo }
+  | { kind: 'failed'; error: ClassifiedError };
+
 export interface AdapterSubmit {
   text: string;
   media: { url: string; kind: 'image' | 'video'; mediaId: string }[];
@@ -90,6 +98,15 @@ export interface PlatformAdapter {
   reconcile(cred: DecryptedCredential, q: AdapterReconcile): Promise<ReconcileResult>;
   classifyError(rawCode: string): ClassifiedError;
   refreshToken(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RefreshTokenResult>;
+  /**
+   * 010 T061: làm mới THẬT – nhận mã làm mới đã giải mã (Meta: mã người dùng dài hạn), trả mã mới để tầng kết nối ghi.
+   * Chỉ có khi `capabilities.tokenRefresh`. `signal` ≤ 10 giây do bên gọi đặt.
+   */
+  renewToken?(
+    refreshCred: DecryptedCredential,
+    ctx: AdapterCallContext,
+    signal?: AbortSignal,
+  ): Promise<RenewTokenResult>;
   /** 010: thu hồi quyền phía nền tảng khi ngắt kết nối (FR-017). Không ném; thời gian chờ ≤ 5 giây do bên gọi đặt. */
   revoke(cred: DecryptedCredential, ctx: AdapterCallContext): Promise<RevokeResult>;
   /** 010: hạn hiện tại của quyền (đo lại bằng lời gọi nền tảng khi cần). Dạng `none` khi không có mốc hạn cố định. */

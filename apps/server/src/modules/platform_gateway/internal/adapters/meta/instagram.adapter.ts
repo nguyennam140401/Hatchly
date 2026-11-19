@@ -17,6 +17,7 @@ import type {
   CallbackParams,
   ConnectionCandidate,
   PlatformAdapter,
+  RenewTokenResult,
   RevokeResult,
 } from '../adapter';
 import { makeClassifier } from '../classify';
@@ -37,6 +38,8 @@ export interface InstagramAdapterOptions {
   reconcile: boolean;
   /** 010: luồng OAuth/đo hạn; `null`/thiếu ⇒ chưa cấu hình ứng dụng Meta (013 chạy độc lập). */
   oauth?: MetaOAuth | null;
+  /** 010 T061: bật làm mới mã quyền bằng việc nền (`META_TOKEN_REFRESH_ENABLED`). */
+  tokenRefresh?: boolean;
 }
 
 /** Tiền tố `externalId` của ứng viên GIỮ CHỖ cho Page chưa liên kết Instagram (hiện "Page chưa liên kết", không kết nối được). */
@@ -57,7 +60,7 @@ export class InstagramAdapter implements PlatformAdapter {
     this.capabilities = {
       reconcile: opts.reconcile,
       asyncProcessing: true,
-      tokenRefresh: false,
+      tokenRefresh: opts.tokenRefresh ?? false,
       reportsQuota: true,
       maxReconcileWindowHours: 24,
     };
@@ -272,6 +275,32 @@ export class InstagramAdapter implements PlatformAdapter {
         remedies: [{ action: 'reconnect', labelVi: 'Kết nối lại Instagram' }],
       },
     });
+  }
+
+  /**
+   * Làm mới thật (T061): mã người dùng dài hạn → Page chứa tài khoản Instagram này → mã Page mới (Instagram đăng bằng mã
+   * Page nguồn). Lỗi phân loại theo bảng lỗi Instagram.
+   */
+  async renewToken(
+    refreshCred: DecryptedCredential,
+    ctx: AdapterCallContext,
+    signal?: AbortSignal,
+  ): Promise<RenewTokenResult> {
+    const oauth = this.opts.oauth ?? null;
+    if (oauth === null || ctx.externalId === undefined) {
+      return { kind: 'failed', error: classify('IG:REFRESH_UNSUPPORTED') };
+    }
+    try {
+      const { userToken } = await oauth.renewUserToken(revealCredential(refreshCred), signal);
+      const page = (await oauth.listPages(userToken, signal)).find(
+        (p) => p.instagram?.id === ctx.externalId,
+      );
+      if (page === undefined) return { kind: 'failed', error: classify('IG:PAGE_NOT_LINKED') };
+      const expiry = expiryFromDebug(await oauth.debugToken(page.accessToken, signal));
+      return { kind: 'renewed', accessToken: page.accessToken, refreshToken: userToken, expiry };
+    } catch (e) {
+      return { kind: 'failed', error: toClassified(asGraphError(e), classify) };
+    }
   }
 
   /** 010: thu hồi quyền – bộ chuyển đổi thật (T073) gọi API thu hồi; hiện chưa hỗ trợ. */

@@ -1,9 +1,19 @@
-import { type DynamicModule, Module } from '@nestjs/common';
+import { type DynamicModule, Inject, Injectable, Module, type OnModuleInit } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../../core';
 import { notConfiguredProxy } from '../../core/gateways/not-configured';
 import { registerMetaAdapters } from './internal/adapters/meta/register';
 import { registerDefaultAdapters } from './internal/adapters/registry';
+import { registerJobHandler } from '../queue';
 import { writeChannelAudit } from './internal/connections/channel-audit';
+import { createCheckConnectionHandler } from './internal/maintenance/check-connection.handler';
+import { runCleanupConnectData } from './internal/maintenance/cleanup.handler';
+import { runChannelMaintenance } from './internal/maintenance/due-connections';
+import {
+  channelMaintenance,
+  checkConnection,
+  cleanupConnectData,
+  defineChannelSchedules,
+} from './internal/maintenance/jobs';
 import type { ConnectionStore } from './internal/connections/connection-store';
 import {
   CONNECTIONS_SERVICE,
@@ -154,6 +164,46 @@ const providers = [
   },
 ];
 
+let handlersRegistered = false;
+
+/** Đăng ký bộ xử lý việc nền (010 T058–T063) – CHỈ ở Worker, trước khi QueueRuntime bắt đầu lấy việc. */
+@Injectable()
+class PlatformGatewayWorkerHandlers implements OnModuleInit {
+  constructor(
+    @Inject(PLATFORM_STORE) private readonly store: ConnectionStore,
+    @Inject(CREDENTIAL_VAULT) private readonly vault: CredentialVault,
+    @Inject(FEATURE_GATE) private readonly features: FeatureGate,
+    @Inject(GATEWAY_SETTINGS) private readonly settings: GatewaySettings,
+    @Inject(NOTIFICATIONS) private readonly notifications: NotificationsPublicApi,
+    @Inject(ACCOUNT_PUBLIC_API) private readonly account: AccountPublicApi,
+  ) {}
+
+  onModuleInit(): void {
+    if (handlersRegistered) return;
+    handlersRegistered = true;
+    const check = createCheckConnectionHandler({
+      store: this.store,
+      vault: this.vault,
+      settings: this.settings,
+      features: this.features,
+      notifications: this.notifications,
+      eligibility: () => this.account.getPublishingEligibility(),
+      audit: writeChannelAudit,
+    });
+    registerJobHandler(checkConnection, async (payload) => {
+      await check(payload.connectionId);
+    });
+    registerJobHandler(channelMaintenance, async () => {
+      const cfg = await this.settings.get();
+      await runChannelMaintenance({ batchLimit: cfg.checkBatchLimit });
+    });
+    registerJobHandler(cleanupConnectData, async () => {
+      await runCleanupConnectData();
+    });
+    defineChannelSchedules();
+  }
+}
+
 /**
  * Module Cổng nền tảng (`platform_gateway`).
  * Chỉ export provider thuộc giao diện công khai; mọi thứ khác nằm trong `internal/`.
@@ -165,7 +215,7 @@ export class PlatformGatewayModule {
       return {
         module: PlatformGatewayModule,
         global: true,
-        providers,
+        providers: [...providers, PlatformGatewayWorkerHandlers],
         exports: [PLATFORM_GATEWAY],
       };
     }

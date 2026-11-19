@@ -222,3 +222,71 @@ describe('InstagramAdapter – kết nối (US2)', () => {
     await expect(instagram().revoke()).resolves.toBe('unsupported');
   });
 });
+
+describe('renewToken – làm mới quyền Meta (T061)', () => {
+  const ctxFb = { connectionId: 'c1', externalId: 'page-1' };
+
+  it('Facebook: đổi lại mã người dùng dài hạn → lấy lại mã Page → đo hạn mới; bí mật không vào URL', async () => {
+    stub.on('POST /oauth/access_token', {
+      json: { access_token: 'EAAnew_user', expires_in: 5_184_000 },
+    });
+    stub.on('GET /me/accounts', {
+      json: {
+        data: [
+          { id: 'page-1', name: 'Tiệm Hoa', access_token: 'EAAnew_page', tasks: ['CREATE_CONTENT'] },
+        ],
+      },
+    });
+    stub.on(
+      'POST /debug_token',
+      debugOk(DEFAULT_GRANTED_SCOPES, Math.floor(Date.now() / 1000) + 40 * 86_400),
+    );
+    const r = await facebook().renewToken(cred, ctxFb);
+    expect(r.kind).toBe('renewed');
+    if (r.kind !== 'renewed') return;
+    expect(r.accessToken).toBe('EAAnew_page');
+    expect(r.refreshToken).toBe('EAAnew_user');
+    expect(r.expiry.kind).toBe('token');
+    for (const req of stub.requests) {
+      expect(req.url).not.toContain('APP-SECRET');
+      expect(req.url).not.toContain('fb_exchange_token');
+    }
+  });
+
+  it('Facebook: Page không còn trong danh sách ⇒ failed user_action (cần kết nối lại)', async () => {
+    stub.on('POST /oauth/access_token', { json: { access_token: 'EAAnew_user' } });
+    stub.on('GET /me/accounts', { json: { data: [] } });
+    const r = await facebook().renewToken(cred, ctxFb);
+    expect(r.kind === 'failed' && r.error.category).toBe('user_action');
+  });
+
+  it('thu hồi (190) ⇒ user_action; mạng/5xx ⇒ không phải kết luận khẳng định', async () => {
+    stub.on('POST /oauth/access_token', graphError(190, undefined, 401));
+    const revoked = await facebook().renewToken(cred, ctxFb);
+    expect(revoked.kind === 'failed' && revoked.error.category).toBe('user_action');
+    stub.clear();
+    stub.on('POST /oauth/access_token', { status: 503, json: {} });
+    const down = await facebook().renewToken(cred, ctxFb);
+    expect(down.kind === 'failed' && down.error.category).not.toBe('user_action');
+  });
+
+  it('Instagram: lấy lại mã Page chứa tài khoản Instagram này', async () => {
+    stub.on('POST /oauth/access_token', { json: { access_token: 'EAAnew_user' } });
+    stub.on('GET /me/accounts', {
+      json: {
+        data: [
+          {
+            id: 'p1',
+            name: 'Tiệm Hoa',
+            access_token: 'EAAnew_ig_page',
+            tasks: ['CREATE_CONTENT'],
+            instagram_business_account: { id: 'ig-1', username: 'tiemhoa' },
+          },
+        ],
+      },
+    });
+    stub.on('POST /debug_token', debugOk());
+    const r = await instagram().renewToken(cred, { connectionId: 'c1', externalId: 'ig-1' });
+    expect(r.kind === 'renewed' && r.accessToken).toBe('EAAnew_ig_page');
+  });
+});
