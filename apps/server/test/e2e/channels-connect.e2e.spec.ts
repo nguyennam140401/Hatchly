@@ -100,7 +100,7 @@ describeDb('Kết nối kênh – HTTP (005, 010)', () => {
     expect(all).not.toMatch(/fake_tok_|accessToken|ciphertext/i);
     expect((list.body as unknown[]).length).toBeGreaterThanOrEqual(1);
 
-    expect((await actors.owner.delete(`/api/v1/channels/${conn.connectionId}`)).status).toBe(204);
+    expect((await actors.owner.delete(`/api/v1/channels/${conn.connectionId}`)).status).toBe(200);
     const after = (await actors.owner.get('/api/v1/channels')).body as {
       connectionId: string;
       status: string;

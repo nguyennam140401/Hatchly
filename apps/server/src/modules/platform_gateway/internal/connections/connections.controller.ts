@@ -20,6 +20,8 @@ import {
   type ChannelConnectionDto,
   type ConfirmResponse,
   type ConnectResponse,
+  type DisconnectPreview,
+  type DisconnectResponse,
   type OverviewResponse,
   type RecheckResponse,
   type SelectionResponse,
@@ -222,12 +224,22 @@ export class ConnectionsController {
     return mapErrors(() => this.connections.recheck(params.connectionId));
   }
 
-  @Delete(':connectionId')
-  @HttpCode(204)
+  /** Hậu quả của việc ngắt: số bài đã lên lịch cho riêng kênh này + Instagram liên kết qua Page này (FR-042). */
+  @Get(':connectionId/disconnect-preview')
   @CustomerAccess('channel.manage')
-  async disconnect(
+  disconnectPreview(
     @ValidParam(connectionParam) params: z.infer<typeof connectionParam>,
-  ): Promise<void> {
-    await mapErrors(() => this.connections.disconnect(params.connectionId));
+  ): Promise<DisconnectPreview> {
+    return mapErrors(() => this.connections.disconnectPreview(params.connectionId));
+  }
+
+  /** Ngắt (idempotent – đã ngắt vẫn 200): xóa mã quyền ngay, thu hồi phía nền tảng nếu được (FR-017). */
+  @Delete(':connectionId')
+  @HttpCode(200)
+  @CustomerAccess('channel.manage')
+  disconnect(
+    @ValidParam(connectionParam) params: z.infer<typeof connectionParam>,
+  ): Promise<DisconnectResponse> {
+    return mapErrors(() => this.connections.disconnect(params.connectionId));
   }
 }

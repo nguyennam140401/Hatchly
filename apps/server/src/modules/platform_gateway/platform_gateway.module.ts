@@ -13,11 +13,13 @@ import { writeChannelAudit } from './internal/connections/channel-audit';
 import { createCheckConnectionHandler } from './internal/maintenance/check-connection.handler';
 import { runCleanupConnectData } from './internal/maintenance/cleanup.handler';
 import { runChannelMaintenance } from './internal/maintenance/due-connections';
+import { createDisconnectAllHandler } from './internal/maintenance/disconnect-all.handler';
 import {
   channelMaintenance,
   checkConnection,
   cleanupConnectData,
   defineChannelSchedules,
+  disconnectAll,
 } from './internal/maintenance/jobs';
 import type { ConnectionStore } from './internal/connections/connection-store';
 import {
@@ -217,6 +219,17 @@ class PlatformGatewayWorkerHandlers implements OnModuleInit {
         throw err;
       }
     });
+    const connections = new ConnectionsService(this.store, this.vault, () => new Date(), {
+      features: this.features,
+      settings: this.settings,
+      eligibility: () => this.account.getPublishingEligibility(),
+      audit: writeChannelAudit,
+      notifications: this.notifications,
+    });
+    const disconnectAllHandler = createDisconnectAllHandler(connections);
+    registerJobHandler(disconnectAll, async () => {
+      await disconnectAllHandler();
+    });
     registerJobHandler(channelMaintenance, async () => {
       const cfg = await this.settings.get();
       await runChannelMaintenance({ batchLimit: cfg.checkBatchLimit });
@@ -259,6 +272,7 @@ export class PlatformGatewayModule {
             FEATURE_GATE,
             GATEWAY_SETTINGS,
             ACCOUNT_PUBLIC_API,
+            NOTIFICATIONS,
           ],
           useFactory: (
             store: ConnectionStore,
@@ -266,6 +280,7 @@ export class PlatformGatewayModule {
             features: FeatureGate,
             settings: GatewaySettings,
             account: AccountPublicApi,
+            notifications: NotificationsPublicApi,
           ) =>
             new ConnectionsService(store, vault, () => new Date(), {
               features,
@@ -273,6 +288,7 @@ export class PlatformGatewayModule {
               // Gói hết hạn/đang xóa ⇒ dừng kết nối mới (FR-033); module `account` sở hữu dữ liệu này (ADR-13).
               eligibility: () => account.getPublishingEligibility(),
               audit: writeChannelAudit,
+              notifications,
             }),
         },
       ],

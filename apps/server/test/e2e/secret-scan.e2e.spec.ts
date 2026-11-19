@@ -182,7 +182,7 @@ describeDb('Quét bí mật sau luồng kết nối kênh (010 SC-003)', () => {
 
   it('ngắt kết nối xong, phản hồi/nhật ký sau đó vẫn sạch', async () => {
     const del = await track(actors.owner.delete(`/api/v1/channels/${connectionId}`));
-    expect(del.status).toBe(204);
+    expect(del.status).toBe(200);
     expect(seen.flatMap((s) => hits('http', s))).toEqual([]);
     expect(hits('log', t.rawLogs.join('\n'))).toEqual([]);
   });

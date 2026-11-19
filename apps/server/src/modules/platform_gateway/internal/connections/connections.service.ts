@@ -2,10 +2,14 @@ import type {
   ChannelOverviewItem,
   ConfirmResponse,
   ConnectErrorCode,
+  DisconnectPreview,
+  DisconnectResponse,
   OverviewResponse,
   SelectionResponse,
 } from '@app/shared/platform_gateway';
 import { AppError, can, currentAccountId, requireCustomer } from '../../../../core';
+import { tenantTx } from '../../../../core/db';
+import type { NotificationsPublicApi } from '../../../notifications';
 import { withGatewayOp } from '../../../../core/gateways/op-log';
 import type {
   AccountCheckResult,
@@ -24,7 +28,12 @@ import {
 import type { FeatureGate } from '../features/feature-gate';
 import { toChannelConnection, toChannelConnections } from '../gateway.service';
 import type { GatewaySettings } from '../settings/gateway-settings';
-import { credentialAad, type CredentialVault } from '../vault/credential-vault';
+import {
+  credentialAad,
+  revealCredential,
+  type CredentialVault,
+  type DecryptedCredential,
+} from '../vault/credential-vault';
 import type { ChannelAuditEntry, ChannelAuditSink } from './channel-audit';
 import { blockCodeOf, callbackCodeOfBlock, reasonCodeOf } from './connect-errors';
 import { connectionConsumers } from './consumers';
@@ -32,6 +41,7 @@ import type { ConnectionStore, StoredCandidate, StoredConnection } from './conne
 import { expiryFromJson, expiryToJson } from './connection-store';
 import { limitReached, remainingSlots } from './limits';
 import { hashOauthState, newOauthState, OAUTH_STATE_TTL_MS, SELECTION_TTL_MS } from './oauth-state';
+import { emitNeedsReconnect } from '../notify/channel-notify';
 import { recordConnect } from '../metrics';
 import { toOverviewItem } from './overview-mapper';
 
@@ -53,7 +63,13 @@ export interface ConnectionsServiceExtras {
   eligibility?: () => Promise<{ planActive: boolean; deletionRequested: boolean }>;
   /** Ghi kiểm toán thao tác kênh (FR-030). Thiếu ⇒ không ghi (bản dựng cũ/kiểm thử 005). */
   audit?: ChannelAuditSink;
+  /** Thông báo gộp cho Instagram phụ thuộc khi Page bị ngắt (FR-042). Thiếu ⇒ không phát. */
+  notifications?: NotificationsPublicApi;
 }
+
+/** Ngắt hàng loạt: song song tối đa 5 kết nối; thu hồi phía nền tảng chờ tối đa 5 giây mỗi kết nối. */
+const DISCONNECT_PARALLEL = 5;
+const REVOKE_TIMEOUT_MS = 5_000;
 
 const DEFAULTS = {
   maxPerPlatform: 5,
@@ -467,9 +483,8 @@ export class ConnectionsService {
       }
       const cfg = await this.cfg();
       const ids = [...new Set(externalIds)];
-      const live = (await this.store.listConnections()).filter(
-        (c) => c.channelType === sel.channelType && isLive(c),
-      );
+      const allLive = (await this.store.listConnections()).filter((c) => isLive(c));
+      const live = allLive.filter((c) => c.channelType === sel.channelType);
       const connected = new Set(live.map((c) => c.externalId));
       const wouldCreate = ids.filter((id) => {
         const cand = sel.candidates.find((c) => c.externalId === id);
@@ -514,7 +529,7 @@ export class ConnectionsService {
             candidate,
             check,
             cfg.maxPerPlatform,
-            live,
+            allLive, // Page nguồn của Instagram nằm ở loại kênh KHÁC nên phải tra trong mọi kết nối còn hiệu lực (T045)
           );
           results.push({
             externalId,
@@ -578,7 +593,9 @@ export class ConnectionsService {
     const sourceId =
       candidate.sourceExternalId === null || candidate.sourceExternalId === undefined
         ? null
-        : (live.find((c) => c.externalId === candidate.sourceExternalId)?.id ?? null);
+        : (live.find(
+            (c) => c.channelType === 'facebook_page' && c.externalId === candidate.sourceExternalId,
+          )?.id ?? null);
     let tokenExpiresAt: Date | null;
     if (expiry !== undefined) tokenExpiresAt = expiry.kind === 'none' ? null : expiry.expiresAt;
     else
@@ -895,17 +912,167 @@ export class ConnectionsService {
     );
   }
 
-  async disconnect(connectionId: string): Promise<void> {
+  // ---------- ngắt kết nối (FR-017, FR-029, US7) ----------
+
+  /** Hậu quả của việc ngắt (T073): số bài đã lên lịch cho RIÊNG kênh này + Instagram liên kết qua Page này (FR-042). */
+  async disconnectPreview(connectionId: string): Promise<DisconnectPreview> {
     const existing = await this.store.getConnection(connectionId);
-    const ok = await this.store.disconnect(connectionId);
-    if (!ok && existing === null) throw new ConnectionNotFoundError();
-    if (ok) {
-      await this.audit({
-        action: 'channel.disconnect',
-        connectionId,
-        channelType: existing?.channelType ?? null,
-        result: 'ok',
+    if (existing === null || !isLive(existing)) throw connectionNotFound();
+    const live = (await this.store.listLiveConnections?.()) ?? [];
+    const dependents = live.filter((c) => c.sourceConnectionId === existing.id);
+    const impact = (await connectionConsumers().scheduledImpact([existing.id])).get(existing.id);
+    return {
+      connectionId: existing.id,
+      displayName: existing.displayName,
+      scheduledImpact: {
+        count: impact?.count ?? 0,
+        nextAt: impact?.nextAt?.toISOString() ?? null,
+      },
+      dependents: dependents.map((d) => ({
+        connectionId: d.id,
+        displayName: d.displayName,
+        channelType: 'instagram' as const,
+      })),
+    };
+  }
+
+  /** Ngắt một kết nối của khách (idempotent: đã ngắt ⇒ vẫn `disconnected:true`). */
+  disconnect(connectionId: string): Promise<DisconnectResponse> {
+    return this.disconnectOne(connectionId, 'user');
+  }
+
+  /**
+   * Ngắt MỌI kết nối của tài khoản trong ngữ cảnh (T074 – việc `disconnect_all` khi xóa tài khoản). Song song ≤ 5, thu hồi
+   * phía nền tảng ≤ 5 giây/kết nối và lỗi không chặn; chạy lại ⇒ không còn gì để làm.
+   */
+  async disconnectAll(): Promise<{ disconnected: number }> {
+    const live = (await this.store.listLiveConnections?.()) ?? [];
+    let disconnected = 0;
+    const revokedUsers = new Set<string>(); // một mã người dùng chỉ thu hồi một lần
+    for (let i = 0; i < live.length; i += DISCONNECT_PARALLEL) {
+      const batch = live.slice(i, i + DISCONNECT_PARALLEL);
+      const results = await Promise.all(
+        batch.map((c) => this.disconnectOne(c.id, 'account_deletion', { revokedUsers, all: true })),
+      );
+      disconnected += results.length;
+    }
+    return { disconnected };
+  }
+
+  private async disconnectOne(
+    connectionId: string,
+    reason: 'user' | 'account_deletion',
+    opts: { revokedUsers?: Set<string>; all?: boolean } = {},
+  ): Promise<DisconnectResponse> {
+    const accountId = currentAccountId();
+    if (accountId === null) throw new Error('Thiếu ngữ cảnh tài khoản khi ngắt kết nối');
+    const existing = await this.store.getConnection(connectionId);
+    if (existing === null) throw new ConnectionNotFoundError();
+    if (!isLive(existing)) return { disconnected: true, revoked: 'skipped', cancelledAttempts: 0 };
+    const live = (await this.store.listLiveConnections?.()) ?? [];
+    const isMeta = (t: string) => t === 'facebook_page' || t === 'instagram';
+
+    // Đọc mã MỘT LẦN ngay trước khi xóa (bản trong bộ nhớ dùng để thu hồi sau); mã hỏng vẫn không chặn việc ngắt.
+    let revokeCred: DecryptedCredential | undefined;
+    let userKey: string | undefined;
+    try {
+      const token = await this.vault.decrypt(
+        existing.tokenCiphertext,
+        credentialAad(accountId, 'token', existing.channelType, existing.externalId),
+      );
+      revokeCred = token;
+      if (existing.refreshCiphertext != null) {
+        revokeCred = await this.vault.decrypt(
+          existing.refreshCiphertext,
+          credentialAad(accountId, 'refresh', existing.channelType, existing.externalId),
+        );
+        userKey = revealCredential(revokeCred);
+      }
+    } catch {
+      revokeCred = undefined;
+    }
+
+    // Một giao dịch: hủy lượt chưa gửi + xóa bản mã + (khi do khách ngắt) thông báo gộp cho Instagram phụ thuộc.
+    const dependents = live.filter((c) => c.sourceConnectionId === existing.id);
+    let cancelled = 0;
+    let done: boolean;
+    if (this.store.listLiveConnections === undefined) {
+      done = await this.store.disconnect(connectionId); // bản giả: không có giao dịch thật
+    } else {
+      const outcome = await tenantTx(async (tx) => {
+        const c = (await connectionConsumers().onDisconnect(tx, existing.id)).cancelled;
+        const ok = await this.store.disconnect(existing.id);
+        if (ok && reason === 'user' && dependents.length > 0 && this.extras.notifications) {
+          await emitNeedsReconnect(this.extras.notifications, tx, {
+            connectionIds: dependents.map((d) => d.id),
+            channelNames: dependents.map((d) => d.displayName),
+            reason: 'source_page_lost',
+            now: this.now(),
+          });
+        }
+        return { cancelled: c, ok };
       });
+      cancelled = outcome.cancelled;
+      done = outcome.ok;
+    }
+    if (!done) return { disconnected: true, revoked: 'skipped', cancelledAttempts: 0 }; // đua: bên kia đã ngắt
+
+    // Thu hồi phía nền tảng SAU khi đã xóa (≤ 5 giây, lỗi không chặn). Chỉ thu hồi khi đây là kết nối Meta CUỐI CÙNG:
+    // quyền của Meta gắn với người dùng + ứng dụng nên thu hồi sẽ làm hỏng mọi Page khác còn kết nối.
+    const othersLiveMeta =
+      !opts.all && live.some((c) => c.id !== existing.id && isMeta(c.channelType));
+    let revoked: DisconnectResponse['revoked'] = 'skipped';
+    let hintVi: string | undefined;
+    const alreadyRevoked = userKey !== undefined && opts.revokedUsers?.has(userKey) === true;
+    if (revokeCred !== undefined && !othersLiveMeta && !alreadyRevoked) {
+      if (userKey !== undefined) opts.revokedUsers?.add(userKey);
+      revoked = await this.revokeAtPlatform(existing, revokeCred);
+    }
+    if (revoked !== 'done') {
+      hintVi = isMeta(existing.channelType)
+        ? othersLiveMeta
+          ? 'Quyền vẫn đang dùng cho kênh Meta khác của bạn. Khi ngắt kênh cuối cùng, bạn có thể gỡ ứng dụng trong cài đặt Facebook.'
+          : 'Bạn có thể gỡ ứng dụng trong cài đặt Facebook (Cài đặt → Ứng dụng và trang web) để thu hồi hoàn toàn quyền.'
+        : 'Bạn có thể gỡ ứng dụng trong cài đặt của nền tảng để thu hồi hoàn toàn quyền.';
+    }
+    await this.audit({
+      action: 'channel.disconnect',
+      connectionId,
+      channelType: existing.channelType,
+      result: 'ok',
+      reasonCode: reason,
+      ...(reason === 'account_deletion'
+        ? { actor: { type: 'system' as const, id: 'disconnect_all' } }
+        : {}),
+    });
+    return {
+      disconnected: true,
+      revoked,
+      ...(hintVi !== undefined ? { hintVi } : {}),
+      cancelledAttempts: cancelled,
+    };
+  }
+
+  /** `adapter.revoke` với thời gian chờ 5 giây; không bao giờ ném. `unsupported` ⇒ `skipped`. */
+  private async revokeAtPlatform(
+    conn: StoredConnection,
+    cred: DecryptedCredential,
+  ): Promise<DisconnectResponse['revoked']> {
+    try {
+      const adapter = getAdapter(conn.channelType);
+      const timeout = new Promise<'failed'>((resolve) => {
+        setTimeout(() => {
+          resolve('failed');
+        }, REVOKE_TIMEOUT_MS).unref();
+      });
+      const result = await Promise.race([
+        adapter.revoke(cred, { connectionId: conn.id, externalId: conn.externalId }),
+        timeout,
+      ]);
+      if (result === 'done') return 'done';
+      return result === 'unsupported' ? 'skipped' : 'failed';
+    } catch {
+      return 'failed';
     }
   }
 }

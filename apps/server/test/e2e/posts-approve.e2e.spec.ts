@@ -133,7 +133,7 @@ describeDb('Duyệt và lên lịch (012 US2)', () => {
   it('một kênh đã ngắt → 409 CHANNEL_INACTIVE kèm channelIssues, KHÔNG mục nào được tạo (tất cả hoặc không)', async () => {
     const dead = await connectChannel(actors.owner, 'instagram', 1);
     const post = await createDraft(actors.owner, [{ connectionId: fb }, { connectionId: dead }]);
-    expect((await actors.owner.delete(`/api/v1/channels/${dead}`)).status).toBe(204);
+    expect((await actors.owner.delete(`/api/v1/channels/${dead}`)).status).toBe(200);
     const res = await actors.owner.post(`${P}/${post.id}/approve`, approveBody(post));
     const error = expectError(res, 409, 'CHANNEL_INACTIVE');
     const issues = (

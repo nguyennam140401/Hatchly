@@ -34,6 +34,21 @@ export const cleanupConnectData = defineJobType({
   payload: z.strictObject({}),
 });
 
+/**
+ * Ngắt MỌI kết nối của một tài khoản (luồng xóa tài khoản FR-14 – tính năng khác, chưa có; điểm nối ghi ở docs/wiki). Idempotent:
+ * gọi lại ⇒ không còn gì để làm. Hàng chờ `scheduled` không tự thử lại; bên tạo việc (luồng xóa tài khoản) tạo lại với khóa
+ * chống trùng `disconnect_all:{accountId}` cho tới khi hết kết nối.
+ */
+export const disconnectAll = defineJobType({
+  name: 'platform_gateway.disconnect_all',
+  queue: 'scheduled',
+  scope: 'tenant',
+  version: 1,
+  payload: z.strictObject({}),
+});
+
+export const disconnectAllDedupeKey = (accountId: string): string => `disconnect_all:${accountId}`;
+
 const yyyymmdd = (d: Date): string => d.toISOString().slice(0, 10).replaceAll('-', '');
 
 /** Khóa chống trùng hằng ngày: mỗi kết nối chỉ một lần kiểm tra mỗi ngày UTC. */
