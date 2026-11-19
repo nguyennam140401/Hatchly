@@ -2,6 +2,7 @@ import { GatewaySettings } from '../../../src/modules/platform_gateway/internal/
 import { readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { expect } from 'vitest';
+import { currentAccountId } from '../../../src/core/db';
 import { executionStorage } from '../../../src/core/context/execution-storage';
 import { uuidV7 } from '../../../src/core/ids/uuid-v7';
 import type { FakeStateStore } from '../../../src/dev/fake-components';
@@ -17,6 +18,7 @@ import { makeFakeAdapterFactory } from '../../../src/modules/platform_gateway/in
 import type { FakeStep } from '../../../src/modules/platform_gateway/internal/fake/scenarios';
 import { PlatformGatewayService } from '../../../src/modules/platform_gateway/internal/gateway.service';
 import {
+  credentialAad,
   FakeCredentialVault,
   newFakeToken,
 } from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
@@ -93,11 +95,16 @@ export async function makePlatformHarness(
     b,
     as,
     async createConnection(channelType, opts) {
+      const externalId = `${channelType}-${uuidV7()}`;
       const { connection } = await store.insertConnection({
         channelType,
-        externalId: `${channelType}-${uuidV7()}`,
+        externalId,
         displayName: `Trang thử ${channelType}`,
-        tokenCiphertext: await vault.encrypt(newFakeToken()),
+        // AAD khớp với cách `PlatformGatewayService` giải mã (tài khoản hiện hành + loại kênh + mã ngoài).
+        tokenCiphertext: await vault.encrypt(
+          newFakeToken(),
+          credentialAad(currentAccountId() ?? '', 'token', channelType, externalId),
+        ),
         tokenExpiresAt: new Date(Date.now() + (opts?.expiresInMs ?? 30 * 86_400_000)),
       });
       if (opts?.status === 'disconnected') await store.disconnect(connection.id);

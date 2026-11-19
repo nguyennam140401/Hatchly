@@ -17,6 +17,9 @@ import { PlatformGatewayService } from './internal/gateway.service';
 import { GatewaySettings } from './internal/settings/gateway-settings';
 import { PgGatewaySettingsReader } from './internal/settings/pg-gateway-settings-reader';
 import { FakeCredentialVault, type CredentialVault } from './internal/vault/credential-vault';
+import { EnvMasterKeyWrapper } from './internal/vault/env-master-key.wrapper';
+import { KmsCredentialVault } from './internal/vault/kms-credential-vault';
+import { KmsKeyWrapper } from './internal/vault/kms.wrapper';
 import { ACCOUNT_PUBLIC_API, type AccountPublicApi } from '../account';
 import { NOTIFICATIONS, type NotificationsPublicApi } from '../notifications';
 import { PLATFORM_GATEWAY } from './public-api';
@@ -98,15 +101,19 @@ const providers = [
     provide: CREDENTIAL_VAULT,
     inject: [APP_CONFIG],
     useFactory: (config: AppConfig): CredentialVault => {
-      // Kho mã hóa phong bì thật (`kms` / `env-master-key`) do T033 cung cấp; tới lúc đó chỉ bản giả chạy được.
-      // Chọn theo `CREDENTIAL_VAULT_DRIVER`; chưa có bản thật thì "chưa cấu hình" (không bao giờ im lặng dùng giả).
+      // Chọn theo `CREDENTIAL_VAULT_DRIVER`; chưa cấu hình thì "chưa cấu hình" (không bao giờ im lặng dùng giả).
+      // `assert-no-fakes` đã chặn `fake`/`env-master-key` ở production lúc khởi động.
       if (config.CREDENTIAL_VAULT_DRIVER === 'fake') return new FakeCredentialVault();
-      if (
-        config.CREDENTIAL_VAULT_DRIVER === undefined &&
-        config.PLATFORM_GATEWAY_DRIVER === 'fake'
-      ) {
-        return new FakeCredentialVault();
+      if (config.CREDENTIAL_VAULT_DRIVER === 'env-master-key') {
+        const master = config.CREDENTIAL_MASTER_KEY_B64;
+        if (master === undefined) return NOT_CONFIGURED_VAULT;
+        return new KmsCredentialVault(new EnvMasterKeyWrapper(master));
       }
+      if (config.CREDENTIAL_VAULT_DRIVER === 'kms') {
+        return new KmsCredentialVault(new KmsKeyWrapper(config.KMS_KEY_ID));
+      }
+      // Chưa chọn kho: driver cổng `fake` dùng bản giả, còn lại "chưa cấu hình".
+      if (config.PLATFORM_GATEWAY_DRIVER === 'fake') return new FakeCredentialVault();
       return NOT_CONFIGURED_VAULT;
     },
   },

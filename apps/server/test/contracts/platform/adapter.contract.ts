@@ -18,6 +18,8 @@ import {
 } from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
 import type { PlatformHarness } from './harness';
 
+const TEST_AAD = 'contract-test-aad';
+
 // Bộ kiểm thử hợp đồng BỘ CHUYỂN ĐỔI (005, contracts/platform-gateway.md mục 5) – chạy cho MỌI bộ chuyển
 // đổi trong listRegisteredAdapters(): kênh mới đăng ký tự được kiểm (SC-002).
 
@@ -74,7 +76,7 @@ export function describePlatformAdapterContract(
       const adapter = getAdapter();
       await h.as(h.a, async () => {
         const connectionId = await h.createConnection(adapter.channelType);
-        const cred = await vault.decrypt(await vault.encrypt(newFakeToken()));
+        const cred = await vault.decrypt(await vault.encrypt(newFakeToken(), TEST_AAD), TEST_AAD);
         const ctx = { connectionId };
         expect(AccountCheckShape.safeParse(await adapter.checkAccount(cred, ctx)).success).toBe(
           true,
@@ -113,7 +115,7 @@ export function describePlatformAdapterContract(
       if (adapter.capabilities.reconcile) return;
       const h = harness();
       await h.as(h.a, async () => {
-        const cred = await vault.decrypt(await vault.encrypt(newFakeToken()));
+        const cred = await vault.decrypt(await vault.encrypt(newFakeToken(), TEST_AAD), TEST_AAD);
         expect(
           await adapter.reconcile(cred, {
             connectionId: '00000000-0000-7000-8000-000000000000',
@@ -131,7 +133,7 @@ export function describePlatformAdapterContract(
       const adapter = getAdapter();
       await h.as(h.a, async () => {
         const connectionId = await h.createConnection(adapter.channelType);
-        const cred = await vault.decrypt(await vault.encrypt(newFakeToken()));
+        const cred = await vault.decrypt(await vault.encrypt(newFakeToken(), TEST_AAD), TEST_AAD);
         const result = await adapter.revoke(cred, { connectionId });
         expect(['done', 'failed', 'unsupported']).toContain(result);
       });
@@ -142,7 +144,7 @@ export function describePlatformAdapterContract(
       const adapter = getAdapter();
       await h.as(h.a, async () => {
         const connectionId = await h.createConnection(adapter.channelType);
-        const cred = await vault.decrypt(await vault.encrypt(newFakeToken()));
+        const cred = await vault.decrypt(await vault.encrypt(newFakeToken(), TEST_AAD), TEST_AAD);
         const expiry = await adapter.expiryOf(cred, { connectionId });
         expect(ExpiryInfoShape.safeParse(expiry).success).toBe(true);
         // Bản giả điều khiển được bằng kịch bản: ép đủ ba dạng.
@@ -165,7 +167,7 @@ export function describePlatformAdapterContract(
       const adapter = getAdapter();
       await h.as(h.a, async () => {
         const connectionId = await h.createConnection(adapter.channelType);
-        const cred = await vault.decrypt(await vault.encrypt(newFakeToken()));
+        const cred = await vault.decrypt(await vault.encrypt(newFakeToken(), TEST_AAD), TEST_AAD);
         const r = await adapter.checkAccount(cred, { connectionId });
         if (r.kind === 'eligible' && r.expiry?.kind === 'token') {
           expect(r.expiry.expiresAt.getTime()).toBe(r.tokenExpiresAt.getTime());

@@ -40,7 +40,11 @@ import { ConnectionNotFoundError, InvalidRequestError } from './errors';
 import type { FeatureGate } from './features/feature-gate';
 import { emitNeedsReconnect } from './notify/channel-notify';
 import type { GatewaySettings } from './settings/gateway-settings';
-import type { CredentialVault, DecryptedCredential } from './vault/credential-vault';
+import {
+  credentialAad,
+  type CredentialVault,
+  type DecryptedCredential,
+} from './vault/credential-vault';
 
 // Tầng công khai của Cổng nền tảng (005, contracts/platform-gateway.md mục 1): connectionId → kết nối của
 // tài khoản trong ngữ cảnh → bộ chuyển đổi theo loại kênh → giải mã quyền → gọi. Rẽ nhánh CHỈ theo
@@ -174,7 +178,12 @@ export class PlatformGatewayService implements PlatformGatewayPublicApi {
   }
 
   private credential(c: StoredConnection): Promise<DecryptedCredential> {
-    return this.opts.vault.decrypt(c.tokenCiphertext);
+    const accountId = currentAccountId();
+    if (accountId === null) throw new Error('Thiếu ngữ cảnh tài khoản khi giải mã mã quyền');
+    return this.opts.vault.decrypt(
+      c.tokenCiphertext,
+      credentialAad(accountId, 'token', c.channelType, c.externalId),
+    );
   }
 
   /** Kết nối đã ngắt → lỗi cần người dùng "Kết nối lại" (không gọi nền tảng). */

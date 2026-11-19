@@ -24,7 +24,7 @@ import {
 import type { FeatureGate } from '../features/feature-gate';
 import { toChannelConnection, toChannelConnections } from '../gateway.service';
 import type { GatewaySettings } from '../settings/gateway-settings';
-import type { CredentialVault } from '../vault/credential-vault';
+import { credentialAad, type CredentialVault } from '../vault/credential-vault';
 import { blockCodeOf, callbackCodeOfBlock } from './connect-errors';
 import { connectionConsumers } from './consumers';
 import type { ConnectionStore, StoredCandidate, StoredConnection } from './connection-store';
@@ -291,11 +291,19 @@ export class ConnectionsService {
     c: ConnectionCandidate,
   ): Promise<StoredCandidate> {
     const adapter = getAdapter(channelType);
-    const ciphertext = await this.vault.encrypt(c.accessToken);
+    const accountId = currentAccountId();
+    if (accountId === null) throw new Error('Thiếu ngữ cảnh tài khoản khi mã hóa mã quyền');
+    const aadToken = credentialAad(accountId, 'token', channelType, c.externalId);
+    const ciphertext = await this.vault.encrypt(c.accessToken, aadToken);
     const refreshCiphertext =
-      c.refreshToken === undefined ? null : await this.vault.encrypt(c.refreshToken);
+      c.refreshToken === undefined
+        ? null
+        : await this.vault.encrypt(
+            c.refreshToken,
+            credentialAad(accountId, 'refresh', channelType, c.externalId),
+          );
     const check: AccountCheckResult = await adapter
-      .checkAccount(await this.vault.decrypt(ciphertext), {
+      .checkAccount(await this.vault.decrypt(ciphertext, aadToken), {
         connectionId: `candidate:${c.externalId}`,
         externalId: c.externalId,
       })
