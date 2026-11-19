@@ -234,6 +234,24 @@ describeDb('Xử lý lỗi khi đăng (US3)', () => {
     expect(world.gateway.submitCalls).toBe(0);
   });
 
+  it('media chuẩn hóa hỏng (conversion_failed) → needs_user media_invalid, không gửi lên nền tảng (T073)', async () => {
+    const id = await seedAttempt(account, postId, connectionId);
+    const mediaId = uuidV7();
+    const m = world.post.variants[0];
+    if (m) m.media = [{ mediaId, kind: 'image' }];
+    world.media.result = {
+      kind: 'unavailable',
+      mediaIds: [mediaId],
+      reasons: [{ mediaId, reason: 'conversion_failed' }],
+    };
+    await world.run(id, account);
+    expect(await attemptRow(id)).toMatchObject({
+      status: 'needs_user',
+      needs_reason: 'media_invalid',
+    });
+    expect(world.gateway.submitCalls).toBe(0);
+  });
+
   it('quá giờ hẹn > 60 phút ở lần bắt đầu đầu tiên → needs_user overdue, KHÔNG đăng (S14)', async () => {
     const id = await seedAttempt(account, postId, connectionId, {
       scheduledAt: new Date(Date.now() - 2 * HOUR),

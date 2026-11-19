@@ -8,6 +8,7 @@ export {
   type MediaSummary,
   type PublicUrlResult,
   type PublishableMedia,
+  type PublishableMediaFailure,
   type PublishableMediaResult,
 } from './public-api';
 export {

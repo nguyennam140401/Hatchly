@@ -60,10 +60,17 @@ export interface PublishableMedia {
   durationSec?: number;
 }
 
+export type PublishableMediaFailure = 'not_found' | 'deleted' | 'not_ready' | 'conversion_failed';
+
 export type PublishableMediaResult =
   | { kind: 'ok'; items: PublishableMedia[] }
   /** Có tệp không còn/không đăng được (đã xóa, chưa xử lý xong…) – 013 báo "vui lòng chọn ảnh khác". */
-  | { kind: 'unavailable'; mediaIds: string[] };
+  | {
+      kind: 'unavailable';
+      mediaIds: string[];
+      /** Lý do từng tệp (cùng thứ tự `mediaIds`): `conversion_failed` = chuẩn hóa/chuyển đổi thất bại (`unprocessable`). */
+      reasons?: { mediaId: string; reason: PublishableMediaFailure }[];
+    };
 
 export interface MediaPublicApi {
   /** Thuộc tính của nhiều media (≤ 100 mã), giữ nguyên thứ tự đầu vào. */

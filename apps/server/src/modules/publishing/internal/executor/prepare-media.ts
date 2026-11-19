@@ -41,6 +41,20 @@ export async function prepareMedia(
 
   const result = await deps.media.getPublishableMedia(ids, { ttlSec: TTL_SEC });
   if (result.kind === 'unavailable') {
+    // 014 đã chuẩn hóa ảnh → JPEG lúc tải lên; không có chuyển đổi theo yêu cầu. Chuẩn hóa hỏng → báo người dùng.
+    const reasons = result.reasons?.map((r) => r.reason) ?? [];
+    if (reasons.includes('conversion_failed')) {
+      return fail(
+        'Không chuyển được ảnh hoặc video sang định dạng mà kênh nhận. Vui lòng chọn ảnh khác.',
+        'conversion_failed',
+      );
+    }
+    if (reasons.includes('not_ready')) {
+      return fail(
+        'Ảnh hoặc video của bài này chưa xử lý xong. Vui lòng chờ xử lý xong hoặc chọn ảnh khác.',
+        'MEDIA_NOT_READY',
+      );
+    }
     return fail(
       'Không lấy được ảnh hoặc video của bài này (có thể đã bị xóa hoặc chưa xử lý xong). Vui lòng chọn ảnh khác.',
       'MEDIA_UNAVAILABLE',
