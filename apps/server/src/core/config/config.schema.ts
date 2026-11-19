@@ -232,6 +232,8 @@ export const AppConfigSchema = z.object({
     .regex(/^v\d+\.\d+$/)
     .default('v21.0'),
   META_GRAPH_BASE_URL: z.url().default('https://graph.facebook.com'),
+  /** 010: gốc hộp thoại cấp quyền của Meta (khác Graph API); kiểm thử trỏ về máy chủ giả. */
+  META_OAUTH_DIALOG_BASE_URL: z.url().default('https://www.facebook.com'),
   /** Hết thời gian chờ một lời gọi Graph (ms) – PHẢI nhỏ hơn `PLATFORM_SUBMIT_TIMEOUT_MS`. */
   META_GRAPH_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(25_000),
   /** Đối soát bằng đọc lại bài gần đây: mặc định tắt cho tới khi POC-2 xác nhận (tắt → "Cần kiểm tra"). */

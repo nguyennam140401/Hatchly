@@ -58,6 +58,20 @@ const providers = [
           facebookReconcile: config.META_FACEBOOK_RECONCILE === 'true',
           instagramReconcile: config.META_INSTAGRAM_RECONCILE === 'true',
           facebookVideoMaxBytes: config.FACEBOOK_VIDEO_MAX_BYTES,
+          oauth:
+            config.FACEBOOK_APP_ID !== undefined && config.FACEBOOK_APP_SECRET !== undefined
+              ? {
+                  appId: config.FACEBOOK_APP_ID,
+                  appSecret: config.FACEBOOK_APP_SECRET,
+                  dialogBaseUrl: config.META_OAUTH_DIALOG_BASE_URL,
+                  scopeGroups: config.CHANNEL_SCOPE_GROUPS,
+                  scopeOverrides: {
+                    facebook_page: config.CHANNEL_SCOPES_FACEBOOK_PAGE,
+                    instagram: config.CHANNEL_SCOPES_INSTAGRAM,
+                  },
+                  tokenRefresh: config.META_TOKEN_REFRESH_ENABLED,
+                }
+              : null,
         });
       };
       // 010: driver `real` = bảng `platform_gateway.channel_connections` thật + bộ chuyển đổi thật.

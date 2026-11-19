@@ -90,6 +90,7 @@ describe('loadConfig', () => {
       AI_SYSTEM_WEEKLY_CAP_MICRO_USD: 2_000_000,
       META_GRAPH_VERSION: 'v21.0',
       META_GRAPH_BASE_URL: 'https://graph.facebook.com',
+      META_OAUTH_DIALOG_BASE_URL: 'https://www.facebook.com',
       META_GRAPH_TIMEOUT_MS: 25_000,
       META_FACEBOOK_RECONCILE: 'false',
       META_INSTAGRAM_RECONCILE: 'false',

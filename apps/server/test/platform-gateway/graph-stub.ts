@@ -107,7 +107,7 @@ export function accountsPage(pages: StubPage[], next?: string): StubReply {
           ? {}
           : { instagram_business_account: { id: p.instagram.id, username: p.instagram.username } }),
       })),
-      ...(next === undefined ? {} : { paging: { next } }),
+      ...(next === undefined ? {} : { paging: { next: `https://graph.example.test/${next}`, cursors: { after: next } } }),
     },
   };
 }
@@ -131,14 +131,14 @@ export const DEFAULT_GRANTED_SCOPES = [
 
 /** Nạp kịch bản chuẩn: đổi mã → mã ngắn hạn → dài hạn, danh sách Page, `debug_token`, quyền. */
 export function loadMetaConnectScenario(stub: GraphStub, s: MetaConnectScenario): void {
-  stub.on('GET /oauth/access_token', {
+  stub.on('POST /oauth/access_token', {
     json: { access_token: 'EAAshort_user_token', expires_in: 3600 },
   });
-  stub.on('GET /oauth/access_token', {
+  stub.on('POST /oauth/access_token', {
     json: { access_token: 'EAAlong_user_token', token_type: 'bearer', expires_in: 5_184_000 },
   });
   stub.on('GET /me/accounts', accountsPage(s.pages));
-  stub.on('GET /debug_token', {
+  stub.on('POST /debug_token', {
     json: {
       data: {
         is_valid: true,
