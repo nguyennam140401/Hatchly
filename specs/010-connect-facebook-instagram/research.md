@@ -231,3 +231,14 @@ Gói hết hạn → việc **không gọi nền tảng, không nhắc**, chỉ 
 - **Kiểm toán** (`infra.audit_log`, 12 tháng): `channel.connect`, `channel.connect_failed`, `channel.reconnect`, `channel.recheck`, `channel.disconnect`, `channel.state_changed`, `feature.set`, `support.view_channel` — metadata chỉ `{connection_id, channel_type, result, reason_code, trace_id}`; **không** mã quyền, tên Page đầy đủ hay dữ liệu cá nhân.
 - **Chỉ số** (OpenTelemetry, gắn `account_id` ở nhãn *log*, không ở nhãn chỉ số có cardinality cao): `channel_connections{state,type}`, `channel_expiring_lt7d`, `channel_refresh_total{result}`, `channel_connect_total{result}`; cảnh báo vận hành "quyền còn < 7 ngày" dùng chung ngưỡng.
 - **Hỗ trợ**: `supportViewAccount` đọc qua khung nhìn `platform_gateway.support_channel_view` (không có cột bí mật) — mỗi lần xem ghi `support.view_channel`.
+
+## Kết quả thi công và dữ kiện còn thiếu (T090, 2026-11-19)
+
+Đã chạy toàn bộ luồng với Graph/TikTok giả (e2e `channels-*`, `secret-scan`, test DB/hàng chờ). **Chưa kiểm chứng với nền tảng thật** (cập nhật POC-2):
+
+- R1/R2 (Meta): hạn thật của mã Page, `data_access_expires_at`, quyền tối thiểu, `debug_token` bằng POST – đều là giả định theo stub.
+- Làm mới Meta (`fb_exchange_token` rồi `me/accounts`) và thu hồi (`DELETE me/permissions`) cần thử với ứng dụng Meta thật.
+- TikTok: `creator_info/query`, `refresh_expires_in`, `oauth/revoke` là giả định; đăng bài thật chưa làm.
+- Quickstart thủ công (10 kịch bản) chưa chạy trên trình duyệt/Docker đầy đủ; Playwright 360/768/1280 px (T048) chưa chạy.
+
+**Rủi ro còn mở:** KMS thật (K5); App Review quyền `ads`/`analytics`; TikTok chưa duyệt ứng dụng; hồ sơ Q-D3/C6 cần thêm TikTok trước khi bật công tắc.

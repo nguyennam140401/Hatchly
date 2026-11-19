@@ -208,3 +208,18 @@ liệu khách hàng, điểm cuối khách không có tham số tài khoản; (I
 (IV) chỉ thêm `account` vào `allowedDeps`, cổng ngược do `publishing` đăng ký; (V) 3 việc nền đều có khóa chống trùng + kiểm thử chạy lại hai lần;
 (VII) DTO không có trường mã quyền, vault bọc phong bì có AAD; (VIII) thông báo gom, không gửi hằng ngày. **Đạt – không phát sinh vi phạm mới.**
 Hai việc đã thành điều kiện của `/speckit-tasks`: ADR-13 và cập nhật `modules.manifest.json`.
+
+## Kiểm tra hiến pháp sau thi công (T086, 2026-11-19)
+
+Kết quả `/constitution-review` trên toàn bộ nhánh `impl/010-connect-facebook-instagram`: **đạt, không vi phạm nghiêm trọng**.
+
+- **I (tenant):** các hàm SECURITY DEFINER mới (`list_due_connections`, `channel_stats`, `purge_connect_data`, `set_feature_override`,
+  `set_feature_default`, `get_feature_state`) chỉ trả/ghi phần cần thiết, cấp quyền hẹp. `accountId` từ đường dẫn chỉ ở điểm cuối nhân viên
+  (`@StaffAccess`, có lý do + kiểm toán). **Theo dõi:** hai hàm `set_feature_*` cấp `EXECUTE` cho vai trò `support` nên việc "chỉ admin" kiểm ở
+  tầng ứng dụng; cân nhắc vai trò DB riêng. Cần đối chiếu fixtures truy cập chéo cho từng bảng mới.
+- **II:** `status` công khai giữ 4 giá trị (`toLegacyStatus`); kênh hỏng/TikTok tắt ⇒ `expired`/`disconnected` nên `precheck` dừng; `submit` TikTok luôn
+  `user_action`. Luồng đăng chính không đổi.
+- **IV:** `check:boundaries` đạt; không dùng `authTx`/`runInAccountScope` ngoài module sở hữu.
+- **V:** việc nền chạy lại được (test chạy hai lần, hai Worker đồng thời, đua với kết nối lại). Hàng chờ `scheduled` không tự thử lại trong ngày.
+- **VII:** mã quyền mã hóa phong bì + AAD; `secret-scan.e2e.spec.ts` 0 khớp; KMS thật chờ K5.
+- **Ghi chú lệch so với tài liệu:** AAD dùng `channelType:externalId` (không phải `selection_id+external_id`); kiểm toán thao tác kênh ghi theo kiểu cố gắng hết sức.

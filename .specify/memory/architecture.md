@@ -218,6 +218,7 @@ Các con số là giả định ban đầu, cấu hình được. Mọi bộ x�
 | Tạo bài hàng loạt | Mỗi job gắn một chủ đề; chủ đề đã có bài thì bỏ qua |
 | Lời gọi AI | Giữ chỗ treo được việc định kỳ trả lại |
 | Email | Khóa chống trùng theo mã thông báo |
+| Kiểm tra/làm mới/nhắc hạn kênh (010) | `check_connection:{id}:{yyyymmdd}`; ghi theo `version`, nhắc theo `last_notified_stage` (cột chạy lại được) |
 
 Job hỏng hẳn được chuyển sang `dead_jobs` kèm lỗi cuối; hỗ trợ chạy lại được bằng một thao tác.
 Khóa chống trùng (singleton key) có dạng `publish:{attemptId}`, `media_label:{mediaId}`,
@@ -283,7 +284,8 @@ stateDiagram-v2
   cập nhật trong cùng giao dịch; kiểm tra lại hạn mức kênh ở giờ mới; không phải duyệt lại.
 - Giao diện bộ chuyển đổi nền tảng (`PlatformAdapter`): `checkAccount`, `mediaRules`, `submit`,
   `checkStatus`, `reconcile`, `classifyError`, `refreshToken`. Bộ chuyển đổi giai đoạn 1: Facebook
-  Page, Instagram, Zalo OA. TikTok thêm sau.
+  Page, Instagram, Zalo OA. TikTok (010): có bộ chuyển đổi kết nối/kiểm tra/làm mới/thu hồi nhưng sau công tắc `channel.tiktok` theo khách hàng (mặc định tắt); đăng bài thật thêm sau.
+  Việc nền kênh (010, hàng chờ `scheduled`): `platform_gateway.channel_maintenance` (03:00 UTC+7), `check_connection`, `cleanup_connect_data`, `disconnect_all`. Mã quyền mã hóa phong bì có AAD theo tài khoản + kênh.
 - Mỗi lỗi được phân thành `transient` | `user_action` | `unknown`. Bảng `error_mappings` (cấu hình)
   chứa thông điệp tiếng Việt và cách khắc phục.
 - Token nền tảng được mã hóa bằng KMS và chỉ giải mã trong adapter. Media được đưa cho nền tảng qua
