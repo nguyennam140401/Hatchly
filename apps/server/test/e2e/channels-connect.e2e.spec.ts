@@ -127,6 +127,28 @@ describeDb('Kết nối kênh – HTTP (005, 010)', () => {
     expect(cancelled.headers.location).toBe(`${WEB}/channels?error=CONNECT_CANCELLED`);
   });
 
+  it('010 T021: state đã dùng / khác loại kênh / của người khác ⇒ cùng STATE_INVALID, không tạo gì', async () => {
+    const invalid = `${WEB}/channels?error=STATE_INVALID`;
+    const cbUrl = (type: string, state: string) =>
+      `/api/v1/channels/callback/${type}?state=${encodeURIComponent(state)}&code=fake_code_t21`;
+
+    // Dùng lần hai: lần đầu hợp lệ (tới phiên chọn), lần hai bị từ chối.
+    const used = await startState();
+    const first = await actors.owner.get(cbUrl('facebook_page', used));
+    expect(first.headers.location).toMatch(/\/channels\/select\//);
+    expect((await actors.owner.get(cbUrl('facebook_page', used))).headers.location).toBe(invalid);
+
+    // Khác loại kênh: state cấp cho facebook_page, gọi lại ở instagram.
+    const other = await startState();
+    expect((await actors.owner.get(cbUrl('instagram', other))).headers.location).toBe(invalid);
+
+    // Của người khác: cộng tác viên (cùng tài khoản) dùng state do chủ khởi động.
+    const mine = await startState();
+    const res = await actors.collaborator.get(cbUrl('facebook_page', mine));
+    expect(res.status).toBe(302);
+    expect(res.headers.location).not.toMatch(/\/channels\/select\//);
+  });
+
   it('010: chọn NHIỀU Page một lần → confirm trả kết quả từng Page; overview theo vai trò; phiên chọn bị xóa', async () => {
     const state = await startState();
     const cb = await actors.owner.get(
