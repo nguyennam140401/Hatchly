@@ -68,7 +68,7 @@ description: "Danh sách việc cho tính năng 010 – Kết nối kênh Facebo
 
 - [X] T020 [P] [US1] Hợp đồng bộ chuyển đổi Facebook trong `PGT/adapter-contract.spec.ts`: `authorizeUrl` đủ tham số + không `client_secret`; `exchangeCallback` hủy ⇒ `CONNECT_CANCELLED`, 2 Page ⇒ 2 ứng viên, phân trang > 1 trang
 - [ ] T021 [P] [US1] Kiểm thử HTTP `PGT/connect-flow.http.spec.ts`: `connect` → callback → `selections/:id` → `confirm`; `state` sai/hết hạn/đã dùng/của người khác/khác loại kênh ⇒ cùng `STATE_INVALID`; luồng đăng nhập Facebook 009 không tự tạo kết nối (US1-7, FR-005); chọn một Page duy nhất ⇒ chọn sẵn
-- [ ] T022 [P] [US1] DB test `apps/server/test/db/platform-gateway/connect-race.db.spec.ts`: hai `confirm` cùng Page ⇒ 1 kết nối + `ALREADY_CONNECTED`; hai tài khoản cùng Page ⇒ `OWNED_BY_ANOTHER_ACCOUNT` (không lộ thêm); chọn quá chỗ còn lại song song ⇒ `LIMIT_REACHED` trước khi tạo gì (R8)
+- [X] T022 [P] [US1] DB test `apps/server/test/db/platform-gateway/connect-race.db.spec.ts`: hai `confirm` cùng Page ⇒ 1 kết nối + `ALREADY_CONNECTED`; hai tài khoản cùng Page ⇒ `OWNED_BY_ANOTHER_ACCOUNT` (không lộ thêm); chọn quá chỗ còn lại song song ⇒ `LIMIT_REACHED` trước khi tạo gì (R8)
 
 ### Implementation for User Story 1
 
