@@ -26,6 +26,8 @@ import {
   storageQuotas,
   uploadSessions,
 } from '../../../src/modules/media/internal/db/schema';
+import { aiCostLedger } from '../../../src/modules/ai_gateway/internal/db/ai-cost-ledger.log-table';
+import { aiBudgets, aiReservations } from '../../../src/modules/ai_gateway/internal/db/schema';
 import { publishAttempts } from '../../../src/modules/publishing/internal/db/schema';
 import { publishSteps } from '../../../src/modules/publishing/internal/db/publish-steps.log-table';
 import type { CrossTenantOptions } from '../helpers/cross-tenant';
@@ -285,6 +287,50 @@ export const CROSS_TENANT_FIXTURES: Record<string, AnyFixture> = {
       reason: 'Nhật ký đổi công tắc chỉ thêm – migration 0025 thu hồi UPDATE, DELETE của app',
     },
   } satisfies CrossTenantOptions<typeof featureOverrideEvents>,
+  // 015: Cổng AI thật – ngân sách chu kỳ (một dòng/tài khoản/chu kỳ), giữ chỗ, sổ chi phí chỉ thêm.
+  'ai_gateway.ai_budgets': {
+    table: aiBudgets,
+    onePerAccount: true,
+    insertRow: () => ({
+      cycle_start: '2026-11-01',
+      cycle_end: '2026-12-01',
+      cap: 4_000_000n,
+      soft_limit: 2_000_000n,
+    }),
+    updateRow: () => ({ used: 1n }),
+  } satisfies CrossTenantOptions<typeof aiBudgets>,
+  'ai_gateway.ai_reservations': {
+    table: aiReservations,
+    insertRow: () => ({
+      cycle_start: '2026-11-01',
+      task: 'post_generation' as const,
+      model_tier: 'default' as const,
+      provider: 'anthropic',
+      model_id: 'claude-sonnet-4-5',
+      // Dòng giá khởi đầu của migration 0030 (cha cùng module, FK price_id).
+      price_id: '0194f100-0000-7000-8000-000000000001',
+      estimate: 1000n,
+    }),
+    updateRow: () => ({ state: 'released' }),
+  } satisfies CrossTenantOptions<typeof aiReservations>,
+  // Sổ chi phí phân vùng CHỈ THÊM (migration 0029 chỉ cấp SELECT, INSERT): đọc/chèn chéo thật, sửa/xóa bị từ chối.
+  'ai_gateway.ai_cost_ledger': {
+    table: aiCostLedger,
+    insertRow: () => ({
+      cycle_start: '2026-11-01',
+      reservation_id: uuidV7(),
+      task: 'post_generation',
+      model_tier: 'default',
+      model_id: 'claude-sonnet-4-5',
+      provider: 'anthropic',
+      cost_micro_usd: 1000n,
+      estimate_micro_usd: 1500n,
+    }),
+    updateRow: () => ({ cost_micro_usd: 0n }),
+    appendOnly: {
+      reason: 'Sổ chi phí AI chỉ thêm – migration 0029 chỉ cấp SELECT, INSERT cho app/system',
+    },
+  } satisfies CrossTenantOptions<typeof aiCostLedger>,
 };
 
 /** Bảng tenant đã có spec truy cập chéo riêng (không chạy lại ở đây) – lý do trỏ tệp spec. */
@@ -295,6 +341,8 @@ export const CROSS_TENANT_EXEMPT: Record<string, string> = {
   'account.memberships': 'test/db/auth-isolation.db.spec.ts',
   'account.sessions': 'test/db/auth-isolation.db.spec.ts',
   'account.auth_tokens': 'test/db/auth-isolation.db.spec.ts',
+  'ai_gateway.ai_trend_allocations':
+    'app bị thu hồi mọi quyền (chỉ system đọc/ghi) nên khuôn tenantTx không áp dụng được – test/ai_gateway/trend-allocations-isolation.db.spec.ts',
   'infra.dead_jobs': 'account_id cho phép NULL – test/db/dead-jobs-isolation.db.spec.ts',
   // 008 (FR-014): bảng bị sổ đăng ký bỏ sót, catalog phát hiện – đã có spec riêng.
   'infra.audit_log':

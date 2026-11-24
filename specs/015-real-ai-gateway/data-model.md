@@ -1,8 +1,22 @@
 # Mô hình dữ liệu — Cổng AI thật
 
 Schema PostgreSQL `ai_gateway` (đã khai trong `modules.manifest.json`). Tiền là `bigint` micro-USD (4 USD = 4 000 000). Thời gian
-`timestamptz` UTC; ngày chu kỳ/tuần là `date`. Khóa chính UUID v7 sinh ở ứng dụng. Migration `0024` (bảng, ràng buộc, RLS, phân
-vùng) và `0025` (cấu hình khởi đầu, khung nhìn hỗ trợ, quyền) — **chỉ thêm**, tương thích ngược (API/Worker cũ chạy song song).
+`timestamptz` UTC; ngày chu kỳ/tuần là `date`. Khóa chính UUID v7 sinh ở ứng dụng. Migration `0029` (bảng, ràng buộc, RLS, phân
+vùng) và `0030` (cấu hình khởi đầu, khung nhìn hỗ trợ, quyền) — **chỉ thêm**, tương thích ngược (API/Worker cũ chạy song song).
+(0024/0025 đã bị 010 dùng, hiện có tới 0028. Đã cập nhật `apps/server/drizzle/migrations/meta/_journal.json` theo hai migration mới.)
+Migration `0031` (`0031_ai_gateway_admin_functions.sql`, chỉ thêm hàm, đã vào `_journal.json`): hàm ghi cấu hình do admin.
+Khung nhìn hỗ trợ (migration 0030): `ai_gateway.support_ai_budget_detail`, `ai_gateway.support_ai_cost_ledger`, `ai_gateway.support_ai_trend_allocations`
+(tiền tố `support_ai_*`).
+
+## 0. Quyền và vai trò sau 0030/0031
+
+- Sau `0030` vai trò `system` **không còn** quyền ghi `model_prices`, `model_routes`, `task_fallback`, `ai_settings`, `provider_invoices`
+  (chỉ đọc). `system` chỉ ghi `system_budgets`, `system_reservations`, `system_cost_ledger` và `ai_trend_allocations`.
+- Ghi cấu hình do admin chỉ qua hàm `SECURITY DEFINER` (`search_path = pg_catalog, ai_gateway`) trong schema `ai_gateway` (0031):
+  `admin_add_price`, `admin_set_settings`, `admin_set_route`, `admin_set_task_fallback`, `admin_enter_invoice`, cùng hàm đọc
+  `admin_get_*`. `EXECUTE` chỉ cấp cho `support`. Mỗi hàm ghi kiểm toán.
+- Kiểm lệch 10× giá và TTL 60 s (`effective_from >= now() + TTL`) nằm **trong SQL**, sau `pg_advisory_xact_lock`; so với dòng liền trước
+  và liền sau theo `effective_from` của cùng `(provider, model_id, unit)` (chặn tăng 100× qua hai bước hẹn giờ).
 
 ## 1. Ánh xạ tên Việt → Anh (ghi vào bảng thuật ngữ kiến trúc khi ingest)
 
@@ -40,8 +54,10 @@ vùng) và `0025` (cấu hình khởi đầu, khung nhìn hỗ trợ, quyền) �
 Ràng buộc: `UNIQUE (account_id, cycle_start)`; `CHECK (used >= 0 AND reserved >= 0 AND used + reserved <= cap)` **(chốt cuối III)**;
 `CHECK (soft_limit < cap AND cap > 0)`. Chỉ mục `(account_id, cycle_start DESC)`.
 
-Trạng thái hiển thị suy ra, không lưu: `normal` (`used+reserved < soft_limit`), `cheap_model` (≥ soft), `blocked`
-(`cap - spent < minCallEstimate`). Tạo lười bằng `INSERT … ON CONFLICT DO NOTHING` (FR-014).
+**Trạng thái ngân sách KHÔNG lưu cột riêng** (đồng bộ FR-002): luôn suy ra từ `used`/`reserved`/`cap`/`soft_limit` tại thời điểm đọc,
+nên không thể lệch với số liệu: `normal` (`used+reserved < soft_limit`), `cheap_model` (≥ soft), `blocked`
+(`cap - used - reserved < minCallEstimate`; hiển thị `blocked` **có tính** `reserved`). Mốc 100% (`notified_100`, `percent = 100`) tính theo
+số **đã quyết toán**: `used + minEstimate >= cap`, với `minEstimate = 1000` token vào + 500 token ra theo giá `cheap_vision`. Chỉ hai cờ mốc `notified_80/100` được lưu (chống gửi thông báo lặp). Tạo lười bằng `INSERT … ON CONFLICT DO NOTHING` (FR-014).
 
 ### 2.2 `ai_reservations` — một lần giữ chỗ cho một lời gọi (FR-008)
 
@@ -91,7 +107,10 @@ Bất biến đối soát (SC-006): với mỗi `(account_id, cycle_start)`, `us
 
 `week_start date`, `industry_id uuid` (mã tham chiếu, **không FK**, ADR-09), `cost_micro_usd bigint`, `shared_ledger_id uuid`
 (dòng `system_cost_ledger` nguồn). `UNIQUE (account_id, week_start, industry_id, shared_ledger_id)`. Chỉ đọc bởi nhân viên qua khung
-nhìn hỗ trợ; **không** cộng vào `ai_budgets.used`. Khách không thấy.
+nhìn hỗ trợ. **Cách ghi** (bảng tenant, RLS): việc nền `allocate_trend_cost` chạy `scope: 'system'`, với mỗi tài khoản nhận phần chia
+gọi `systemTx` rồi đặt ngữ cảnh tài khoản đó cho từng dòng (qua `account.current_account_id()`, cùng cơ chế Worker đặt lại
+ngữ cảnh tenant) và `INSERT … ON CONFLICT DO NOTHING` theo khóa duy nhất; không dùng vai trò bỏ qua RLS, không ghi chéo tenant trong
+một câu lệnh; chạy lại hai lần cho cùng kết quả; **không** cộng vào `ai_budgets.used`. Khách không thấy.
 
 ## 3. Bảng hệ thống (`sharedTable`, có `reason`; chỉ vai trò `system` ghi)
 

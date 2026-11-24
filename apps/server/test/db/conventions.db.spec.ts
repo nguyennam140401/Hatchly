@@ -25,6 +25,9 @@ import '../../src/modules/platform_gateway/internal/db/schema';
 import '../../src/modules/publishing/internal/db/schema';
 import '../../src/modules/media/internal/db/schema';
 import '../../src/modules/publishing/internal/db/publish-steps.log-table';
+// 015: bảng của Cổng AI thật (ngân sách, giữ chỗ, sổ chi phí phân vùng...).
+import '../../src/modules/ai_gateway/internal/db/schema';
+import '../../src/modules/ai_gateway/internal/db/ai-cost-ledger.log-table';
 
 const FIXTURES = join(__dirname, 'fixtures', 'conventions');
 const fixtures = readdirSync(FIXTURES)
@@ -136,7 +139,7 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
     const result = await check(clean);
     expect(result.violations).toEqual([]);
     expect(result.checked.tables).toBeGreaterThanOrEqual(3);
-    expect(result.checked.views).toBe(5); // + 2 khung nhìn hỗ trợ việc hỏng (003) + 1 khung nhìn kênh (010)
+    expect(result.checked.views).toBe(8); // + 2 khung nhìn hỗ trợ việc hỏng (003) + 1 khung nhìn kênh (010) + 3 khung nhìn hỗ trợ Cổng AI (015)
   });
 
   it.each(fixtures)('%s → phát hiện đúng quy tắc mong đợi', async (fixture) => {

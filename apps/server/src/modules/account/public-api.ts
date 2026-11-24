@@ -27,7 +27,23 @@ export interface PublishingEligibility {
   deletionRequested: boolean;
 }
 
+/** Mốc chu kỳ AI của tài khoản (015): ngày trong tháng dùng để lặp hằng tháng. */
+export interface AiCycleAnchor {
+  /** `YYYY-MM-DD` theo UTC+7. */
+  anchorDate: string;
+}
+
 export interface AccountPublicApi {
+  /**
+   * Mốc chu kỳ của tài khoản trong ngữ cảnh (015, R-05). Không cache; chạy ở API và Worker. `null` = chưa kích hoạt /
+   * gói hết hạn → Cổng AI từ chối như hết hạn mức. Hiện thực tạm: ngày tạo của tài khoản `active`.
+   */
+  getAiCycleAnchor(): Promise<AiCycleAnchor | null>;
+  /**
+   * Số tài khoản đang hoạt động (`status = 'active'`) toàn hệ thống – mẫu số của cảnh báo tỷ lệ chạm ngưỡng AI (015 US8).
+   * Số tổng hợp, không nhận mã tài khoản; không cache; chạy ở Worker (vai trò system) và API.
+   */
+  countActiveAccounts(): Promise<number>;
   /** Gói còn hạn và tài khoản không bị xóa? Không cache; chạy trong ngữ cảnh tài khoản (API và Worker). */
   getPublishingEligibility(): Promise<PublishingEligibility>;
   /**

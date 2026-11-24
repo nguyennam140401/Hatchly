@@ -10,7 +10,7 @@ trong ngữ cảnh tài khoản của việc (RLS); việc hệ thống chạy n
 | `ai_gateway.release_stale` (có từ 005) | `ai_batch` | tenant | hẹn trong **giao dịch giữ chỗ**, chạy +15 phút | `ai_release_stale:{reservationId}` | `held` quá hạn → `released`; `calling` quá hạn → quyết toán theo ước tính (kẹp trần), sổ `anomaly='unsettled'`, cảnh báo; chạy lại = không đổi |
 | `ai_gateway.release_stale_system` (có từ 005) | `scheduled` | system | mỗi phút | `scheduled:ai_gateway.release_stale_system:{slot}` | Như trên cho `system_reservations`; **bản thật tự khai báo lịch** (hết phụ thuộc `defineStaleSystemSchedule` của sandbox) |
 | `ai_gateway.allocate_trend_cost` | `trends` | system | sau lần thu thập tuần của `trends` (thứ Hai 05:00 UTC+7), `trends` gửi khi xong | `ai_alloc:{weekStart}:{industryId}` | Tổng `system_cost_ledger` của ngành/tuần chia đều cho tài khoản cùng ngành (R-11); upsert theo khóa duy nhất → chạy lại không nhân đôi |
-| `ai_gateway.check_thresholds` | `scheduled` | system | mỗi giờ | `scheduled:ai_gateway.check_thresholds:{slot}` | Tỷ lệ tài khoản đạt ngưỡng mềm > 5% → `ai.threshold_ratio_high` |
+| `ai_gateway.check_thresholds` | `scheduled` | system | mỗi 5 phút (`*/5 * * * *`), quy tắc cửa sổ [10m] for 0m (≈ 11 phút) | `scheduled:ai_gateway.check_thresholds:{slot}` | Tỷ lệ tài khoản đạt ngưỡng mềm > 5% → `ai.threshold_ratio_high` |
 | `ai_gateway.reconcile_invoices` | `scheduled` | system | hằng ngày 02:00 UTC+7 (ngày hôm trước) | `scheduled:ai_gateway.reconcile_invoices:{slot}` | So sổ với `provider_invoices`; lệch > 5% → `ai.invoice_mismatch` |
 
 Quy tắc đồng thời: `ai_batch` đã giới hạn ≤ 3 việc/tenant (003); việc cảnh báo/đối soát đồng thời 1.
@@ -33,6 +33,8 @@ Phát bằng nhật ký có cấu trúc mức `warn` (`gatewayEvent('warn', …)
 | `ai.industry_source_missing` | chưa có nguồn số ngành/tài khoản theo ngành | tính trần tuần/phân bổ |
 
 SC-013: kích hoạt đúng trong mô phỏng và đội vận hành nhận trong ≤ 15 phút (cảnh báo nhật ký/chỉ số → kênh cảnh báo hiện có).
+Cách hiểu đã chốt: nhóm cảnh báo theo sự kiện/tỷ lệ phải đến đội vận hành ≤ 15 phút kể từ lúc điều kiện xảy ra (`check_thresholds` mỗi 5 phút, ≈ 11 phút).
+Riêng đối soát hóa đơn (chạy hằng ngày vì hóa đơn nhà cung cấp theo ngày): ≤ 15 phút **sau khi việc đối soát phát hiện lệch**.
 
 ## 3. Chỉ số OpenTelemetry (gắn `account_id` khi có, không nhãn có độ phân tán cao ngoài `account_id`)
 

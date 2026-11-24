@@ -5,7 +5,7 @@ Mục tiêu: chứng minh tính năng chạy đầu-cuối. Chi tiết bảng/h�
 ## 0. Điều kiện
 
 - Chạy trong worktree `impl/015-real-ai-gateway` (`.claude/worktrees/015-real-ai-gateway`); `pnpm install` đã xong.
-- PostgreSQL cục bộ: `pnpm db:up` rồi `pnpm db:bootstrap` và `pnpm db:setup` (đã có `ai_gateway` sau migration `0024`–`0025`).
+- PostgreSQL cục bộ: `pnpm db:up` rồi `pnpm db:bootstrap` và `pnpm db:setup` (đã có `ai_gateway` sau migration `0029`–`0031`).
 - Không chạy docker compose ở hai checkout cùng lúc (trùng cổng 3000/3001/8080).
 - Mục 1–5 **không cần khóa nhà cung cấp** (dùng nhà cung cấp giả hoặc máy chủ HTTP giả cục bộ). Chỉ mục 6 cần khóa thật.
 
@@ -14,7 +14,7 @@ Mục tiêu: chứng minh tính năng chạy đầu-cuối. Chi tiết bảng/h�
 ```bash
 pnpm typecheck && pnpm lint
 pnpm check:boundaries          # ai_gateway không import module khác ngoài account/notifications/queue; SDK chỉ ở internal/providers
-pnpm db:lint-migrations        # 0024/0025 chỉ thêm, tương thích ngược
+pnpm db:lint-migrations        # 0029/0030/0031 chỉ thêm, tương thích ngược
 pnpm db:check                  # mọi bảng tenant mới có RLS, account_id đầu chỉ mục; bảng shared có reason
 pnpm check:secrets
 ```

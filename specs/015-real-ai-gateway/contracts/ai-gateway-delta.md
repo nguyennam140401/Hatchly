@@ -21,6 +21,8 @@ export interface TranscribeRequest {
 
 - **Ai truyền**: module chạy nền (`ai_batch`: mỗi bài/lần tạo lại; `media`: mỗi tệp gán nhãn). Quy ước gợi ý: `post:{postId}:gen:{n}`,
   `media:{mediaId}:label`. Lời gọi tương tác trực tiếp của người dùng **không bắt buộc** (bỏ trống → luôn là lời gọi mới).
+- **Bắt buộc với bên gọi nền (T053a)**: việc chạy nền (`media` gán nhãn, `ai_batch`) MUST truyền `requestId` ổn định theo đối tượng
+  (`media:{mediaId}:label`, `post:{postId}:gen:{n}`) để job chạy lại không tính tiền hai lần (nguyên tắc V).
 - **Phạm vi trùng**: `(tài khoản, chu kỳ, requestId)`; mã của việc hệ thống: `(tuần, requestId)`.
 - **Hành vi** khi gặp mã đã có giữ chỗ **không** ở trạng thái `released`:
 
@@ -40,7 +42,9 @@ Không có văn bản kết quả được lưu hay trả lại (FR-017); bên g
 | `AI_DUPLICATE_REQUEST` | "Yêu cầu này đã được xử lý hoặc đang xử lý" | false | Mục 1; kèm thuộc tính `status: 'settled' \| 'in_progress'` |
 | `AI_NOT_CONFIGURED` | "Tính năng AI tạm thời chưa sẵn sàng, bạn vẫn có thể soạn tay" | false | Thiếu giá hợp lệ / thiếu `model_routes` rank 1 / tài khoản chưa có chu kỳ hợp lệ khác "hết hạn mức" (FR-022); luôn phát `ai.price_missing`/`ai.route_missing` |
 
-Các mã cũ giữ nguyên nghĩa. `AI_BUDGET_EXHAUSTED` cũng được trả khi tài khoản **không có chu kỳ hiệu lực** (Edge Case). Bộ xử lý nền gặp
+Các mã cũ giữ nguyên nghĩa. `AI_BUDGET_EXHAUSTED` cũng được trả khi tài khoản **không có chu kỳ hiệu lực** (Edge Case); khi đó
+`getUsage()` trả `{ percent: 100, state: 'blocked', nextCycleStartsAt: now }`. Lượt **dự phòng** thiếu giá → `AI_PROVIDER_UNAVAILABLE`
+(không phải `AI_NOT_CONFIGURED`) kèm phát `ai.price_missing`. Sổ ghi `provider` của tuyến **thực sự trả kết quả**. Bộ xử lý nền gặp
 `AI_BUDGET_EXHAUSTED`, `AI_SYSTEM_BUDGET_EXHAUSTED`, `AI_DUPLICATE_REQUEST`, `AI_NOT_CONFIGURED` MUST dùng `noRetry(...)` của 003 (FR-037,
 không đốt hàng chờ); `AI_PROVIDER_UNAVAILABLE` thử lại theo chính sách hàng chờ (≤ 2 lần ở `ai_batch`).
 
@@ -86,6 +90,8 @@ export interface IndustryAccountsSource {
 }
 ```
 
+**Ai đăng ký token (T063)**: module `trends` (hoặc `context`, SA chốt khi làm 016/ngành) cung cấp provider Nest cho hai token trong
+module của mình và export; `ai_gateway.module` chỉ inject tùy chọn (`@Optional()`), không import ngược module đó.
 Chưa có hiện thực → trần hệ thống dùng `AI_SYSTEM_WEEKLY_CAP_MICRO_USD` và việc phân bổ bị bỏ qua kèm cảnh báo `ai.industry_source_missing`.
 
 ## 6. Bộ kiểm thử hợp đồng (`test/contracts/ai/`)

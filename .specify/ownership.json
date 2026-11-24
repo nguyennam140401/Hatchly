@@ -24,6 +24,7 @@
     "modules.manifest.json",
     "modules.manifest.schema.json",
     "apps/server/drizzle/meta/_journal.json",
+    "apps/server/drizzle/migrations/meta/_journal.json",
     "packages/shared/src/index.ts"
   ],
   "agents": {
@@ -121,6 +122,7 @@
         "ops/**",
         ".github/**",
         "tooling/**",
+        ".dependency-cruiser.cjs",
         "Dockerfile",
         "docker-compose*.yml",
         ".dockerignore",
@@ -138,6 +140,7 @@
     "qa": {
       "write": [
         "apps/server/test/**",
+        "apps/server/vitest*.mts",
         "apps/web/test/**",
         "apps/web/e2e/**",
         "e2e/**",

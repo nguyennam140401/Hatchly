@@ -10,7 +10,7 @@ import { isConnectionError } from '../db/errors';
 
 export interface GatewaySelection {
   platform: 'fake' | 'real' | 'unset';
-  ai: 'fake' | 'unset';
+  ai: 'fake' | 'real' | 'unset';
   notifications: 'fake' | 'unset';
   storage: 'memory' | 's3' | 'unset';
   mail: 'memory' | 'smtp' | 'unset';

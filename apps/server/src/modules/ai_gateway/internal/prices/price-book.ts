@@ -14,6 +14,8 @@ export interface PriceEntry {
   cachedInputPerMTokMicroUsd: number;
   /** micro-USD mỗi phút âm thanh (STT). */
   perAudioMinuteMicroUsd?: number;
+  /** Độ chi tiết tính tiền STT (giây; 1 hoặc 60). Thiếu = 1. */
+  billingGranularitySec?: number;
   effectiveFrom: Date;
 }
 

@@ -14,6 +14,17 @@ import {
   type TestDatabase,
 } from './helpers/queue-db';
 
+// Giới hạn kết nối đặt ở mức CSDL KIỂM THỬ (không phải `ALTER ROLE "system"`): vai trò là của CẢ cụm nên đặt giới hạn 0 ở
+// đó làm hỏng mọi tiến trình khác dùng chung cụm (CSDL dev docker, lượt kiểm thử song song) bằng lỗi
+// "too many connections for role system". Người dùng siêu quyền của `asAdmin` không bị giới hạn mức CSDL.
+const setConnectionLimit = (limit: number) =>
+  asAdmin(async (c) => {
+    const { rows } = await c.query<{ q: string }>(
+      `SELECT format('ALTER DATABASE %I CONNECTION LIMIT ${String(Math.trunc(limit))}', current_database()) AS q`,
+    );
+    await c.query(rows[0]!.q);
+  });
+
 describeDb('Worker /readyz – kiểm tra queue', () => {
   let database: TestDatabase;
   let workers: TestWorkers;
@@ -28,7 +39,7 @@ describeDb('Worker /readyz – kiểm tra queue', () => {
     await server.listen(0);
   });
   afterAll(async () => {
-    await asAdmin((c) => c.query('ALTER ROLE "system" CONNECTION LIMIT -1'));
+    await setConnectionLimit(-1);
     await asOwner((c) => c.query('UPDATE pgboss.version SET version = 46'));
     await server.close();
     await workers.stop();
@@ -42,9 +53,9 @@ describeDb('Worker /readyz – kiểm tra queue', () => {
   });
 
   it('mất kết nối bể điều khiển → 503 trong ≤ 30 giây, có queue.fetch_failed; khôi phục → 200', async () => {
-    // Chặn vai trò system (bể điều khiển) mở kết nối mới + cắt kết nối hiện có.
+    // Chặn mở kết nối mới tới CSDL kiểm thử này + cắt kết nối hiện có của vai trò system (bể điều khiển).
+    await setConnectionLimit(0);
     await asAdmin(async (c) => {
-      await c.query('ALTER ROLE "system" CONNECTION LIMIT 0');
       await c.query(
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = 'system' AND datname = current_database()",
       );
@@ -55,7 +66,7 @@ describeDb('Worker /readyz – kiểm tra queue', () => {
     expect(workers.logs.of('queue.fetch_failed').length).toBeGreaterThan(0);
     expect(workers.runtimes[0]!.isReady()).toBe(false);
 
-    await asAdmin((c) => c.query('ALTER ROLE "system" CONNECTION LIMIT -1'));
+    await setConnectionLimit(-1);
     await waitFor(async () => (await status()) === 200, 45_000, 500, '/readyz 200 lại');
   });
 

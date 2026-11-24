@@ -15,7 +15,7 @@ import {
 import { toFieldErrors } from '../src/core/index.js';
 
 describe('PERMISSIONS (FR-012)', () => {
-  it('đúng 18 quyền theo contracts/authz-api.md mục 1 (006: view + edit; 010: + channel.view, feature.manage; 014: + media.view, media.delete)', () => {
+  it('đúng 20 quyền theo contracts/authz-api.md mục 1 (006: view + edit; 010: + channel.view, feature.manage; 014: + media.view, media.delete; 015: + ai.pricing.manage, ai.cost.view)', () => {
     expect(PERMISSION_LIST).toEqual([
       'context.view',
       'context.edit',
@@ -35,6 +35,8 @@ describe('PERMISSIONS (FR-012)', () => {
       'support.lookup',
       'plan.manage',
       'staff.manage',
+      'ai.pricing.manage',
+      'ai.cost.view',
     ]);
   });
 
@@ -61,12 +63,14 @@ describe('PERMISSIONS (FR-012)', () => {
       'post.republish',
       'status.view',
     ]);
-    expect(permissionsOf('support')).toEqual(['support.lookup']);
+    expect(permissionsOf('support')).toEqual(['support.lookup', 'ai.cost.view']);
     expect(permissionsOf('admin')).toEqual([
       'feature.manage',
       'support.lookup',
       'plan.manage',
       'staff.manage',
+      'ai.pricing.manage',
+      'ai.cost.view',
     ]);
     expect(permissionsOf('owner')).toHaveLength(14);
     expect(PERMISSION_LIST).not.toContain('context.manage');

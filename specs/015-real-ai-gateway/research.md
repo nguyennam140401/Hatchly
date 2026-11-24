@@ -74,7 +74,7 @@ loại**. Căn cứ: hiến pháp III, ADR-06, `.specify/memory/architecture.md`
 ## R-06 Bảng giá (FR-019/020/022, Clarifications Q3)
 
 - **Quyết định**: `model_prices(provider, model_id, unit 'token'|'audio_minute', input/output/cached_input per M token,
-  per_minute, billing_granularity_sec, effective_from, created_by)`. `DbPriceSource` nạp toàn bảng; `PriceBook` giữ
+  per_minute, billing_granularity_sec, effective_from, created_by)`. `DbPriceSource` hiện thực giao diện `ModelPriceSource.priceFor(provider, modelId, unit, at)` (trả `PriceRecord` kèm `priceId` hoặc `null`); đệm TTL `AI_PRICE_CACHE_TTL_MS` ≤ 60000 ms; `PriceBook` giữ
   bộ nhớ đệm trong tiến trình **TTL 60 giây** (cấu hình) và chọn dòng `effective_from <= at` mới nhất tại thời điểm giữ
   chỗ (đã có trong 005). Giá của giữ chỗ được **ghi vào dòng giữ chỗ** (`price_id`) để quyết toán dùng đúng giá đó dù giá
   đổi giữa chừng.
@@ -94,7 +94,7 @@ loại**. Căn cứ: hiến pháp III, ADR-06, `.specify/memory/architecture.md`
   chính/dự phòng; `task_fallback(task PK, enabled)` bật dự phòng **riêng từng loại việc** (6 dòng). Dự phòng chỉ thử khi
   `task_fallback.enabled` **và** có `model_routes` rank 2 cho bậc đó. Không đủ → trả `AI_PROVIDER_UNAVAILABLE` ngay (đã trả
   giữ chỗ), không thử. `AiGatewayService.callWithFallback` hiện thử cứng `[primary, fallback]`; sửa thành danh sách lượt
-  do `RouteBook.attemptsFor(task, tier)` trả (1 hoặc 2 phần tử) — giữ nguyên "đúng một lần dự phòng".
+  do `RouteBook.attemptsFor(task, tier)` (bất đồng bộ; thuật toán thuần ở `selectAttempts`) trả (1 hoặc 2 phần tử) — giữ nguyên "đúng một lần dự phòng".
 - Giá dự phòng tra theo `(provider, model_id)` của lượt đó; giữ chỗ lại theo giá dự phòng (FR-024); sổ ghi nhà cung cấp
   thực sự trả kết quả.
 - **Đã loại**: dự phòng bật toàn cục (STT/nhãn có thể chưa có nhà cung cấp thứ hai); danh sách nhà cung cấp trong biến môi
@@ -153,12 +153,12 @@ loại**. Căn cứ: hiến pháp III, ADR-06, `.specify/memory/architecture.md`
   `OpenAiAdapter` (văn bản + thị giác + trả dần + chuyển giọng nói), chọn chính/dự phòng **bằng dữ liệu** `model_routes` — đổi
   nhà cung cấp là đổi dòng cấu hình. Mặc định khởi đầu: chính = Anthropic cho `default`/`cheap`/`cheap_vision`, dự phòng =
   OpenAI; STT = OpenAI, chưa bật dự phòng (`task_fallback.transcription = false`). Giá ban đầu là **giá giả định** được nạp ở migration
-  `0025`, thay bằng giá thật sau POC-1 bằng một dòng `model_prices` mới (không phát hành).
+  `0030`, thay bằng giá thật sau POC-1 bằng một dòng `model_prices` mới (không phát hành).
 - SDK: cố định phiên bản chính xác khi thi công; chỉ nhập trong `internal/providers/`; kiểu SDK không rò ra ngoài (FR-008 của
   005, quy tắc `aiProviderPackagePatterns` trong manifest).
 - **Rủi ro mở**: chất lượng/chi phí tiếng Việt và STT chưa kiểm chứng → mọi thứ ở trên là cấu hình, không nằm trong mã nghiệp vụ.
   Thay đổi nhà cung cấp cuối cùng sau POC không cần ADR mới (đã nằm trong bảng ngăn xếp "Chốt sau POC-1/POC-4").
-- **Mức USD mỗi ngành** (POC-3): khởi đầu do SA chốt tạm trong migration `0025`, chỉnh qua cấu hình.
+- **Mức USD mỗi ngành** (POC-3): khởi đầu do SA chốt tạm trong migration `0030`, chỉnh qua cấu hình.
 
 ## R-13 Phụ thuộc chưa có
 
@@ -205,6 +205,10 @@ loại**. Căn cứ: hiến pháp III, ADR-06, `.specify/memory/architecture.md`
   thiếu → `ConfigError` khi khởi động. `assert-no-fakes.ts` không đổi (production cấm `fake`; staging cho `real`). Khóa nằm ở
   `Secret` theo thành phần (`api-secrets`, `worker-secrets`), không vào nhật ký/sổ/thông báo lỗi (FR-026). Nhà cung cấp mới ở nước
   ngoài được thêm vào danh sách chuyển dữ liệu xuyên biên giới (tài liệu `Kiến trúc dữ liệu mục 9`) trước khi bật ở production.
+- **Ghi nhận (T049a)**: Anthropic và OpenAI cần có dòng ở `TaiLieuDacTa/Kien_truc_Du_lieu_Cache_App_AI_Content_MXH.md` mục 9 (hook chặn
+  agent SA ghi tệp này; PM/chủ sở hữu thêm: dữ liệu gửi = lời nhắc tối thiểu, khung hình thu nhỏ, âm thanh 5 phút đầu cho OpenAI STT).
+  OpenAI gọi với `store:false`; Anthropic không có cờ kỹ thuật không-huấn-luyện, chỉ có cam kết hợp đồng (hiến chương VII) và phải
+  vào hồ sơ chuyển dữ liệu xuyên biên giới (Q-D3) trước ngày ra mắt.
 - Dữ liệu gửi ra: chỉ phần hồ sơ cần thiết do module gọi chuẩn bị; Cổng AI bổ sung kiểm tra rằng `AiRequest` không chứa email/số
   điện thoại ở các trường đã biết (lớp phòng thủ rẻ, test).
 

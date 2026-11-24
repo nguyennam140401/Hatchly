@@ -28,7 +28,7 @@ Mã lỗi (tiếng Việt, kèm hành động khắc phục): `AI_PRICE_IMPLAUSI
 
 | Điểm cuối | Kết quả | Ghi chú |
 |---|---|---|
-| `GET /support/ai/budget/:accountId?reason=…` | Chu kỳ hiện hành: `used`, `reserved`, `cap`, `softLimit`, `state`, các dòng sổ gần nhất (task, model, provider, token/giây, `costMicroUsd`, `anomaly`), chi phí xu hướng đã phân bổ | `supportViewAccount` — bắt buộc `reason` ≥ độ dài tối thiểu; ghi `support.view_account`; qua khung nhìn `support.ai_budget_detail` (không cột bí mật) |
+| `GET /support/ai/budget/:accountId?reason=…` | Chu kỳ hiện hành: `used`, `reserved`, `cap`, `softLimit`, `state`, các dòng sổ gần nhất (task, model, provider, token/giây, `costMicroUsd`, `anomaly`), chi phí xu hướng đã phân bổ | `supportViewAccount` — bắt buộc `reason` ≥ độ dài tối thiểu; ghi `support.view_account`; qua các khung nhìn `ai_gateway.support_ai_budget_detail`, `ai_gateway.support_ai_cost_ledger`, `ai_gateway.support_ai_trend_allocations` (không cột bí mật) |
 | `GET /support/ai/summary?cycle=…` | Tổng hợp nội bộ: theo loại việc, theo mô hình, theo nhà cung cấp, trung bình mỗi tài khoản và mỗi bài (`post_generation` đã quyết toán) | Chỉ số tổng hợp, không dữ liệu từng tài khoản nhận dạng được |
 
 Vai trò khách gọi bất kỳ điểm cuối nào ở đây → `403` (`@StaffAccess`). Nhật ký truy cập chung ghi mã tài khoản và mã nhân viên, **không** ghi số tiền.

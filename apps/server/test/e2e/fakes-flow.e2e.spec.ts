@@ -24,6 +24,7 @@ import { describeDb } from '../db/helpers/db';
 import { jobs, waitFor } from '../queue/helpers/queue-db';
 import { startTestWorkers, type TestWorkers } from '../support/queue-test-kit';
 import { samplePublishFlow } from '../contracts/platform/sample-publish-flow';
+import { expectCustomerSafeRemedy } from '../contracts/ai/message-assert';
 
 const WEB = 'http://app.test';
 const mail = new MemoryMailTransport();
@@ -166,9 +167,9 @@ describeDb('Luồng chạy cục bộ bằng bản giả lập (SC-007)', () => 
       delta: 'Thêm',
     });
     expect(blocked.status).toBe(409);
-    expect((blocked.body as { error: { message: string } }).error.message).toBe(
-      'Đã sử dụng hết giới hạn AI của chu kỳ',
-    );
+    const blockedMessage = (blocked.body as { error: { message: string } }).error.message;
+    expect(blockedMessage).toContain('giới hạn AI');
+    expectCustomerSafeRemedy(blockedMessage);
 
     // 6. Đường dẫn tải lên → "trình duyệt" tải → stat thấy đúng vị trí tenants/<acc>/media/<id>/original.
     const up = await owner.post('/api/v1/dev/fakes/storage/upload-url', {

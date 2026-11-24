@@ -36,14 +36,43 @@ const EXPECTED = {
     'post.republish',
     'status.view',
   ],
-  support: ['support.lookup'],
-  admin: ['feature.manage', 'support.lookup', 'plan.manage', 'staff.manage'],
+  // 015: support xem sổ chi phí AI (chỉ nội bộ); admin thêm sửa bảng giá/định tuyến.
+  support: ['support.lookup', 'ai.cost.view'],
+  admin: [
+    'feature.manage',
+    'support.lookup',
+    'plan.manage',
+    'staff.manage',
+    'ai.pricing.manage',
+    'ai.cost.view',
+  ],
 } as const;
 
 describe('Danh mục quyền', () => {
-  it('có đúng 18 quyền (006: context.view + context.edit; 010: + channel.view, feature.manage; 014: + media.view, media.delete)', () => {
-    expect(PERMISSION_LIST).toHaveLength(18);
+  it('có đúng 20 quyền (006: context.view + context.edit; 010: + channel.view, feature.manage; 014: + media.view, media.delete; 015: + ai.pricing.manage, ai.cost.view)', () => {
+    expect(PERMISSION_LIST).toHaveLength(20);
     expect(PERMISSION_LIST as string[]).not.toContain('context.manage');
+  });
+
+  // T003a (015, FR-011, FR-012): quyền AI nội bộ – khách không bao giờ có.
+  it('ai.pricing.manage chỉ admin; ai.cost.view chỉ support và admin; khách đều bị chặn', () => {
+    expect(roleHasPermission('admin', 'ai.pricing.manage')).toBe(true);
+    expect(roleHasPermission('support', 'ai.pricing.manage')).toBe(false);
+    expect(roleHasPermission('owner', 'ai.pricing.manage')).toBe(false);
+    expect(roleHasPermission('collaborator', 'ai.pricing.manage')).toBe(false);
+
+    expect(roleHasPermission('support', 'ai.cost.view')).toBe(true);
+    expect(roleHasPermission('admin', 'ai.cost.view')).toBe(true);
+    expect(roleHasPermission('owner', 'ai.cost.view')).toBe(false);
+    expect(roleHasPermission('collaborator', 'ai.cost.view')).toBe(false);
+  });
+
+  it('lời giải thích khi bị từ chối quyền AI bằng tiếng Việt và không lộ số tiền', () => {
+    for (const p of ['ai.pricing.manage', 'ai.cost.view'] as const) {
+      const message = PERMISSION_DENIED_MESSAGES[p];
+      expect(message.length, p).toBeGreaterThan(10);
+      expect(message, p).not.toMatch(/USD|\$/);
+    }
   });
 
   it('hồ sơ kinh doanh: chủ xem + sửa, cộng tác viên chỉ xem, nội bộ không có gì (FR-008, FR-012)', () => {
@@ -66,7 +95,8 @@ describe('Danh mục quyền', () => {
   it.each(Object.entries(EXPECTED))(
     'vai trò %s có đúng các quyền của bảng FR-012',
     (role, perms) => {
-      expect(permissionsOf(role as keyof typeof EXPECTED)).toEqual(perms);
+      // So sánh không phụ thuộc thứ tự khai báo.
+      expect([...permissionsOf(role as keyof typeof EXPECTED)].sort()).toEqual([...perms].sort());
     },
   );
 

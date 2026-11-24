@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, lt, max, sql } from 'drizzle-orm';
 import { currentAccountId, systemTx, tenantTx, type Db } from '../../../../core/db';
 import { uuidV7 } from '../../../../core/ids/uuid-v7';
-import { gatewayEvent } from '../../../../core/gateways/op-log';
+import { gatewayEvent } from '../events';
 import { requireFakeAccount } from '../../../../dev/fake-components';
 import {
   aiFakeBudgets,
@@ -99,6 +99,8 @@ export class SandboxBudgetStore implements FakeBudgetStore {
   }
 
   reserve(key: BudgetKey, est: number, meta: ReserveMeta): Promise<ReserveResult> {
+    // 015: `meta.requestId` được bỏ qua ở kho sandbox (bảng giả lập không có cột mã yêu cầu); chống trùng
+    // thật nằm ở DbBudgetStore (ràng buộc duy nhất của `ai_reservations`). Không bao giờ trả `duplicate`.
     const e = BigInt(est);
     if (key.scope === 'account') {
       return tenantTx(async (db) => {
@@ -362,7 +364,8 @@ export class SandboxBudgetStore implements FakeBudgetStore {
             inArray(aiFakeReservations.state, ['held', 'calling']),
           ),
         );
-      if (crossed.length > 0 && hooks?.onCrossed !== undefined) await hooks.onCrossed(db, crossed);
+      if (crossed.length > 0 && hooks?.onCrossed !== undefined)
+        await hooks.onCrossed(db, crossed, r.cycle_start);
       return crossed;
     }
     const [r] = await db
