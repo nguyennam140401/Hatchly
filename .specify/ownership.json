@@ -146,6 +146,7 @@
         "**/*.spec.*",
         "**/*.test.*",
         "specs/*/acceptance-report.md",
+        "specs/*/verify.md",
         "specs/*/checklists/test-*.md"
       ],
       "wins_conflicts": true
