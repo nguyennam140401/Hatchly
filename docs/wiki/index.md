@@ -20,7 +20,7 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 - [008-cicd-jenkins-pipeline.md](features/008-cicd-jenkins-pipeline.md) — 008 CI/CD Jenkins cho test và release ( current)
 - [009-social-login-members.md](features/009-social-login-members.md) — 009 Đăng nhập Google/Facebook và thành viên ( draft)
 - [014-media-library-basic.md](features/014-media-library-basic.md) — 014 Thư viện media cơ bản; **còn T090, T093** ( draft)
-- [012-manual-compose-approval-calendar.md](features/012-manual-compose-approval-calendar.md) — 012 Soạn bài tay, duyệt, lịch, Chờ duyệt; **còn T059, T066, T093, T094** ( draft)
+- [012-manual-compose-approval-calendar.md](features/012-manual-compose-approval-calendar.md) — 012 Soạn bài tay, duyệt, lịch, Chờ duyệt, tab Lịch sử, huy hiệu số bài chờ ( current)
 - [011-ui-architecture-foundation.md](features/011-ui-architecture-foundation.md) — 011 Nền kiến trúc giao diện; **còn T074** ( draft)
 
 ## Module

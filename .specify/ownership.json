@@ -32,7 +32,8 @@
         ".specify/pm/state/*.md",
         "specs/*/tasks.md",
         ".specify/project-context.md",
-        ".specify/ownership.json"
+        ".specify/ownership.json",
+        "docs/wiki/**"
       ]
     },
     "analyst": {
