@@ -119,7 +119,20 @@ export const appRoutes: RouteObject[] = [
                   Component: (await import('../features/media/MediaLibraryPage')).MediaLibraryPage,
                 }),
               },
-              { path: '/channels', element: comingSoon(t('nav.channelsPlan')) },
+              // 010: Kênh kết nối (xem: chủ + cộng tác viên; kết nối/ngắt: chủ – API tự chặn) và chọn Page sau khi cấp quyền.
+              {
+                path: '/channels',
+                lazy: async () => ({
+                  Component: (await import('../features/channels/ChannelsPage')).ChannelsPage,
+                }),
+              },
+              {
+                path: '/channels/select/:selectionId',
+                lazy: async () => ({
+                  Component: (await import('../features/channels/SelectChannelsPage'))
+                    .SelectChannelsPage,
+                }),
+              },
               { path: '/settings', element: comingSoon(t('nav.settings')) },
               { path: '/more', element: <MorePage /> },
               {

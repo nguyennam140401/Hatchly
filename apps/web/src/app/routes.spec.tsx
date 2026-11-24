@@ -26,9 +26,9 @@ describe('routes', () => {
 
   it('trang giữ chỗ trong khung: "Sắp có" + điều hướng còn nguyên', async () => {
     fakeApi({ 'GET /api/v1/auth/me': () => ({ status: 200, body: me() }) });
-    // 012 đã làm màn hình Lịch, 014 làm Thư viện → dùng một tuyến còn giữ chỗ (Kênh & gói).
-    renderAt('/channels');
-    expect(await screen.findByRole('heading', { name: 'Kênh & gói' })).toBeInTheDocument();
+    // 012 đã làm Lịch, 014 làm Thư viện, 010 làm Kênh kết nối → dùng một tuyến còn giữ chỗ (Cài đặt).
+    renderAt('/settings');
+    expect(await screen.findByRole('heading', { name: 'Cài đặt' })).toBeInTheDocument();
     expect(screen.getByText('Sắp có')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
   });

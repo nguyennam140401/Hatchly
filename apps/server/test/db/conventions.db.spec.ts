@@ -21,6 +21,7 @@ import '../../src/modules/account/internal/db/schema';
 import '../../src/modules/context/internal/db/schema';
 // 012: bài viết, phiên bản kênh, lịch sử sự kiện, bộ giới hạn theo kênh, mục lịch đăng.
 import '../../src/modules/content/internal/db/schema';
+import '../../src/modules/platform_gateway/internal/db/schema';
 import '../../src/modules/publishing/internal/db/schema';
 import '../../src/modules/media/internal/db/schema';
 import '../../src/modules/publishing/internal/db/publish-steps.log-table';
@@ -135,7 +136,7 @@ describeDb('Kiểm tra quy ước CSDL (db:check)', () => {
     const result = await check(clean);
     expect(result.violations).toEqual([]);
     expect(result.checked.tables).toBeGreaterThanOrEqual(3);
-    expect(result.checked.views).toBe(4); // + 2 khung nhìn hỗ trợ việc hỏng (003)
+    expect(result.checked.views).toBe(5); // + 2 khung nhìn hỗ trợ việc hỏng (003) + 1 khung nhìn kênh (010)
   });
 
   it.each(fixtures)('%s → phát hiện đúng quy tắc mong đợi', async (fixture) => {

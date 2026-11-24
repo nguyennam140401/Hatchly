@@ -4,7 +4,11 @@ import { ACCOUNT_PUBLIC_API, type AccountPublicApi } from '../account';
 import { CONTENT_PUBLIC_API, type ContentPublicApi } from '../content';
 import { MEDIA_PUBLIC_API, type MediaPublicApi } from '../media';
 import { NOTIFICATIONS, type NotificationsPublicApi } from '../notifications';
-import { PLATFORM_GATEWAY, type PlatformGatewayPublicApi } from '../platform_gateway';
+import {
+  PLATFORM_GATEWAY,
+  registerConnectionConsumers,
+  type PlatformGatewayPublicApi,
+} from '../platform_gateway';
 import { registerJobHandler } from '../queue';
 import {
   createExecuteAttemptHandler,
@@ -19,6 +23,33 @@ import { DEFAULT_PUBLISH_SETTINGS } from './internal/retry-policy';
 import { runSweepOverdue } from './internal/overdue.sweeper';
 import { definePublishingSchedules, runAttemptJob, sweepOverdueJob } from './jobs';
 import { PUBLISHING_PUBLIC_API } from './public-api';
+
+/**
+ * 010 R7: đăng ký cổng ngược để `platform_gateway` đếm bài đã lên lịch, hủy lượt chưa gửi khi ngắt kênh và nạp bảng
+ * ánh xạ lỗi – mà `platform_gateway` KHÔNG import `publishing`. Chạy ở cả API lẫn Worker (cả hai đều có thể ngắt kênh).
+ */
+@Injectable()
+class ConnectionConsumersRegistration implements OnModuleInit {
+  constructor(
+    private readonly publishing: PublishingService,
+    private readonly errorMapping: ErrorMappingService,
+  ) {}
+
+  onModuleInit(): void {
+    registerConnectionConsumers({
+      scheduledImpact: (ids) => this.publishing.countScheduledByConnections(ids),
+      onDisconnect: (tx, connectionId) => this.publishing.cancelAllForConnection(tx, connectionId),
+      errorMappings: async () =>
+        (await this.errorMapping.loader()).map((m) => ({
+          channelType: m.channelType,
+          rawCode: m.rawCode,
+          category: m.category,
+          messageVi: m.messageVi,
+          remedies: m.remedies,
+        })),
+    });
+  }
+}
 
 /** Đăng ký bộ xử lý việc – CHỈ ở Worker, trước khi QueueRuntime bắt đầu lấy việc. */
 let handlerRegistered = false;
@@ -73,6 +104,7 @@ export class PublishingModule {
       controllers: unit === 'api' ? [AttemptsController] : [],
       providers: [
         ErrorMappingService,
+        ConnectionConsumersRegistration,
         AttemptActionsService,
         ProgressQuery,
         PublishingService,

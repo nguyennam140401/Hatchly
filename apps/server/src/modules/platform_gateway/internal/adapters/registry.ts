@@ -50,4 +50,5 @@ export function registerDefaultAdapters(opts: DefaultAdapterOptions): void {
   registerAdapter('instagram', () => opts.makeFake('instagram'));
   registerAdapter('zalo_oa', () => opts.makeFake('zalo_oa'));
   registerAdapter('test_channel', () => opts.makeFake('test_channel'));
+  registerAdapter('tiktok', () => opts.makeFake('tiktok')); // bản giả luôn có cho dev/test (010 T079)
 }

@@ -75,11 +75,11 @@ describeDb('Luồng chạy cục bộ bằng bản giả lập (SC-007)', () => 
     expect(approve).toBeDefined();
     const cb = await owner.get(new URL(approve!).pathname + new URL(approve!).search);
     expect(cb.status).toBe(302);
-    const selectionId = new URL(cb.headers.location!).searchParams.get('selection')!;
+    const selectionId = new URL(cb.headers.location!, 'http://app.test').pathname.split('/').pop()!;
     const sel = await owner.get(`/api/v1/channels/selections/${selectionId}`);
     const candidate = (
-      sel.body as { candidates: { externalId: string; check: { kind: string } }[] }
-    ).candidates.find((c) => c.check.kind === 'eligible')!;
+      sel.body as { candidates: { externalId: string; selectable: boolean }[] }
+    ).candidates.find((c) => c.selectable)!;
     const saved = await owner.post('/api/v1/channels', {
       selectionId,
       externalId: candidate.externalId,

@@ -58,6 +58,11 @@ export const ReconcileResultShape = z.discriminatedUnion('kind', [
   }),
 ]);
 
+export const ExpiryInfoShape = z.union([
+  z.object({ kind: z.literal('none') }),
+  z.object({ kind: z.enum(['token', 'data_access']), expiresAt: z.date() }),
+]);
+
 export const AccountCheckShape = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('eligible'),
@@ -65,6 +70,7 @@ export const AccountCheckShape = z.discriminatedUnion('kind', [
     grantedScopes: z.array(z.string()),
     quotaRemaining: z.number().nullable(),
     tokenExpiresAt: z.date(),
+    expiry: ExpiryInfoShape.optional(),
   }),
   z.object({ kind: z.literal('ineligible'), error: ClassifiedErrorShape }),
 ]);

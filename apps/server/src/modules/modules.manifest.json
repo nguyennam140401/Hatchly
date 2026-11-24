@@ -75,7 +75,7 @@
       "kind": "gateway",
       "schema": "platform_gateway",
       "runsIn": ["api", "worker"],
-      "allowedDeps": ["notifications", "queue"]
+      "allowedDeps": ["account", "notifications", "queue"]
     },
     {
       "name": "ai_gateway",

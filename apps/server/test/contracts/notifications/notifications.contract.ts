@@ -51,6 +51,11 @@ function example(
       type: 'channel_token_expiring',
       refs: { connectionId: salt, expiresOn: day },
     }),
+    channel_needs_reconnect: () => ({
+      type: 'channel_needs_reconnect',
+      refs: { connectionId: salt, day, reason: 'token_expired' },
+      params: { channelDisplayName: 'Page Cửa hàng', affectedPosts: 3 },
+    }),
     ai_usage_80: () => ({
       type: 'ai_usage_80',
       refs: { cycleStart: day },
@@ -89,6 +94,11 @@ const EXPECTED: Record<
     emailBatch: 'batch_10m',
   },
   channel_token_expiring: {
+    recipients: ['owner'],
+    channels: ['in_app', 'email'],
+    emailBatch: 'immediate',
+  },
+  channel_needs_reconnect: {
     recipients: ['owner'],
     channels: ['in_app', 'email'],
     emailBatch: 'immediate',

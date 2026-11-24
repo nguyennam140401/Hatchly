@@ -9,7 +9,7 @@ import { isConnectionError } from '../db/errors';
 // API và Worker đọc cùng biến môi trường → cùng lựa chọn; mỗi đơn vị ghi một dòng `gateways.selected`.
 
 export interface GatewaySelection {
-  platform: 'fake' | 'unset';
+  platform: 'fake' | 'real' | 'unset';
   ai: 'fake' | 'unset';
   notifications: 'fake' | 'unset';
   storage: 'memory' | 's3' | 'unset';

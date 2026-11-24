@@ -44,13 +44,22 @@ const DetailResponse = shape<PostDetailResponse>({
 });
 const ListResponse = shape<PostListResponse>({ items: arr });
 const BulkResponse = shape<BulkResult>({ succeeded: int, failed: int, results: arr });
-const ChannelsResponse: ResponseSchema<ChannelConnectionDto[]> = {
+/**
+ * Kết nối ở bộ chọn kênh của trình soạn: KHÔNG có `tiktok` (010 R3 – `channel_variants` chưa hỗ trợ TikTok,
+ * đăng TikTok từ trình soạn là tính năng sau). Máy chủ đã lọc; web lọc thêm cho chắc.
+ */
+export type ComposerChannel = Omit<ChannelConnectionDto, 'channelType'> & {
+  channelType: Exclude<ChannelConnectionDto['channelType'], 'tiktok'>;
+};
+const ChannelsResponse: ResponseSchema<ComposerChannel[]> = {
   safeParse: (value: unknown) => {
     if (!Array.isArray(value)) return { success: false as const };
     const parsed = value.map((v) => ChannelConnectionDto.safeParse(v));
-    return parsed.every((p) => p.success)
-      ? { success: true as const, data: parsed.map((p) => p.data) }
-      : { success: false as const };
+    if (!parsed.every((p) => p.success)) return { success: false as const };
+    const data = parsed
+      .map((p) => p.data)
+      .filter((c): c is ComposerChannel => c.channelType !== 'tiktok');
+    return { success: true as const, data };
   },
 };
 

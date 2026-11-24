@@ -54,7 +54,11 @@ export function recordUpload(result: UploadResult): void {
   get().uploads.add(1, { result });
 }
 
-export function recordProcessed(result: ProcessResult, kind?: MediaKindLabel, seconds?: number): void {
+export function recordProcessed(
+  result: ProcessResult,
+  kind?: MediaKindLabel,
+  seconds?: number,
+): void {
   const m = get();
   m.processed.add(1, { result });
   if (result === 'ready' && kind !== undefined && seconds !== undefined) {

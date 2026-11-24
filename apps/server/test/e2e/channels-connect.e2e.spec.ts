@@ -1,6 +1,11 @@
-// 005 T026 (contracts/platform-gateway.md mục 3): điểm cuối kết nối kênh trên bản giả lập (kho memory),
+// 005 T026 + 010 T021/T026 (contracts/channels-http-api.md): điểm cuối kết nối kênh trên bản giả lập (kho memory),
 // ApiAppModule thật + phiên đăng nhập thật (CSDL kiểm thử – pnpm test:db).
-import { ChannelConnectionDto, SelectionResponse } from '@app/shared/platform_gateway';
+import {
+  ChannelConnectionDto,
+  ConfirmResponse,
+  OverviewResponse,
+  SelectionResponse,
+} from '@app/shared/platform_gateway';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { describeDb } from '../db/helpers/db';
 import { createActors, type Actors } from '../auth/helpers/actors';
@@ -8,7 +13,7 @@ import { createTestApp, type TestApp } from '../auth/helpers/app';
 
 const WEB = 'http://app.test';
 
-describeDb('Kết nối kênh – HTTP (005)', () => {
+describeDb('Kết nối kênh – HTTP (005, 010)', () => {
   let t: TestApp;
   let actors: Actors;
 
@@ -50,14 +55,18 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     );
     expect(cb.status).toBe(302);
     const location = new URL(cb.headers.location!);
-    expect(location.origin + location.pathname).toBe(`${WEB}/channels/connect`);
-    const selectionId = location.searchParams.get('selection')!;
+    expect(location.origin + location.pathname).toMatch(
+      new RegExp(`^${WEB}/channels/select/[0-9a-f-]{36}$`),
+    );
+    const selectionId = location.pathname.split('/').pop()!;
     const sel = await actors.owner.get(`/api/v1/channels/selections/${selectionId}`);
     expect(sel.status).toBe(200);
     const body = SelectionResponse.parse(sel.body);
     expect(body.candidates).toHaveLength(3);
-    const eligible = body.candidates.find((c) => c.check.kind === 'eligible')!;
-    const ineligible = body.candidates.find((c) => c.check.kind === 'ineligible')!;
+    expect(body.limit).toBe(5);
+    const eligible = body.candidates.find((c) => c.selectable)!;
+    const ineligible = body.candidates.find((c) => !c.selectable)!;
+    expect(ineligible.blocked?.remedies.length).toBeGreaterThanOrEqual(1);
 
     const bad = await actors.owner.post('/api/v1/channels', {
       selectionId,
@@ -78,7 +87,7 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     const cb2 = await actors.owner.get(
       `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state2)}&code=fake_code_def`,
     );
-    const sel2 = new URL(cb2.headers.location!).searchParams.get('selection')!;
+    const sel2 = new URL(cb2.headers.location!).pathname.split('/').pop()!;
     const again = await actors.owner.post('/api/v1/channels', {
       selectionId: sel2,
       externalId: eligible.externalId,
@@ -91,7 +100,7 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
     expect(all).not.toMatch(/fake_tok_|accessToken|ciphertext/i);
     expect((list.body as unknown[]).length).toBeGreaterThanOrEqual(1);
 
-    expect((await actors.owner.delete(`/api/v1/channels/${conn.connectionId}`)).status).toBe(204);
+    expect((await actors.owner.delete(`/api/v1/channels/${conn.connectionId}`)).status).toBe(200);
     const after = (await actors.owner.get('/api/v1/channels')).body as {
       connectionId: string;
       status: string;
@@ -105,16 +114,101 @@ describeDb('Kết nối kênh – HTTP (005)', () => {
       `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state)}&code=fake_code_x`,
     );
     expect(anon.status).toBe(302);
-    expect(anon.headers.location).toBe(`${WEB}/channels/connect?error=STATE_INVALID`);
+    expect(anon.headers.location).toBe(`${WEB}/channels?error=STATE_INVALID`);
 
     const wrong = await actors.owner.get(
       '/api/v1/channels/callback/facebook_page?state=sai&code=fake_code_x',
     );
-    expect(wrong.headers.location).toBe(`${WEB}/channels/connect?error=STATE_INVALID`);
+    expect(wrong.headers.location).toBe(`${WEB}/channels?error=STATE_INVALID`);
 
     const cancelled = await actors.owner.get(
       `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state)}&error=access_denied`,
     );
-    expect(cancelled.headers.location).toBe(`${WEB}/channels/connect?error=CONNECT_CANCELLED`);
+    expect(cancelled.headers.location).toBe(`${WEB}/channels?error=CONNECT_CANCELLED`);
+  });
+
+  it('010 T021: state đã dùng / khác loại kênh / của người khác ⇒ cùng STATE_INVALID, không tạo gì', async () => {
+    const invalid = `${WEB}/channels?error=STATE_INVALID`;
+    const cbUrl = (type: string, state: string) =>
+      `/api/v1/channels/callback/${type}?state=${encodeURIComponent(state)}&code=fake_code_t21`;
+
+    // Dùng lần hai: lần đầu hợp lệ (tới phiên chọn), lần hai bị từ chối.
+    const used = await startState();
+    const first = await actors.owner.get(cbUrl('facebook_page', used));
+    expect(first.headers.location).toMatch(/\/channels\/select\//);
+    expect((await actors.owner.get(cbUrl('facebook_page', used))).headers.location).toBe(invalid);
+
+    // Khác loại kênh: state cấp cho facebook_page, gọi lại ở instagram.
+    const other = await startState();
+    expect((await actors.owner.get(cbUrl('instagram', other))).headers.location).toBe(invalid);
+
+    // Của người khác: cộng tác viên (cùng tài khoản) dùng state do chủ khởi động.
+    const mine = await startState();
+    const res = await actors.collaborator.get(cbUrl('facebook_page', mine));
+    expect(res.status).toBe(302);
+    expect(res.headers.location).not.toMatch(/\/channels\/select\//);
+  });
+
+  it('010: chọn NHIỀU Page một lần → confirm trả kết quả từng Page; overview theo vai trò; phiên chọn bị xóa', async () => {
+    const state = await startState();
+    const cb = await actors.owner.get(
+      `/api/v1/channels/callback/facebook_page?state=${encodeURIComponent(state)}&code=fake_code_multi`,
+    );
+    const selectionId = new URL(cb.headers.location!).pathname.split('/').pop()!;
+    const sel = SelectionResponse.parse(
+      (await actors.owner.get(`/api/v1/channels/selections/${selectionId}`)).body,
+    );
+    const ok = sel.candidates.filter((c) => c.selectable).map((c) => c.externalId);
+    const bad = sel.candidates.find((c) => !c.selectable)!.externalId;
+    expect(ok.length).toBeGreaterThanOrEqual(2);
+
+    // Cộng tác viên không xác nhận được (API chặn, không chỉ ẩn nút).
+    const denied = await actors.collaborator.post(
+      `/api/v1/channels/selections/${selectionId}/confirm`,
+      { externalIds: ok },
+    );
+    expect(denied.status).toBe(403);
+
+    const res = await actors.owner.post(`/api/v1/channels/selections/${selectionId}/confirm`, {
+      externalIds: [...ok, bad, 'khong-co-trong-phien'],
+    });
+    expect(res.status).toBe(200);
+    const parsed = ConfirmResponse.parse(res.body);
+    const outcome = Object.fromEntries(parsed.results.map((r) => [r.externalId, r.outcome]));
+    expect(ok.every((id) => outcome[id] === 'created')).toBe(true);
+    expect(outcome[bad]).toBe('ineligible');
+    expect(outcome['khong-co-trong-phien']).toBe('not_in_selection');
+    for (const r of parsed.results) {
+      if (r.outcome !== 'created') expect(r.error?.remedies.length).toBeGreaterThanOrEqual(1);
+    }
+
+    // Phiên đã dùng/xóa → 404 SELECTION_NOT_FOUND.
+    expect((await actors.owner.get(`/api/v1/channels/selections/${selectionId}`)).status).toBe(404);
+
+    // overview: chỉ dữ liệu đã lưu, không mã quyền, không TikTok; chủ thêm được, cộng tác viên chỉ xem.
+    const ownerView = await actors.owner.get('/api/v1/channels/overview');
+    expect(ownerView.status).toBe(200);
+    expect(ownerView.headers['cache-control']).toContain('no-store');
+    const ov = OverviewResponse.parse(ownerView.body);
+    expect(ov.features.tiktok).toBe(false);
+    expect(ov.platforms.map((p) => p.channelType)).toEqual(['facebook_page', 'instagram']);
+    expect(ov.viewerCanManage).toBe(true);
+    expect(ov.connections.length).toBeGreaterThanOrEqual(ok.length);
+    for (const c of ov.connections) {
+      expect(c.shortCode).toHaveLength(6);
+      expect(c.state).toBe('active');
+    }
+    const collab = OverviewResponse.parse(
+      (await actors.collaborator.get('/api/v1/channels/overview')).body,
+    );
+    expect(collab.viewerCanManage).toBe(false);
+    expect(collab.platforms.every((p) => !p.canAdd)).toBe(true);
+    expect(JSON.stringify([parsed, ov, collab])).not.toMatch(/fake_tok_|accessToken|ciphertext/i);
+    expect((await actors.anonymous.get('/api/v1/channels/overview')).status).toBe(401);
+
+    // Dọn: ngắt các kết nối vừa tạo.
+    for (const c of ov.connections) {
+      await actors.owner.delete(`/api/v1/channels/${c.connectionId}`);
+    }
   });
 });

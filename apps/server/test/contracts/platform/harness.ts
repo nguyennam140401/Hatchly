@@ -1,6 +1,8 @@
+import { GatewaySettings } from '../../../src/modules/platform_gateway/internal/settings/gateway-settings';
 import { readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { expect } from 'vitest';
+import { currentAccountId } from '../../../src/core/db';
 import { executionStorage } from '../../../src/core/context/execution-storage';
 import { uuidV7 } from '../../../src/core/ids/uuid-v7';
 import type { FakeStateStore } from '../../../src/dev/fake-components';
@@ -16,6 +18,7 @@ import { makeFakeAdapterFactory } from '../../../src/modules/platform_gateway/in
 import type { FakeStep } from '../../../src/modules/platform_gateway/internal/fake/scenarios';
 import { PlatformGatewayService } from '../../../src/modules/platform_gateway/internal/gateway.service';
 import {
+  credentialAad,
   FakeCredentialVault,
   newFakeToken,
 } from '../../../src/modules/platform_gateway/internal/vault/credential-vault';
@@ -92,11 +95,16 @@ export async function makePlatformHarness(
     b,
     as,
     async createConnection(channelType, opts) {
+      const externalId = `${channelType}-${uuidV7()}`;
       const { connection } = await store.insertConnection({
         channelType,
-        externalId: `${channelType}-${uuidV7()}`,
+        externalId,
         displayName: `Trang thử ${channelType}`,
-        tokenCiphertext: await vault.encrypt(newFakeToken()),
+        // AAD khớp với cách `PlatformGatewayService` giải mã (tài khoản hiện hành + loại kênh + mã ngoài).
+        tokenCiphertext: await vault.encrypt(
+          newFakeToken(),
+          credentialAad(currentAccountId() ?? '', 'token', channelType, externalId),
+        ),
         tokenExpiresAt: new Date(Date.now() + (opts?.expiresInMs ?? 30 * 86_400_000)),
       });
       if (opts?.status === 'disconnected') await store.disconnect(connection.id);
@@ -115,7 +123,13 @@ export async function makePlatformHarness(
     publishedCount: (hash) => control.publishedCount(hash),
     gateway: (submitTimeoutMs = 200) =>
       new PlatformGatewayService({ store, vault, submitTimeoutMs }),
-    connections: () => new ConnectionsService(store, vault),
+    // Bộ hợp đồng 005 không kiểm giới hạn kết nối (010 có test riêng) – nâng trần để harness tạo tùy ý.
+    connections: () =>
+      new ConnectionsService(store, vault, () => new Date(), {
+        settings: new GatewaySettings({
+          readAll: () => Promise.resolve({ 'channel.max_per_platform': 1000 }),
+        }),
+      }),
     logText() {
       const file = resolve(
         TEST_LOG_DIR,

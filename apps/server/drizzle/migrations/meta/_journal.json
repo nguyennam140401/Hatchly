@@ -169,6 +169,41 @@
       "when": 1794933948337,
       "tag": "0023_media_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795022325520,
+      "tag": "0024_platform_gateway_010_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795022326712,
+      "tag": "0025_platform_gateway_010_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795070791839,
+      "tag": "0026_platform_gateway_010_source_external_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795071019821,
+      "tag": "0027_platform_gateway_010_cleanup_function",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1795072233410,
+      "tag": "0028_platform_gateway_010_feature_admin_functions",
+      "breakpoints": true
     }
   ]
 }

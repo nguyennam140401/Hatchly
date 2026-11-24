@@ -13,6 +13,7 @@ const EXPECTED = {
     'context.view',
     'context.edit',
     'channel.manage',
+    'channel.view',
     'post.edit',
     'media.upload',
     'media.view',
@@ -26,6 +27,7 @@ const EXPECTED = {
   ],
   collaborator: [
     'context.view',
+    'channel.view',
     'post.edit',
     'media.upload',
     'media.view',
@@ -35,12 +37,12 @@ const EXPECTED = {
     'status.view',
   ],
   support: ['support.lookup'],
-  admin: ['support.lookup', 'plan.manage', 'staff.manage'],
+  admin: ['feature.manage', 'support.lookup', 'plan.manage', 'staff.manage'],
 } as const;
 
 describe('Danh mục quyền', () => {
-  it('có đúng 16 quyền (006: context.manage tách thành context.view + context.edit)', () => {
-    expect(PERMISSION_LIST).toHaveLength(16);
+  it('có đúng 18 quyền (006: context.view + context.edit; 010: + channel.view, feature.manage; 014: + media.view, media.delete)', () => {
+    expect(PERMISSION_LIST).toHaveLength(18);
     expect(PERMISSION_LIST as string[]).not.toContain('context.manage');
   });
 

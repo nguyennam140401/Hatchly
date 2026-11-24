@@ -59,7 +59,10 @@ const CASES: Case[] = [
 
 beforeAll(async () => {
   baseUrl = await stub.start();
-  cred = await new FakeCredentialVault().decrypt(await new FakeCredentialVault().encrypt(TOKEN));
+  cred = await new FakeCredentialVault().decrypt(
+    await new FakeCredentialVault().encrypt(TOKEN, 'test-aad'),
+    'test-aad',
+  );
 });
 afterAll(async () => {
   await stub.stop();

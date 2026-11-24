@@ -39,6 +39,18 @@ an toàn, báo rõ kênh nào dùng được / sắp hết hạn / đã hỏng, 
 Một chủ kinh doanh có thể quản lý nhiều Page / nhiều tài khoản Instagram / nhiều tài khoản TikTok. **Không**
 thuộc phạm vi: Zalo OA (tính năng riêng), việc đăng bài (T4), đăng nhập bằng Facebook (009).
 
+## Clarifications
+
+### Session 2026-11-15
+
+- Q: Khi ngắt (hoặc mất quyền) một Facebook Page, kết nối Instagram liên kết qua Page đó xử lý thế nào? → A: Instagram giữ là kết nối riêng nhưng chuyển "Cần kết nối lại" (lý do "Page liên kết đã ngắt/mất quyền"); thông báo nêu cả hai kênh và số bài bị ảnh hưởng; kết nối lại Page thì Instagram dùng lại được (FR-042).
+- Q: Mỗi tài khoản được kết nối tối đa bao nhiêu kênh cho mỗi nền tảng? → A: 5 mỗi nền tảng cho mọi gói, là giá trị cấu hình (FR-007).
+- Q: Khi gói hết hạn (giữ dữ liệu 90 ngày), kết nối kênh xử lý thế nào? → A: Dừng làm mới/nhắc/gọi nền tảng, giữ mã quyền mã hóa tới khi xóa tài khoản; gia hạn thì kiểm tra lại từng kênh (FR-033).
+
+### Session 2026-11-18
+
+- Q: Trong lần cấp quyền ở 010, hệ thống xin những nhóm quyền nào của nền tảng? → A: Phương án C (PO chọn): nhóm **đăng/quản lý bài**, nhóm **thống kê** (chỉ số tổng hợp của chính kênh) và nhóm **quảng cáo** (Meta; chỉ bản nháp chờ duyệt, không tạo/tăng ngân sách – phần ép quy tắc này thuộc tính năng quảng cáo sau). "Từ khóa xu hướng" **không** xin từ nền tảng (vẫn lấy từ RSS + Brave Search – module Xu hướng). Điều chỉnh FR-002; PO chấp nhận mở rộng so với "quyền tối thiểu" ban đầu (FR-043).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Chủ tài khoản kết nối Facebook Page (Priority: P1)
@@ -298,7 +310,10 @@ cũ không đổi.
 5. **Given** chủ tài khoản yêu cầu xóa tài khoản (FR-14), **When** yêu cầu được ghi nhận, **Then** mọi kết
    nối kênh bị ngắt **ngay** và mã quyền bị xóa, không đợi 30 ngày.
 6. **Given** tài khoản hết hạn gói (FR-13), **When** chủ cố **kết nối mới**, **Then** bị chặn với giải thích
-   "Gói đã hết hạn" và cách liên hệ gia hạn; vẫn **xem** được kênh và **ngắt** được kênh.
+   "Gói đã hết hạn" và cách liên hệ gia hạn; vẫn **xem** được kênh và **ngắt** được kênh; việc làm mới,
+   nhắc hết hạn và gọi sang nền tảng cho tài khoản này dừng, mã quyền vẫn được giữ mã hóa.
+7. **Given** tài khoản vừa được gia hạn trong 90 ngày, **When** việc kiểm tra chạy, **Then** từng kết nối
+   được kiểm tra lại độc lập: còn quyền → "Đang hoạt động", hết hạn/thu hồi → "Cần kết nối lại" kèm nút.
 
 ---
 
@@ -336,7 +351,12 @@ kết nối kia và các bài của nó không đổi; kết nối vượt giớ
    kết quả nhất quán, không mất kết nối khác (cập nhật có kiểm soát phiên bản).
 7. **Given** cộng tác viên, **When** mở danh sách nhiều kết nối, **Then** thấy đầy đủ trạng thái/ngày hết hạn
    nhưng không có nút thao tác (như User Story 6).
-8. **Given** một Page/tài khoản đã ngắt, **When** đếm giới hạn, **Then** không tính vào số đang dùng (chỗ
+8. **Given** một kết nối Instagram được liên kết qua Page A, **When** Page A bị ngắt hoặc mất quyền, **Then**
+   Instagram đó chuyển "Cần kết nối lại" với lý do "Page liên kết đã bị ngắt/mất quyền" (không bị xóa, mã
+   quyền Instagram không bị xóa chỉ vì Page ngắt); thông báo gộp nêu cả hai kênh và số bài bị ảnh hưởng;
+   hộp xác nhận ngắt Page nêu trước "Instagram @… liên kết với Page này sẽ cần kết nối lại"; kết nối lại
+   Page A rồi "Kiểm tra lại" Instagram thì Instagram trở lại "Đang hoạt động" mà không phải cấp quyền lại.
+9. **Given** một Page/tài khoản đã ngắt, **When** đếm giới hạn, **Then** không tính vào số đang dùng (chỗ
    được trả lại ngay).
 
 ---
@@ -446,10 +466,20 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
 - **FR-001**: Hệ thống MUST cho **chủ tài khoản** (và chỉ chủ) bắt đầu kết nối **Facebook Page**, **Instagram
   chuyên nghiệp** và (khi được bật – FR-036) **TikTok** từ màn hình Kênh kết nối; quyền thao tác kiểm tra ở API (mã quyền
   `channel.manage`), không chỉ ẩn nút trên giao diện.
-- **FR-002**: Việc cấp quyền MUST do người dùng chủ động đồng ý trên màn hình của nền tảng; hệ thống chỉ xin
-  **các quyền tối thiểu cần để đăng bài và đọc trạng thái/đối soát bài của chính kênh đó** (danh sách quyền
-  ghi ở kế hoạch), MUST NOT xin quyền ngoài nhu cầu đăng bài, MUST NOT xin quyền đọc dữ liệu cá nhân của
-  người theo dõi.
+- **FR-002**: Việc cấp quyền MUST do người dùng chủ động đồng ý trên màn hình của nền tảng; hệ thống xin quyền
+  theo **ba nhóm** (danh sách quyền cụ thể ghi ở kế hoạch, đổi bằng cấu hình): (a) **đăng/quản lý bài** của
+  chính kênh đó (đăng, đọc trạng thái/đối soát, và sửa/xóa nếu nền tảng cho phép); (b) **thống kê** hiệu quả
+  bài/kênh (chỉ số tổng hợp của chính kênh); (c) **quảng cáo** (chỉ Meta). MUST NOT xin quyền ngoài ba nhóm này,
+  MUST NOT xin quyền đọc dữ liệu cá nhân của người theo dõi hay tin nhắn. Người dùng MUST thấy rõ nhóm quyền nào
+  được xin và để làm gì trước khi sang màn hình của nền tảng.
+- **FR-043**: Nhóm **quảng cáo** MUST chỉ được xin cho Meta và chỉ để phục vụ tính năng quảng cáo "bản nháp chờ
+  duyệt": hệ thống MUST NOT tạo quảng cáo đang chạy và MUST NOT tăng ngân sách; bản tạo ra MUST ở trạng thái
+  tạm dừng/nháp và chỉ chạy sau khi **chủ tài khoản duyệt** (nguyên tắc VI). Vì quyền quảng cáo của nền tảng
+  không chia nhỏ được, quy tắc này do ứng dụng tự ép ở tính năng quảng cáo (ngoài phạm vi 010). 010 chỉ xin quyền,
+  lưu danh sách quyền đã cấp (FR-016) và hiển thị nhóm quyền nào đã/chưa cấp; MUST NOT gọi API quảng cáo.
+  Người dùng MUST có thể kết nối **không cấp** nhóm quảng cáo/thống kê (kênh vẫn đăng bài được); nhóm bị từ chối
+  chỉ làm tính năng tương ứng báo "chưa cấp quyền" kèm nút "Cấp quyền bổ sung" (xin thêm không phải kết nối lại
+  từ đầu).
 - **FR-003**: Hệ thống MUST cho người dùng chọn đúng Page/tài khoản (hoặc xác nhận cái duy nhất) trong số
   những cái họ có quyền; MUST hiển thị tên + ảnh đại diện để nhận ra; được chọn **một hoặc nhiều** trong
   một lần cấp quyền, mỗi cái thành một kết nối riêng, kết quả kiểm tra điều kiện độc lập từng cái.
@@ -461,7 +491,7 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
 - **FR-006**: Một Page Facebook, một tài khoản Instagram hoặc một tài khoản TikTok MUST chỉ thuộc **một tài khoản khách hàng** tại
   một thời điểm; kết nối thứ hai vào cùng kênh MUST bị từ chối với thông điệp nêu cách xử lý.
 - **FR-007**: Một tài khoản MUST có thể có **nhiều kết nối cùng một nền tảng**, tối đa **N kết nối chưa ngắt
-  cho mỗi nền tảng** (N là cấu hình, mặc định 5, có thể khác theo gói – xem Assumptions); vượt giới hạn MUST
+  cho mỗi nền tảng** (N = **5** cho mọi gói ở giai đoạn 1; là giá trị cấu hình, đổi không cần phát hành); vượt giới hạn MUST
   bị từ chối kèm số đã dùng/giới hạn và gợi ý ngắt bớt; kết nối đã ngắt không tính vào giới hạn; kết nối
   "Cần kết nối lại" vẫn tính.
 - **FR-008**: Kết nối lại MUST giữ nguyên mã kênh và chỉ chấp nhận **cùng Page/tài khoản Instagram**; khác
@@ -551,7 +581,10 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
 - **FR-032**: Lỗi từ nền tảng MUST được phân loại bằng bảng ánh xạ lỗi (cấu hình, đổi không cần phát hành):
   chắc chắn chưa nhận / cần người dùng / không xác định; mỗi dòng có thông điệp tiếng Việt và cách khắc phục.
 - **FR-033**: Khi tài khoản hết hạn gói (FR-13), hệ thống MUST chặn kết nối mới nhưng vẫn cho xem và ngắt
-  kết nối kênh hiện có.
+  kết nối kênh hiện có. Trong thời gian giữ dữ liệu 90 ngày, hệ thống MUST **dừng làm mới quyền, dừng nhắc
+  hết hạn và dừng mọi lời gọi sang nền tảng** cho tài khoản đó, nhưng **giữ mã quyền đã mã hóa** tới khi tài
+  khoản bị xóa (hoặc chủ ngắt kênh). Khi gói được gia hạn, hệ thống MUST kiểm tra lại từng kết nối: còn quyền
+  → "Đang hoạt động"; hết hạn/thu hồi → "Cần kết nối lại".
 
 **Quản lý nhiều kết nối**
 
@@ -562,6 +595,11 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
   **riêng từng kết nối**; thông báo cùng loại trong một đợt MUST được gom (một thông báo/một email liệt kê
   từng kênh). Mọi nơi chọn kênh để đăng (kế hoạch, bài, lịch) MUST chỉ cho chọn kết nối "Đang hoạt động" hoặc
   "Sắp hết hạn", và phân biệt được các kết nối cùng nền tảng.
+
+- **FR-042**: Kết nối Instagram MUST ghi nhớ **Page nguồn** (mã kết nối Facebook Page mà nó liên kết qua). Khi
+  Page nguồn bị ngắt, hết hạn, thu hồi hoặc mất điều kiện, Instagram MUST chuyển "Cần kết nối lại" với lý do
+  nêu Page nguồn, **không** bị tự ngắt hay xóa; thông báo MUST gộp cả hai kênh; sau khi Page nguồn hoạt động
+  lại, "Kiểm tra lại" Instagram MUST đưa nó về "Đang hoạt động" nếu còn đủ điều kiện, không bắt cấp quyền lại.
 
 **Kênh TikTok và công tắc bật/tắt theo khách hàng**
 
@@ -599,7 +637,8 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
 - **Channel connection (`channel_connections`, kết nối kênh)**: một kênh đã nối của một tài khoản – loại kênh
   (`facebook_page`, `instagram`, `tiktok`), mã và tên Page/tài khoản phía nền tảng, loại tài khoản, quyền đã cấp, mã
   quyền **đã mã hóa**, ngày hết hạn, trạng thái, thời điểm kiểm tra/làm mới gần nhất, mã lỗi gốc gần nhất,
-  số phiên bản (chặn ghi đè), thời điểm kết nối/ngắt. Thuộc schema `platform_gateway`, có `account_id` và
+  số phiên bản (chặn ghi đè), thời điểm kết nối/ngắt; với Instagram có thêm **mã kết nối Page nguồn**
+  (tham chiếu nội bộ cùng module). Thuộc schema `platform_gateway`, có `account_id` và
   bảo mật mức dòng; các module khác chỉ tham chiếu theo mã kết nối (ADR-09), không khóa ngoại.
 - **Connection session (phiên kết nối, tạm)**: dữ liệu giữa lúc cấp quyền và lúc chọn Page – gắn với người
   dùng khởi động, dùng một lần, hết hạn sau 10 phút, chứa mã quyền tạm ở dạng mã hóa, tự bị hủy.
@@ -657,9 +696,9 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
   ở đặc tả yêu cầu/ADR-05 nên cần cập nhật các tài liệu đó. Rủi ro: ứng dụng chưa được TikTok xét duyệt nên
   chưa thể kiểm chứng với dịch vụ thật; mọi phát triển/kiểm thử dùng bản giả lập, và hành vi thật (hạn chế
   của ứng dụng chưa duyệt, thời hạn quyền, hạn mức thời lượng video) kiểm chứng sau, cùng POC-2.
-- **Số lượng kết nối**: tối đa **N = 5 kết nối chưa ngắt cho mỗi nền tảng mỗi tài khoản** (mặc định đề xuất;
-  cấu hình, có thể thay theo gói). Con số này không đổi hạn mức 100 bài/chu kỳ hay 5 GB. Nếu khách cần hơn là
-  quyết định gói/giá cần PO duyệt riêng (làm ở `/speckit-clarify`).
+- **Số lượng kết nối** (đã chốt 2026-11-15): tối đa **N = 5 kết nối chưa ngắt cho mỗi nền tảng mỗi tài khoản**,
+  áp dụng mọi gói, là giá trị cấu hình. Con số này không đổi hạn mức 100 bài/chu kỳ hay 5 GB. Phân biệt theo
+  gói (nếu có) là quyết định giá/gói riêng, ngoài phạm vi.
 - **Công tắc TikTok**: do quản trị nội bộ đặt, không có màn hình khách hàng tự bật; mặc định toàn hệ thống =
   tắt; ghi đè theo tài khoản dùng để mở cho khách thử nghiệm. Khi TikTok duyệt: đổi mặc định sang bật. Công
   tắc không dùng để chặn Facebook/Instagram (nằm ngoài phạm vi, nhưng cơ chế đủ chung để dùng cho tính năng
@@ -682,6 +721,14 @@ có ghi đè theo mặc định thấy TikTok, khách có ghi đè tắt vẫn k
   giữ nguyên.
 - **Ngưỡng nhắc**: nhắc khi còn < 7 ngày, nhắc lại ở 1 ngày và khi hết hạn (theo UI/UX mục 8 và hiến pháp
   VIII); gom thông báo để tránh spam.
+- **Nhóm quyền mở rộng (PO 2026-11-18)**: thống kê và quảng cáo được xin cùng lần cấp quyền. Rủi ro đã được
+  nêu và PO chấp nhận: (1) xin quyền chưa dùng ngay có thể bị Meta từ chối khi xét duyệt (mỗi quyền phải có
+  màn hình/luồng minh họa) và quyền quảng cáo cần xác minh doanh nghiệp + quyền truy cập nâng cao, làm chậm hồ sơ
+  nộp ban đầu; nếu bị chặn, cấu hình nhóm cho phép nộp hồ sơ chỉ với nhóm (a) rồi xin thêm sau, không phải sửa mã;
+  (2) mở rộng so với "quyền tối thiểu" của hiến pháp VII cần được ghi trong ADR và cập nhật đặc tả yêu cầu/hồ sơ
+  Q-D3/C6 (Meta nhận thêm dữ liệu thống kê); (3) TikTok chỉ có nhóm (a) và (b), không có nhóm quảng cáo.
+- **Từ khóa xu hướng**: không lấy qua quyền của nền tảng; tiếp tục dùng RSS báo chính thống + Brave Search (module
+  Xu hướng, không cào mạng xã hội). Dữ liệu thống kê của chính kênh có thể làm đầu vào gợi ý ở tính năng khác.
 - **Xét duyệt của Meta**: trước khi được duyệt, chỉ người được thêm làm tài khoản thử nghiệm của ứng dụng
   kết nối được; sau duyệt mới mở cho khách hàng thật. Hồ sơ nộp cần luồng kết nối + đăng bài (phụ thuộc T3,
   T4) và đã có trang chính sách quyền riêng tư & điều khoản (P5).
