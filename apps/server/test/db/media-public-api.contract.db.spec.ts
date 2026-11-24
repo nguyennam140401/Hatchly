@@ -288,6 +288,10 @@ describeDb('MediaPublicApi – hợp đồng (bản thật)', () => {
       ).toEqual({
         kind: 'unavailable',
         mediaIds: [processing, deleted],
+        reasons: [
+          { mediaId: processing, reason: 'not_ready' },
+          { mediaId: deleted, reason: 'deleted' },
+        ],
       });
       expect(await as(a, () => api.getPublishableMedia([], { ttlSec: 3600 }))).toEqual({
         kind: 'ok',

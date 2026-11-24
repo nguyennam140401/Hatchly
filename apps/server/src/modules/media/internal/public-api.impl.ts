@@ -15,6 +15,7 @@ import type {
   MediaSummary,
   PublicUrlResult,
   PublishableMedia,
+  PublishableMediaFailure,
   PublishableMediaResult,
 } from '../public-api';
 import { mediaItems, type MediaRow } from './db/schema';
@@ -170,10 +171,22 @@ export class MediaPublicApiImpl implements MediaPublicApi {
   ): Promise<PublishableMediaResult> {
     const items: PublishableMedia[] = [];
     const missing: string[] = [];
+    const reasons: { mediaId: string; reason: PublishableMediaFailure }[] = [];
     for (const mediaId of mediaIds) {
       const r = await this.issuePublicUrl(mediaId, { ttlSec: options.ttlSec });
       if (r.kind !== 'ok') {
         missing.push(mediaId);
+        reasons.push({
+          mediaId,
+          reason:
+            r.kind === 'unprocessable'
+              ? 'conversion_failed'
+              : r.kind === 'not_ready'
+                ? 'not_ready'
+                : r.kind === 'deleted'
+                  ? 'deleted'
+                  : 'not_found',
+        });
         continue;
       }
       const m = r.media;
@@ -188,6 +201,8 @@ export class MediaPublicApiImpl implements MediaPublicApi {
         ...(m.durationMs !== null ? { durationSec: Math.round(m.durationMs / 1000) } : {}),
       });
     }
-    return missing.length > 0 ? { kind: 'unavailable', mediaIds: missing } : { kind: 'ok', items };
+    return missing.length > 0
+      ? { kind: 'unavailable', mediaIds: missing, reasons }
+      : { kind: 'ok', items };
   }
 }

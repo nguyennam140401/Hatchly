@@ -15,7 +15,8 @@ sources:
   ]
 updated: 2026-11-24
 status: current
-related: [modules/ai_gateway.md, concepts/queues.md, decisions/index.md, features/015-real-ai-gateway.md]
+related:
+  [modules/ai_gateway.md, concepts/queues.md, decisions/index.md, features/015-real-ai-gateway.md]
 ---
 
 # Ngân sách AI (hiến pháp III, ADR-06)

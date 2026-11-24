@@ -1,8 +1,12 @@
 // US2/US4 (013) – "Đăng lại" và "Đã đăng": khóa lạc quan, hai yêu cầu đồng thời chỉ MỘT thắng và chỉ MỘT việc được tạo,
 // kênh đã đăng không đăng lại được, "Đã đăng" chỉ từ "Cần kiểm tra" và không gọi nền tảng; ghi kiểm toán.
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
+import { runWithJobContext } from '../../../src/core/context/bind-account';
+import { tenantTx } from '../../../src/core/db/transaction';
 import { uuidV7 } from '../../../src/core/ids/uuid-v7';
 import { AttemptActionsService } from '../../../src/modules/publishing/internal/attempt-actions.service';
+import { runAttemptDedupeKey, runAttemptJob } from '../../../src/modules/publishing/jobs';
+import { enqueue } from '../../../src/modules/queue';
 import { startTestProducer } from '../../support/queue-test-kit';
 import {
   asOwner,
@@ -180,5 +184,125 @@ describeDb('Hành động của người dùng trên lượt đăng', () => {
     });
     expect(Object.keys(details)).not.toContain('internalStatus');
     expect(details.traceId).toMatch(/^[0-9a-f-]+$/);
+  });
+
+  // T087 (M1) – khóa `publish:{id}` còn việc hiệu lực → `enqueue` trả `exists` → Đăng lại PHẢI từ chối và hoàn tác
+  // toàn bộ giao dịch (không để lượt ở `scheduled` mà không có việc – Hiến pháp V).
+  it.each([
+    ['needs_user', { needs_reason: 'token_expired' }],
+    ['needs_check', { needs_reason: 'uncertain_result' }],
+  ] as const)(
+    'khóa publish:{id} còn việc (enqueue = exists) → Đăng lại từ %s bị từ chối PUBLISH_VERSION_CONFLICT và hoàn tác toàn bộ',
+    async (status, reason) => {
+      const submittedAt = new Date(Date.now() - 600_000);
+      const id = await seedAttempt(account, postId, connectionId, {
+        status,
+        extra: { run_no: 2, content_hash: 'ch1:abc', submitted_at: submittedAt, ...reason },
+      });
+      // Việc đang hiệu lực giữ khóa chống trùng (cùng khóa mà Đăng lại sẽ dùng).
+      await withAccount(account, () =>
+        tenantTx(() =>
+          enqueue(
+            runAttemptJob,
+            { attemptId: id },
+            { runAfter: new Date(), dedupeKey: runAttemptDedupeKey(id) },
+          ),
+        ),
+      );
+      const key = `publish:${id}`;
+      const jobsBefore = await jobs("name = 'publish' AND singleton_key = $1", [key]);
+      expect(jobsBefore).toHaveLength(1);
+      const before = await attemptRow(id);
+
+      await expect(republish(id, before.version)).rejects.toMatchObject({
+        code: 'PUBLISH_VERSION_CONFLICT',
+        message: 'Bài đang được xử lý, thử lại sau ít giây',
+      });
+
+      // Lượt giữ nguyên MỌI trường quan trọng (kể cả version): giao dịch hoàn tác hoàn toàn.
+      expect(await attemptRow(id)).toEqual(before);
+      expect(before).toMatchObject({
+        status,
+        run_no: 2,
+        content_hash: 'ch1:abc',
+        needs_reason: reason.needs_reason,
+      });
+      expect(before.submitted_at?.getTime()).toBe(submittedAt.getTime());
+      // Không tạo việc mới: vẫn đúng MỘT việc (việc cũ).
+      const jobsAfter = await jobs("name = 'publish' AND singleton_key = $1", [key]);
+      expect(jobsAfter.map((j) => j.id)).toEqual(jobsBefore.map((j) => j.id));
+      // Không ghi kiểm toán.
+      const audit = await asOwner((c) =>
+        c.query(
+          "SELECT 1 FROM infra.audit_log WHERE account_id = $1 AND action = 'publish.republish'",
+          [account],
+        ),
+      );
+      expect(audit.rows).toHaveLength(0);
+    },
+  );
+
+  // T089 (M2)
+  it('Đăng lại: audit_log publish.republish có actor_id, trace_id, metadata chỉ chứa mã; scheduled_at ≈ now(); run_no không đổi', async () => {
+    const id = await needsUser({ run_no: 3 }, new Date(Date.now() - 5 * 3_600_000));
+    const v = (await attemptRow(id)).version;
+    const traceId = uuidV7();
+    const started = Date.now();
+    await runWithJobContext({ traceId, accountId: account }, () => service.republish(id, v, user));
+
+    const row = await asOwner((c) =>
+      c.query<{ scheduled_at: Date; run_no: number }>(
+        'SELECT scheduled_at, run_no FROM publishing.publish_attempts WHERE id = $1',
+        [id],
+      ),
+    );
+    // Giờ đăng được đặt lại về "bây giờ" (không còn là 5 giờ trước).
+    expect(Math.abs((row.rows[0]?.scheduled_at.getTime() ?? 0) - started)).toBeLessThan(15_000);
+    // run_no chỉ tăng lúc chiếm lượt (scheduled → processing), KHÔNG tăng lúc Đăng lại.
+    expect(row.rows[0]?.run_no).toBe(3);
+
+    const audit = await asOwner((c) =>
+      c.query<{
+        actor_type: string;
+        actor_id: string;
+        trace_id: string;
+        metadata: Record<string, unknown>;
+      }>(
+        "SELECT actor_type, actor_id, trace_id, metadata FROM infra.audit_log WHERE account_id = $1 AND action = 'publish.republish'",
+        [account],
+      ),
+    );
+    expect(audit.rows).toHaveLength(1);
+    const entry = audit.rows[0]!;
+    expect(entry.actor_type).toBe('user');
+    expect(entry.actor_id).toBe(user);
+    expect(entry.trace_id).toBe(traceId);
+    // metadata CHỈ chứa mã tham chiếu/trạng thái, không nội dung bài hay mã quyền.
+    expect(Object.keys(entry.metadata).sort()).toEqual(
+      ['attemptId', 'fromStatus', 'postId', 'reason'].sort(),
+    );
+    expect(entry.metadata).toMatchObject({
+      attemptId: id,
+      postId,
+      fromStatus: 'needs_user',
+      reason: 'token_expired',
+    });
+    expect(JSON.stringify(entry.metadata)).not.toMatch(/token_value|secret|Nội dung đã duyệt/i);
+  });
+
+  it('lượt unknown (nội bộ) KHÔNG đăng lại được → PUBLISH_NOT_REPUBLISHABLE, không tạo việc', async () => {
+    const id = await seedAttempt(account, postId, connectionId, {
+      status: 'unknown',
+      phase: 'submitted_awaiting_response',
+      extra: { run_no: 1, content_hash: 'ch1:abc', submitted_at: new Date() },
+    });
+    const before = await attemptRow(id);
+    await expect(republish(id, before.version)).rejects.toMatchObject({
+      code: 'PUBLISH_NOT_REPUBLISHABLE',
+    });
+    expect(await attemptRow(id)).toEqual(before);
+    expect(await jobs("name = 'publish' AND singleton_key = $1", [`publish:${id}`])).toHaveLength(
+      0,
+    );
   });
 });
