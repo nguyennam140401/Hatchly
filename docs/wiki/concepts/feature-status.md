@@ -12,7 +12,7 @@ sources:
     specs/010-connect-facebook-instagram/spec.md,
     specs/011-ui-architecture-foundation/spec.md,
   ]
-updated: 2026-11-15
+updated: 2026-11-24
 status: current
 related:
   [
@@ -41,27 +41,28 @@ Số liệu tính đến **2026-11-15**, đếm từ các `specs/*/tasks.md` (ta
 | FR-07        | Đăng bài đúng lịch                                         | Chưa làm (đã có nền hàng chờ pg-boss)                                         | 003            |
 | FR-08, FR-09 | Theo dõi 5 bước đăng, xử lý lỗi                            | Chưa làm                                                                      | –              |
 | FR-10        | Tra cứu cho đội hỗ trợ                                     | Chưa làm (đã có vai trò hỗ trợ và nhật ký kiểm toán)                          | 004, 009       |
-| FR-11, FR-12 | Ngân sách AI, hiển thị mức sử dụng                         | Chưa làm (chỉ có hợp đồng Cổng AI)                                            | 005            |
+| FR-11, FR-12 | Ngân sách AI, hiển thị mức sử dụng                         | **Đã làm phía máy chủ** (015): giữ chỗ/quyết toán, ngưỡng 2/4 USD, thông báo 80/100; chưa có bề mặt khách gọi `getUsage` (thuộc Tài khoản & Gói); nhà cung cấp thật chờ POC | 005, 015       |
 | FR-13        | Quản trị gói (nội bộ)                                      | Chưa làm                                                                      | –              |
 | FR-14        | Yêu cầu xóa tài khoản                                      | Chưa làm                                                                      | –              |
 
 ## B. Nền kỹ thuật và tính năng đã có spec
 
-| Spec | Nội dung                       | Task xong     | Việc còn mở                                                                                                                                                                 |
-| ---- | ------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 001  | Monorepo, ranh giới module     | 64/64         | –                                                                                                                                                                           |
-| 002  | Lớp CSDL, RLS tenant           | 77/77         | –                                                                                                                                                                           |
-| 003  | Hàng chờ pg-boss               | 75/75         | –                                                                                                                                                                           |
-| 004  | Xác thực email và RBAC         | 87/88         | T087: chạy tay quickstart                                                                                                                                                   |
-| 005  | Hợp đồng cổng và bản giả lập   | 99/99         | –                                                                                                                                                                           |
-| 006  | Module mẫu Hồ sơ kinh doanh    | 73/74         | T074: diễn tập SC-008                                                                                                                                                       |
-| 007  | Hạ tầng Terraform              | 110/121       | 11 việc thủ công: dựng staging/production, drill sao lưu                                                                                                                    |
-| 008  | CI/CD Jenkins                  | 81/99         | 18 việc: ADR-11, dựng Jenkins thật, quickstart; một phần chờ 007                                                                                                            |
-| 009  | Đăng nhập xã hội và thành viên | 91/94         | T057, T091, T092                                                                                                                                                            |
-| 010  | Kết nối Facebook/Instagram     | chưa có tasks | Mới có spec (Draft)                                                                                                                                                         |
-| 011  | Nền kiến trúc giao diện        | 84/85         | **T074** (chuyển `ProfileForm` sang `useAppForm`); kiểm thủ công 9, 12, 13 chưa làm. Đã merge `dev` 2026-11-16, nhánh `impl/011` được giữ                                   |
-| 014  | Thư viện media cơ bản          | 92/94         | **T090** (đo hiệu năng 4G/vStorage), **T093** (thử tay quickstart). Đã merge `dev` 2026-11-18, nhánh `impl/014` được giữ                                                    |
-| 012  | Soạn bài tay, duyệt, lịch      | 91/95         | **T059** (số bài chờ trên điều hướng), **T066** (tab Lịch sử), T093 (2 lỗi có sẵn từ dev), T094 (chạy tay quickstart). Đã merge `dev` 2026-11-16, nhánh `impl/012` được giữ |
+| Spec | Nội dung                       | Task xong     | Việc còn mở                                                                                                                               |
+| ---- | ------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 001  | Monorepo, ranh giới module     | 64/64         | –                                                                                                                                         |
+| 002  | Lớp CSDL, RLS tenant           | 77/77         | –                                                                                                                                         |
+| 003  | Hàng chờ pg-boss               | 75/75         | –                                                                                                                                         |
+| 004  | Xác thực email và RBAC         | 87/88         | T087: chạy tay quickstart                                                                                                                 |
+| 005  | Hợp đồng cổng và bản giả lập   | 99/99         | –                                                                                                                                         |
+| 006  | Module mẫu Hồ sơ kinh doanh    | 73/74         | T074: diễn tập SC-008                                                                                                                     |
+| 007  | Hạ tầng Terraform              | 110/121       | 11 việc thủ công: dựng staging/production, drill sao lưu                                                                                  |
+| 008  | CI/CD Jenkins                  | 81/99         | 18 việc: ADR-11, dựng Jenkins thật, quickstart; một phần chờ 007                                                                          |
+| 009  | Đăng nhập xã hội và thành viên | 91/94         | T057, T091, T092                                                                                                                          |
+| 010  | Kết nối Facebook/Instagram     | chưa có tasks | Mới có spec (Draft)                                                                                                                       |
+| 011  | Nền kiến trúc giao diện        | 84/85         | **T074** (chuyển `ProfileForm` sang `useAppForm`); kiểm thủ công 9, 12, 13 chưa làm. Đã merge `dev` 2026-11-16, nhánh `impl/011` được giữ |
+| 014  | Thư viện media cơ bản          | 92/94         | **T090** (đo hiệu năng 4G/vStorage), **T093** (thử tay quickstart). Đã merge `dev` 2026-11-18, nhánh `impl/014` được giữ                  |
+| 015  | Cổng AI thật                   | 97/101        | **T049a** (bảng mục 9 tài liệu gốc, người dùng thêm), **T073a** (đo POC-1/POC-4 khi có khóa thật); T004 bỏ, T057a không cần. Đã merge `dev` (`ac19fc1`), nhánh `impl/015` và worktree được giữ; chưa bật `real` ở production |
+| 012  | Soạn bài tay, duyệt, lịch      | 95/95         | Xong. Chưa chạy tay quickstart G, H (chấp nhận test tự động). Merge `dev` 2026-11-16 và 2026-11-24, nhánh đã xóa                          |
 
 ## C. Giao diện hiện có
 
@@ -73,7 +74,7 @@ từ 012 có thêm Soạn/xem bài, Chờ duyệt, Lịch và Bài viết; từ 
 
 1. Làm nốt T074 của 011 (chuyển `ProfileForm` sang `useAppForm`) – có thể gộp vào tính năng sửa hồ sơ kế tiếp.
 2. 010 (kết nối kênh), vì đăng bài cần kênh đã kết nối.
-3. Lập kế hoạch, AI tạo nội dung. Soạn bài tay, duyệt, lịch (012), đăng bài 5 bước (013) và thư viện media cơ bản (014) đã merge; còn T090/T093 của 014 và T059/T066 của 012.
+3. Lập kế hoạch, AI tạo nội dung. Soạn bài tay, duyệt, lịch (012), đăng bài 5 bước (013), thư viện media cơ bản (014) và Cổng AI thật (015) đã merge; còn T090/T093 của 014 và điều kiện ngoài của 015 (012 đã xong 95/95). Việc kế tiếp phụ thuộc 015: module tạo nội dung/kế hoạch gọi `AI_GATEWAY`, nối `ACTIVE_INDUSTRIES_SOURCE`/`INDUSTRY_ACCOUNTS_SOURCE` (xu hướng/ngữ cảnh), module media truyền `requestId` khi gán nhãn.
 4. Chốt việc dở của 007 và 008 trước khi cần môi trường thật (tốn chi phí cloud).
 
 ## Cách cập nhật

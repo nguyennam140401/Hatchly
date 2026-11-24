@@ -44,6 +44,10 @@ export const PERMISSION_DENIED_MESSAGES: Record<Permission, string> = {
   'support.lookup': 'Chỉ nhân viên hỗ trợ mới tra cứu được dữ liệu khách hàng.',
   'plan.manage': 'Chỉ quản trị viên mới thay đổi được gói dịch vụ.',
   'staff.manage': 'Chỉ quản trị viên mới quản lý được nhân viên.',
+  'ai.pricing.manage':
+    'Chỉ quản trị viên mới chỉnh được bảng giá và cấu hình AI. Hãy nhờ quản trị viên thực hiện.',
+  'ai.cost.view':
+    'Chỉ nhân viên hỗ trợ hoặc quản trị viên mới xem được chi tiết chi phí AI. Hãy chuyển yêu cầu cho họ.',
 };
 
 /**

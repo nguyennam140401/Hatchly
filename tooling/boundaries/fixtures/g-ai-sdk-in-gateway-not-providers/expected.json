@@ -1,0 +1,4 @@
+{
+  "note": "SDK AI nhập trong ai_gateway nhưng ngoài internal/providers (III, IX); gói không cài nên còn no-unresolvable",
+  "violations": ["ai-sdk-only-in-ai-gateway", "no-unresolvable"]
+}

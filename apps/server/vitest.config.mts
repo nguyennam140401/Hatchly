@@ -21,6 +21,12 @@ export default defineConfig({
       'test/context/**',
       'test/media/**',
       'test/compat/**',
+      // 015: spec Cổng AI cần CSDL chạy ở `pnpm test:db`; spec thuần (token-estimate) vẫn chạy ở chế độ bộ nhớ.
+      'test/ai_gateway/**/*.db.spec.ts',
+      'test/ai_gateway/ledger-partitions.spec.ts',
+      'test/ai_gateway/price-effective.spec.ts',
+      'test/ai_gateway/ledger-reconcile.spec.ts',
+      'test/contracts/ai/**/*.db.contract.spec.ts',
       '**/node_modules/**',
     ],
     globalSetup: ['./test/global-setup.ts'],

@@ -49,6 +49,8 @@ import { StaffAuthController } from './internal/auth/staff-auth.controller';
 import { StaffService } from './internal/auth/staff.service';
 import { ThrottleService } from './internal/auth/throttle.service';
 import { listActiveMembers } from './internal/members-directory';
+import { getAiCycleAnchor } from './internal/ai-cycle-anchor';
+import { countActiveAccounts } from './internal/count-active-accounts';
 import { getPublishingEligibility } from './internal/publishing-eligibility';
 import { describeMembers } from './internal/members/describe-members';
 import { authHousekeeping, defineAccountSchedules, detachedUsers, mailNotice } from './jobs';
@@ -130,6 +132,8 @@ export class AccountModule {
       const workerApi: AccountPublicApi = {
         listActiveMembers,
         getPublishingEligibility,
+        getAiCycleAnchor,
+        countActiveAccounts,
         // Tra cứu chỉ đọc (006) – dùng được ở cả Worker.
         describeMembers: (userIds) => describeMembers(userIds),
         addMember: apiOnly('addMember'),
@@ -219,6 +223,8 @@ export class AccountModule {
           ): AccountPublicApi => ({
             listActiveMembers,
             getPublishingEligibility,
+            getAiCycleAnchor,
+            countActiveAccounts,
             addMember: (input) => members.addMember(input),
             createPendingInvitation: (input) => invitations.seedPending(input),
             removeMember: async (input) => {

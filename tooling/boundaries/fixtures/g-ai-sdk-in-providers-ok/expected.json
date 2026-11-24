@@ -1,0 +1,4 @@
+{
+  "note": "SDK AI nhập đúng chỗ (internal/providers) – chỉ còn no-unresolvable vì gói không cài trong bộ mẫu",
+  "violations": ["no-unresolvable"]
+}

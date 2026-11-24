@@ -32,3 +32,16 @@ Append-only. Định dạng: `## [YYYY-MM-DD] ingest|query|lint | tiêu đề`.
 - Viết lại modules/media.md (`current`: 3 bảng, 4 loại việc, `MediaPublicApi`, `MediaUsageProvider`); cập nhật modules/content.md và modules/publishing.md (nối `MEDIA_DESCRIBER`, `MediaUsageRegistrar`, `getPublishableMedia` thật)
 - Cập nhật concepts/feature-status.md (FR-03 một phần, dòng 014, màn Thư viện), open-questions.md (đóng phần media của 012/013, thêm 014-T090/T093/FR-023/gói/trùng-format/verify-đỏ), glossary.md, index.md
 - Ghi chú: wiki chưa ingest 010 và 013; trang 009, 011, 012 vẫn `draft`
+
+## [2026-11-24] ingest | 012-manual-compose-approval-calendar
+
+- Sửa features/012-manual-compose-approval-calendar.md (`draft` → `current`: 95/95, T059 huy hiệu số bài chờ, T066 tab Lịch sử, dọn lỗi có sẵn; ghi G, H chưa chạy tay)
+- Cập nhật concepts/feature-status.md (dòng 012, mục việc còn lại) và index.md
+- Ghi chú: mock e2e dùng chung ở `apps/web/e2e/helpers.ts`; `ownership.json` cấp `docs/wiki/**` cho pm để chạy ingest
+
+## [2026-11-24] ingest | 015-real-ai-gateway
+
+- Thêm features/015-real-ai-gateway.md (`draft`: 97/101, banner điều kiện ngoài T049a, T073a; quyết định chính, bảng chạm tới, điều kiện trước production)
+- Viết lại modules/ai_gateway.md (`draft` → `current`: bảng thật, việc nền, API công khai, mã lỗi) và concepts/ai-budget.md (`draft` → `current`: hiện thực thật thay vì bản giả)
+- Cập nhật concepts/feature-status.md (FR-11/FR-12, dòng 015, thứ tự làm tiếp), open-questions.md (015-POC-1/4, 015-hợp-đồng, 015-nguồn-ngành, 015-media, 015-bề-mặt-khách, 015-vận-hành) và index.md
+- Ghi chú: merge `dev` `ac19fc1` ngày 2026-11-24, nhánh `impl/015-real-ai-gateway` và worktree được giữ; `pnpm verify` sau khi gộp `dev` đạt 15/18 (web e2e chập chờn, chạy lại riêng 51/51; infra bỏ qua); các trang 009, 011, 013, 014 vẫn `draft`

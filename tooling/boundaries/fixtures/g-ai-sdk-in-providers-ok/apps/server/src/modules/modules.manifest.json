@@ -1,0 +1,14 @@
+{
+  "sharedAllowedPackages": ["zod"],
+  "aiProviderPackagePatterns": ["^@anthropic-ai/", "^openai$", "^@google/genai$", "^@mistralai/"],
+  "modules": [
+    {
+      "name": "ai_gateway",
+      "title": "ai_gateway",
+      "kind": "gateway",
+      "schema": "ai_gateway",
+      "runsIn": ["api", "worker"],
+      "allowedDeps": []
+    }
+  ]
+}

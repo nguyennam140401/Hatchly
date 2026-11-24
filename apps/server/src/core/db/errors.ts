@@ -5,12 +5,14 @@ export type TenantContextErrorCode =
   | 'TENANT_CONTEXT_MISSING'
   | 'TENANT_CONTEXT_INVALID'
   | 'TENANT_CONTEXT_CONFLICT'
+  | 'TENANT_CONTEXT_FORBIDDEN'
   | 'TENANT_NOT_FOUND';
 
 const TENANT_MESSAGES: Record<TenantContextErrorCode, string> = {
   TENANT_CONTEXT_MISSING: 'Thiếu ngữ cảnh tài khoản khi truy cập dữ liệu khách hàng',
   TENANT_CONTEXT_INVALID: 'Mã tài khoản trong ngữ cảnh không hợp lệ',
   TENANT_CONTEXT_CONFLICT: 'Giao dịch lồng nhau khác tài khoản hoặc khác vai trò',
+  TENANT_CONTEXT_FORBIDDEN: 'Chỉ việc nền (Worker) được đặt ngữ cảnh tài khoản theo mã cho trước',
   TENANT_NOT_FOUND: 'Tài khoản trong ngữ cảnh không tồn tại',
 };
 

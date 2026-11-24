@@ -13,6 +13,17 @@ export const ACCESS_PATH_INVENTORY: Record<string, AccessPathEntry> = {
   'view:platform_gateway.support_channel_view': {
     proof: 'test/db/platform-gateway/support-view.db.spec.ts',
   },
+  // 015: khung nhìn hỗ trợ Cổng AI – lọc theo account.current_account_id(), chỉ cấp SELECT cho support,
+  // không có cột lời nhắc/văn bản kết quả/bí mật (0030_ai_gateway_seed_support.sql).
+  'view:ai_gateway.support_ai_budget_detail': {
+    proof: 'test/ai_gateway/support-views.db.spec.ts',
+  },
+  'view:ai_gateway.support_ai_cost_ledger': {
+    proof: 'test/ai_gateway/support-views.db.spec.ts',
+  },
+  'view:ai_gateway.support_ai_trend_allocations': {
+    proof: 'test/ai_gateway/support-views.db.spec.ts',
+  },
   'view:sandbox.support_note_detail': { proof: 'test/db/support-context.db.spec.ts' },
   'view:sandbox.support_note_search': { proof: 'test/db/support-context.db.spec.ts' },
   // ---- (b) hàm SECURITY DEFINER `app` được gọi ----

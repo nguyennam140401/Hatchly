@@ -12,8 +12,8 @@ sources:
     apps/server/drizzle/migrations/0017_content_posts.sql,
     apps/server/src/modules/approval/internal/approval.service.ts,
   ]
-updated: 2026-11-16
-status: draft
+updated: 2026-11-24
+status: current
 related:
   [
     modules/content.md,
@@ -28,12 +28,11 @@ related:
 
 # 012 Soạn bài tay, duyệt, lịch, Chờ duyệt
 
-> **CÒN VIỆC CHƯA LÀM – đừng bỏ sót.** 91/95 việc xong. Còn: **T059** (số bài chờ trên điều hướng – bảng điều hướng 011 bị ghim 7 mục,
-> hiện chỉ có liên kết "Chờ duyệt" ở màn Bài viết và chưa gắn `setCountSources`), **T066** (tab "Lịch sử" trên màn Soạn bài; API đã có),
-> **T093** (toàn bộ kiểm tra xanh trừ 2 lỗi có sẵn từ `dev`: `tooling/test/check-wiki.spec.ts`, prettier `feature-status.md`;
-> `pnpm verify` chưa chạy trọn do hết thời gian), **T094** (chưa chạy tay quickstart trên trình duyệt). Còn nhỏ: "tải thêm" ở danh sách
-> Bài viết, vùng đính media (chờ thư viện media), nút "Thêm bài" ở Lịch chưa điền sẵn ngày. Nhánh `impl/012-…` và worktree được **giữ**.
-> Danh sách đầy đủ ở "Ghi chú thi công" trong `specs/012-manual-compose-approval-calendar/tasks.md`.
+> **Đã xong 95/95 (2026-11-24).** T059 (huy hiệu số bài chờ trên menu, chỉ chủ tài khoản – `AppShell` truyền `overrides.pendingReview` cho
+> `useNavCounts`) và T066 (tab "Lịch sử" ở màn Soạn bài – `HistoryTab`) làm nốt trong đợt merge thứ hai; dọn 3 lỗi có sẵn từ `dev`.
+> **Chưa chạy tay:** kịch bản G (`PUBLISH_EXECUTOR=fake|none`) và H (hết ngân sách AI) của `quickstart.md` – chủ sản phẩm chấp nhận bằng chứng
+> từ test tự động (A–F phủ bằng test trên Postgres thật); sẽ phủ lại ở nghiệm thu chung với 013. Các việc nhỏ khác xem "Ghi chú thi công"
+> trong `specs/012-manual-compose-approval-calendar/tasks.md`.
 
 ## Mục tiêu
 
@@ -47,8 +46,9 @@ FR-05 (phần soạn tay), FR-06; hiến pháp I, II (không đăng trùng: ch�
 
 ## Trạng thái
 
-`draft` (91/95 việc), merge vào `dev` ngày 2026-11-16. Kiểm thử: unit 437, CSDL 738, hàng chờ 107, web 438; `check:boundaries`,
-`db:check`, `db:lint-migrations`, `check:secrets`, `check:web-rules` đạt.
+`current` (95/95 việc). Merge `dev` lần 1 ngày 2026-11-16, lần 2 ngày 2026-11-24 (`4fdc437`). Kiểm thử đợt 2: web 525, tooling 304, e2e trình duyệt 51;
+`lint`, `typecheck`, `check:boundaries`, `check:secrets` đạt. `test:db` có 4 test chập chờn khi chạy dồn tải (chạy riêng đều đạt) – theo dõi trong CI.
+Mock e2e dùng chung nằm ở `apps/web/e2e/helpers.ts` (`mockSession`): màn nào gọi API mới phải thêm mock, không thì hiện hộp "Phiên đã hết hạn".
 
 ## Quyết định chính
 

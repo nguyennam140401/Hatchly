@@ -10,6 +10,8 @@ import {
   actualTokensCost,
   estimateStt,
   estimateTokens,
+  MIN_CALL_INPUT_TOKENS,
+  MIN_CALL_OUTPUT_TOKENS,
   minCallEstimate,
 } from '../../../src/modules/ai_gateway/internal/estimate';
 import { validateAiRequest } from '../../../src/modules/ai_gateway/internal/gateway.service';
@@ -53,7 +55,20 @@ describe('estimate', () => {
     expect(estimateStt(price(), 1)).toBe(100);
   });
   it('minCallEstimate theo giá cheap_vision hiện hành', () => {
-    expect(minCallEstimate(price({ outputPerMTokMicroUsd: 1_250_000 }))).toBe(2);
+    const cheap = price({ inputPerMTokMicroUsd: 1_000_000, outputPerMTokMicroUsd: 5_000_000 });
+    // Lời gọi nhỏ nhất thực tế: 1000 token vào + 500 token ra, tính bằng công thức chung (không số cứng).
+    expect(minCallEstimate(cheap)).toBe(
+      estimateTokens(cheap, MIN_CALL_INPUT_TOKENS, MIN_CALL_OUTPUT_TOKENS),
+    );
+    // 1000 × 1.000.000 + 500 × 5.000.000 = 3.500.000.000 / 1e6 = 3500 micro-USD.
+    expect(minCallEstimate(cheap)).toBe(3_500);
+    expect(Number.isInteger(minCallEstimate(price({ inputPerMTokMicroUsd: 1 })))).toBe(true);
+  });
+  it('minCallEstimate là ước tính THỰC TẾ (hàng nghìn micro-USD), không phải 1 token', () => {
+    const cheap = price({ inputPerMTokMicroUsd: 1_000_000, outputPerMTokMicroUsd: 5_000_000 });
+    expect(minCallEstimate(cheap)).toBeGreaterThan(estimateTokens(cheap, 0, 1) * 100);
+    expect(MIN_CALL_INPUT_TOKENS).toBe(1000);
+    expect(MIN_CALL_OUTPUT_TOKENS).toBe(500);
   });
 });
 

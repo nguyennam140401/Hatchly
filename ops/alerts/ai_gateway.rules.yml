@@ -1,0 +1,176 @@
+# Quy tắc cảnh báo của Cổng AI (015 T050, hiến pháp VIII, SC-013). Nạp vào Prometheus cùng publishing.rules.yml.
+# Ngưỡng nằm trong tệp này – đổi không cần sửa mã.
+#
+# Tên chỉ số suy từ chỉ số OpenTelemetry (meter `app.ai_gateway`, xem modules/ai_gateway/internal/metrics.ts).
+# Nhãn chỉ có `provider`/`outcome`/`event`/`task`/`reason`: KHÔNG có account_id và KHÔNG có số tiền (hiến pháp III/VII).
+#
+# Mô phỏng SC-013 (kiểm tay bằng `promtool test rules` nếu có promtool; repo chưa dùng promtool, tệp được kiểm
+# bằng kiểm thử đơn vị đọc YAML): trong 15 phút có 100 lời gọi nhà cung cấp `anthropic`, 10 lời gọi `outcome="error"`
+# → tỷ lệ 10% > 5% → sau `for: 5m` cảnh báo AiProviderErrorRatioHigh{provider="anthropic"} chuyển sang firing, tức
+# có mặt ở kênh nhận trong ≤ 15 phút kể từ khi tỷ lệ lỗi vượt ngưỡng. Nhà cung cấp `openai` chỉ 1/100 lỗi → không báo.
+groups:
+  - name: ai_gateway
+    rules:
+      - alert: AiProviderErrorRatioHigh
+        expr: >-
+          sum by (provider) (increase(ai_gateway_provider_calls_total{outcome="error"}[15m]))
+          / clamp_min(sum by (provider) (increase(ai_gateway_provider_calls_total[15m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Hơn 5% lời gọi tới một nhà cung cấp AI lỗi trong 15 phút'
+          description: >-
+            Hiến pháp VIII: tỷ lệ lỗi nhà cung cấp AI > 5%/15 phút (theo nhãn provider). Kiểm tra trang trạng thái nhà
+            cung cấp, hạn mức/khóa API (Secret api-secrets/worker-secrets), tuyến dự phòng của Cổng AI
+            (ai_gateway_fallback_total) và thời gian chờ AI_PROVIDER_TIMEOUT_MS. Người dùng vẫn soạn tay được; Cổng AI
+            tự chuyển tuyến dự phòng nếu có.
+
+      # --- 015 T069 (US8): cảnh báo vận hành còn lại của Cổng AI --------------------------------------------------
+      # Repo CHƯA có Loki ruler/LogQL (ops/ và infra/ không có quy tắc nhật ký): chỉ có quy tắc Prometheus. Vì vậy chỉ
+      # viết quy tắc cho sự kiện ai.* có chỉ số thật; các sự kiện chỉ phát ở nhật ký (gatewayEvent warn) xem danh sách
+      # khoảng trống ở cuối nhóm. Nhãn chỉ có task/reason; KHÔNG có account_id và KHÔNG có số tiền.
+      #
+      # Mô phỏng SC-013: nếu Worker báo ai_gateway_events_total{event="ai.system_budget_exhausted"} tăng, điều kiện đúng
+      # suốt cửa sổ [15m]; `for: 5m` < 15m nên sau 5 phút cảnh báo AiSystemBudgetExhausted (warning) firing; Alertmanager
+      # chuyển kênh nhận trong chu kỳ kế tiếp (≤ 1 phút), tổng ≈ 6 phút kể từ khi sự kiện xảy ra.
+      - alert: AiSystemBudgetExhausted
+        # Tương ứng sự kiện ai.system_budget_exhausted: hết trần tuần hệ thống (xu hướng/tác vụ hệ thống).
+        expr: sum(increase(ai_gateway_events_total{event="ai.system_budget_exhausted"}[15m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Trần ngân sách AI tuần của hệ thống đã hết, tác vụ AI hệ thống bị chặn'
+          description: >-
+            Tương ứng sự kiện ai.system_budget_exhausted. Các tác vụ AI hệ thống (tổng hợp xu hướng, gán nhãn dùng chung)
+            bị chặn tới hết tuần. Kiểm tra bảng giá/ước tính và nhu cầu thật, cân nhắc nâng trần tuần trong cấu hình.
+            Chức năng AI của khách vẫn tính trên ngân sách riêng của họ.
+
+      - alert: AiOpenReservationsStuck
+        # Tương ứng sự kiện ai.unsettled_reservation: giữ chỗ treo. release_stale của tenant được hẹn riêng cho từng
+        # giữ chỗ (chạy sau 15 phút + 5 giây); chỉ release_stale_system chạy mỗi phút. Số giữ chỗ chưa đóng không bao
+        # giờ về mức nền trong 30 phút nghĩa là việc dọn không hiệu quả.
+        # Ngưỡng 50 là mức nền dự kiến giai đoạn 1 (≤ 3 việc/tenant), chỉnh theo tải thật.
+        expr: min_over_time(ai_gateway_open_reservations[30m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Số giữ chỗ ngân sách AI chưa đóng cao kéo dài (nghi giữ chỗ treo)'
+          description: >-
+            Tương ứng sự kiện ai.unsettled_reservation. Số giữ chỗ held/calling không giảm trong 30 phút. Kiểm tra Worker
+            có chạy việc ai_gateway.release_stale / release_stale_system (hàng chờ ai_batch, scheduled), nhật ký Worker
+            và các lời gọi nhà cung cấp bị treo (AI_PROVIDER_TIMEOUT_MS).
+
+      - alert: AiCostAboveEstimate
+        # Tương ứng sự kiện ai.cost_anomaly: chi phí thực > ước tính. Dùng tỷ số trung bình thực/ước tính (histogram
+        # ai_gateway_estimate_ratio, không thứ nguyên, không phải số tiền) theo loại việc; > 1 nghĩa là ước tính đang thấp.
+        expr: >-
+          sum by (task) (increase(ai_gateway_estimate_ratio_sum[1h]))
+          / clamp_min(sum by (task) (increase(ai_gateway_estimate_ratio_count[1h])), 1) > 1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Chi phí AI thực tế vượt ước tính trung bình theo một loại việc'
+          description: >-
+            Tương ứng sự kiện ai.cost_anomaly (R-09). Ước tính giữ chỗ thấp hơn thực tế nên giữ chỗ có thể bị kẹp trần.
+            Hiệu chỉnh hệ số ước tính theo loại việc (nhãn task) và kiểm tra bảng giá mô hình.
+
+      # --- Quy tắc dựa trên bộ đếm sự kiện ai_gateway_events_total{event} (chỉ nhãn `event`, tập giá trị cố định) ---
+      # Sự kiện RỜI RẠC (một lần phát = một bước tăng của bộ đếm): điều kiện `increase(...[W]) > 0` chỉ đúng khoảng W
+      # sau sự kiện. Nếu `for` >= W thì cảnh báo kẹt ở pending, không bao giờ firing. Quy tắc: `for` PHẢI nhỏ hơn W.
+      # Nhóm critical dùng `for: 0m` + cửa sổ [10m] → firing ngay ở lần đánh giá đầu thấy bước tăng; cửa sổ 10m còn
+      # chừa dư để không lỡ nếu một chu kỳ cào/đánh giá bị trễ. Backend khởi tạo bộ đếm = 0 cho mọi tên sự kiện nên
+      # increase() không mất lần tăng đầu tiên của chuỗi mới.
+      # Mô phỏng SC-013 cho nhóm critical: ai.settle_failed tăng lúc T0 → chu kỳ cào ≤ 1 phút + chu kỳ đánh giá ≤ 1
+      # phút → firing ≤ T0 + 2 phút (for 0m), Alertmanager chuyển ≤ 1 phút: tới kênh nhận ≪ 15 phút (ngân sách:
+      # for + cửa sổ + chu kỳ đánh giá = 0 + 10 + 1 = 11 phút ≤ 15). ai.price_missing và ai.route_missing tương tự.
+      # AiThresholdRatioHigh (warning, việc kiểm mỗi 5 phút) dùng cửa sổ [10m] + for 0m ≈ 11 phút ≤ 15 (SC-013).
+      # AiInvoiceMismatch dùng [24h] + for 0m: SC-013 tính từ lúc việc đối soát hằng ngày phát sự kiện, không tính từ
+      # lúc phát sinh lệch. AiIndustrySourceMissing giữ cửa sổ [1h] + for 5m (sự kiện hiếm, không thuộc phạm vi SC-013).
+      # Chưa có quy tắc riêng (đã phủ bằng chỉ số khác, tránh trùng): ai.unsettled_reservation (AiOpenReservationsStuck),
+      # ai.cost_anomaly (AiCostAboveEstimate), ai.provider_error (AiProviderErrorRatioHigh), ai.invoice_missing
+      # (cùng đường đối soát với ai.invoice_mismatch, báo ở nhật ký).
+      - alert: AiThresholdRatioHigh
+        # Hiến chương VIII: > 5% tài khoản chạm ngưỡng mềm. Mã phát sự kiện khi tỷ lệ vượt 5% (đã tính trong mã).
+        # SC-013: việc ai_gateway.check_thresholds chạy mỗi 5 phút ('*/5 * * * *') và phát sự kiện ở MỖI lần kiểm khi
+        # tỷ lệ > 5%. Ngân sách: for 0m + cửa sổ 10m + chu kỳ đánh giá ≈ 1m = ≈ 11 phút ≤ 15.
+        # Hành vi lặp: khi tình trạng kéo dài, sự kiện tới đều mỗi 5 phút nên cửa sổ [10m] luôn chứa ≥ 1 bước tăng và
+        # cảnh báo giữ firing; nếu một lần kiểm bị trễ thì có thể "resolved" rồi firing lại. Repo chưa có cấu hình
+        # Alertmanager trong ops/ nên chưa chỉnh group_wait/repeat_interval; khi có, đặt repeat_interval ≥ 1h để không
+        # nhắc dồn dập.
+        expr: sum(increase(ai_gateway_events_total{event="ai.threshold_ratio_high"}[10m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Hơn 5% tài khoản đã chạm ngưỡng mềm của ngân sách AI'
+          description: >-
+            Tương ứng sự kiện ai.threshold_ratio_high. Tỷ lệ tài khoản chạm ngưỡng chuyển sang mô hình rẻ vượt 5%. Xem
+            lại ước tính chi phí theo loại việc, gói cước và mức dùng thực tế; cân nhắc điều chỉnh bảng giá hoặc ngưỡng.
+
+      - alert: AiInvoiceMismatch
+        # Hiến chương VIII: sổ chi phí AI lệch hóa đơn nhà cung cấp > 5% (mã đã so sánh, chỉ phát sự kiện khi lệch).
+        # SC-013 hiểu là: đội vận hành nhận cảnh báo ≤ 15 phút SAU KHI việc đối soát (chạy hằng ngày) phát hiện lệch và
+        # phát sự kiện. Cửa sổ [24h] giữ cảnh báo firing tới lần đối soát kế tiếp; for 0m nên firing ở lần đánh giá đầu.
+        expr: sum(increase(ai_gateway_events_total{event="ai.invoice_mismatch"}[24h])) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Sổ chi phí AI lệch hóa đơn nhà cung cấp quá 5%'
+          description: >-
+            Tương ứng sự kiện ai.invoice_mismatch. Đối chiếu sổ chi phí với hóa đơn nhà cung cấp cho kỳ gần nhất; kiểm
+            tra bảng giá mô hình trong cấu hình, hệ số quy đổi token và các lời gọi bị quyết toán sai hoặc bị bỏ sót.
+
+      - alert: AiSettleFailed
+        # Quyết toán lỗi có thể làm giữ chỗ treo, kéo theo chặn nhầm ngân sách → critical.
+        expr: sum(increase(ai_gateway_events_total{event="ai.settle_failed"}[10m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Quyết toán ngân sách AI thất bại, giữ chỗ có thể bị treo'
+          description: >-
+            Tương ứng sự kiện ai.settle_failed. Lời gọi AI đã xong nhưng ghi quyết toán lỗi nên phần giữ chỗ chưa được trả
+            lại. Kiểm tra kết nối và khóa cơ sở dữ liệu, nhật ký Worker và việc ai_gateway.release_stale; giữ chỗ treo sẽ
+            được dọn sau 15 phút nhưng cần tìm nguyên nhân gốc.
+
+      - alert: AiPriceMissing
+        # Thiếu giá mô hình → mọi lời gọi dùng mô hình đó bị từ chối → AI ngừng dùng được → critical.
+        expr: sum(increase(ai_gateway_events_total{event="ai.price_missing"}[10m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Thiếu bảng giá cho mô hình AI đang được gọi, chức năng AI bị chặn'
+          description: >-
+            Tương ứng sự kiện ai.price_missing. Có lời gọi tới mô hình chưa có giá trong bảng giá cấu hình nên Cổng AI từ
+            chối để giữ trần ngân sách. Bổ sung giá mô hình vào cấu hình bảng giá (không cần phát hành lại) hoặc đổi
+            tuyến sang mô hình đã có giá. Người dùng vẫn soạn tay được.
+
+      - alert: AiRouteMissing
+        # Thiếu tuyến cho loại việc → loại việc đó không gọi được AI → critical.
+        expr: sum(increase(ai_gateway_events_total{event="ai.route_missing"}[10m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Thiếu tuyến mô hình AI cho một loại việc, chức năng AI bị chặn'
+          description: >-
+            Tương ứng sự kiện ai.route_missing. Một loại việc không có tuyến (mô hình chính/dự phòng) trong cấu hình định
+            tuyến. Bổ sung tuyến cho loại việc đó trong cấu hình Cổng AI. Người dùng vẫn soạn tay được.
+
+      - alert: AiIndustrySourceMissing
+        # Ngành chưa có nguồn xu hướng → tổng hợp xu hướng ngành bỏ qua.
+        expr: sum(increase(ai_gateway_events_total{event="ai.industry_source_missing"}[1h])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Có ngành chưa được cấu hình nguồn xu hướng'
+          description: >-
+            Tương ứng sự kiện ai.industry_source_missing. Tổng hợp xu hướng bỏ qua ngành thiếu nguồn. Bổ sung nguồn RSS
+            hoặc từ khóa tìm kiếm cho ngành đó trong cấu hình nguồn xu hướng.
