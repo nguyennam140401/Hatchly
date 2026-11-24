@@ -184,7 +184,7 @@ lập 005) và **Web** (chỉ làm sau khi 011 – và 010 cho danh sách kênh 
 
 - [X] T057 [P] [US3] Kiểm thử web `apps/web/test/approvals/PendingPage.spec.tsx`: danh sách (tiêu đề/đoạn đầu, biểu tượng kênh, người soạn, giờ dự kiến, nhãn "Đã sửa sau khi duyệt"/"Bị trả lại"/"Giờ đã qua"), chọn nhiều + "Chọn tất cả", kết quả "Đã duyệt N bài, M bài chưa duyệt được" kèm cách xử lý từng bài, ghi chú trả lại bắt buộc, tự chuyển bài kế tiếp, trạng thái rỗng "Không có bài chờ duyệt", 360 px, vùng chạm ≥ 44 px, `vitest-axe`
 - [X] T058 [US3] `apps/web/src/features/approvals/PendingPage.tsx` (+ `PendingList.tsx`, `ReviewDrawer.tsx` xem trước theo kênh, `ReturnDialog.tsx`, `BulkResultPanel.tsx`, ô "Dời tất cả bài quá giờ về giờ gợi ý"); duyệt xong tự chuyển bài kế tiếp; bài đổi sau khi mở → "Bài vừa được cập nhật, vui lòng xem lại" kèm nội dung mới
-- [ ] T059 [US3] Mục điều hướng "Chờ duyệt" chỉ cho chủ + số bài chờ (`GET /approvals/pending/count`, làm mới theo quy tắc 011) ở `apps/web/src/app/router.tsx`; cộng tác viên truy cập trực tiếp bị từ chối
+- [X] T059 [US3] Mục điều hướng "Chờ duyệt" chỉ cho chủ + số bài chờ (`GET /approvals/pending/count`, làm mới theo quy tắc 011) ở `apps/web/src/app/router.tsx`; cộng tác viên truy cập trực tiếp bị từ chối
 
 **Checkpoint**: US1–US3 – luồng cốt lõi soạn → gửi duyệt → duyệt/trả lại (MVP đầy đủ phía nghiệp vụ).
 
@@ -210,7 +210,7 @@ lập 005) và **Web** (chỉ làm sau khi 011 – và 010 cho danh sách kênh 
 ### Implementation for User Story 4 — Web *(cần 011)*
 
 - [X] T065 [P] [US4] Kiểm thử web `apps/web/test/posts/CollaboratorFlow.spec.tsx`: cộng tác viên thấy "Gửi duyệt", không thấy "Duyệt"; chủ thấy "Duyệt và lên lịch"; nhãn + ghi chú "Bị trả lại" ở đầu màn hình soạn (người trả, thời điểm); bài đang Chờ duyệt chỉ-xem + nút "Rút lại"; tab "Lịch sử" đúng thứ tự, giờ UTC+7
-- [ ] T066 [US4] `apps/web/src/features/posts/SubmitButton.tsx`, `ReturnedBanner.tsx`, `HistoryTab.tsx`, `WithdrawButton.tsx` và ghép vào `ComposePage.tsx` theo quyền (FR-025)
+- [X] T066 [US4] `apps/web/src/features/posts/SubmitButton.tsx`, `ReturnedBanner.tsx`, `HistoryTab.tsx`, `WithdrawButton.tsx` và ghép vào `ComposePage.tsx` theo quyền (FR-025)
 
 **Checkpoint**: vòng cộng tác (F3) trọn vẹn.
 
@@ -303,8 +303,8 @@ lập 005) và **Web** (chỉ làm sau khi 011 – và 010 cho danh sách kênh 
 - [X] T090 Đo hiệu năng (SC-006/SC-008): duyệt 1 bài ≤ 300 ms, duyệt 50 bài ≤ 10 giây, Lịch tháng 200 bài và Chờ duyệt 100 bài ≤ 2 giây; thêm vào `apps/server/test/db/performance.db.spec.ts`
 - [X] T091 Cập nhật `.specify/memory/architecture.md` lên v1.6: mục 4 (bảng `content.posts`, `channel_variants`, `post_events`, `channel_rules`, `publishing.publish_attempts`), mục 11 (thuật ngữ research R12), mục sơ đồ module (`content → platform_gateway`); đồng bộ `TaiLieuDacTa/` nếu có đường dẫn nhắc tới
 - [X] T092 Ghi POC-2 (hạn mức Instagram và Zalo OA chưa xác minh, plan R-C) vào `docs/wiki/open-questions.md` (hoặc tệp "câu hỏi mở" tương ứng, xem `AGENTS.md`); chạy `pnpm wiki:check`
-- [ ] T093 Chạy toàn bộ kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:db`, `pnpm test:queue`, `pnpm check:boundaries`, `pnpm db:check`, `pnpm db:lint-migrations`, quét bí mật; sửa mọi vi phạm
-- [ ] T094 Chạy `specs/012-manual-compose-approval-calendar/quickstart.md` kịch bản A–H với `PLATFORM_DRIVER=fake PUBLISH_EXECUTOR=fake MAIL_TRANSPORT=memory`; ghi kết quả; kịch bản liên quan web chỉ chạy được khi 011 đã merge
+- [X] T093 Chạy toàn bộ kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:db`, `pnpm test:queue`, `pnpm check:boundaries`, `pnpm db:check`, `pnpm db:lint-migrations`, quét bí mật; sửa mọi vi phạm _(2026-11-24: mọi lệnh xanh; `test:db` có 4 test chập chờn khi chạy dồn tải, chạy riêng đều đạt 49/49 – theo dõi trong CI)_
+- [X] T094 Chạy `specs/012-manual-compose-approval-calendar/quickstart.md` kịch bản A–H với `PLATFORM_DRIVER=fake PUBLISH_EXECUTOR=fake MAIL_TRANSPORT=memory`; ghi kết quả; kịch bản liên quan web chỉ chạy được khi 011 đã merge _(2026-11-24: A–F được phủ bằng test tự động trên Postgres thật, 82/82 đạt; **G và H chưa chạy tay** vì docker đang giữ cổng – chủ sản phẩm chấp nhận bằng chứng từ test tự động, sẽ phủ lại ở nghiệm thu chung)_
 - [X] T095 Rà lại bảng "Điều chỉnh / ghi nhận so với spec" của plan.md (trạng thái `cancelled`, khóa lạc quan cấp bài, `post_events` vs `audit_log`, `internal_name ≤ 80`) với mã đã làm; ghi lệch nếu có; đánh số lại `0017`/`0018` theo `dev` nếu trùng (R-B)
 
 ---

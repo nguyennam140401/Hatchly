@@ -11,6 +11,8 @@ const run = checkWiki as (o: { root: string }) => {
   pages: number;
 };
 
+const parse = parseFrontmatter as (text: string) => { sources?: string[] } | null;
+
 function write(root: string, file: string, content: string) {
   const full = join(root, file);
   mkdirSync(dirname(full), { recursive: true });
@@ -34,11 +36,11 @@ describe('wiki:check', () => {
     expect(run({ root: workspace() }).errors).toEqual([]);
   });
   it('đọc frontmatter nhiều dòng', () => {
-    const fm = parseFrontmatter('---\nsources:\n  [a.md,\n    b.md,\n  ]\n---\n');
+    const fm = parse('---\nsources:\n  [a.md,\n    b.md,\n  ]\n---\n');
     expect(fm?.sources).toEqual(['a.md', 'b.md']);
   });
   it('đọc frontmatter dạng mảng', () => {
-    expect(parseFrontmatter(page())?.sources).toEqual(['README.md']);
+    expect(parse(page())?.sources).toEqual(['README.md']);
   });
   it('báo thiếu frontmatter', () => {
     const root = workspace((r) => {

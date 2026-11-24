@@ -21,6 +21,7 @@ import { EmptyState } from '../../ui/feedback/EmptyState';
 import { Page } from '../../ui/layout/Page';
 import { PageHeader } from '../../ui/layout/PageHeader';
 import { CHANNEL_TYPE_LABELS, ChannelPreview } from './ChannelPreview';
+import { HistoryTab } from './HistoryTab';
 
 // Màn hình Soạn / xem bài (012 US1, US2, US4, US6) – nội dung chung + bản riêng từng kênh, kiểm tra giới hạn kênh (cảnh báo
 // bằng CHỮ + biểu tượng, vẫn lưu được), lưu nháp, gửi duyệt, duyệt và lên lịch, rút lại, hủy lịch. Quyền chỉ để ẩn/hiện; API
@@ -547,6 +548,8 @@ function ComposeEditor({ id, post, onReload, notice, setNotice }: EditorProps) {
             )}
           </div>
         )}
+
+        {post !== undefined && <HistoryTab postId={post.id} />}
 
         <ConfirmDialog
           open={confirmUnschedule}
