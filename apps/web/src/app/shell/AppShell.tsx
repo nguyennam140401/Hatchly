@@ -1,7 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useRefreshAll } from '../../lib/api/hooks';
 import { t } from '../../lib/i18n/t';
+import { postsApi } from '../../lib/api/endpoints/posts';
 import { useNavCounts } from '../../lib/notifications/counts';
+import { useCan } from '../../lib/session/permissions';
 import { NavBar } from '../../ui/nav/NavBar';
 import { Sidebar } from '../../ui/nav/Sidebar';
 import { TopBar } from '../../ui/nav/TopBar';
@@ -16,13 +18,22 @@ import { useNavItems } from './useNavItems';
 /** Đường dẫn cấp gốc của điều hướng: ở đây TopBar hiện logo; màn con hiện nút quay lại. */
 const ROOT_PATHS = new Set<string>(['/', '/more', ...NAV_ITEMS.map((i) => i.path)]);
 
+async function fetchPendingCount(): Promise<number> {
+  return (await postsApi.pendingCount()).count;
+}
+
 /**
  * Khung ứng dụng: ≥ 1024 px → thanh bên (7 mục); < 1024 px → thanh trên + thanh dưới (5 ô).
  * Hai thanh sinh từ cùng `NAV_ITEMS`; lỗi trong vùng nội dung không làm mất khung điều hướng.
  */
 export function AppShell() {
   const desktop = useIsDesktop();
-  const { sidebar, bottom } = useNavItems(useNavCounts());
+  // 012 (T059): huy hiệu "chờ duyệt" chỉ bật cho người có `post.approve` (cộng tác viên không gọi → tránh 403). Truyền nguồn
+  // qua tham số `useNavCounts` (không đặt trạng thái chung trong thân vẽ, không xóa nguồn `unread` của tính năng khác).
+  const canApprove = useCan('post.approve');
+  const { sidebar, bottom } = useNavItems(
+    useNavCounts(canApprove ? { pendingReview: fetchPendingCount } : {}),
+  );
   const refresh = useRefreshAll();
   const location = useLocation();
   const navigate = useNavigate();
