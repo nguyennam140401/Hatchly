@@ -1,0 +1,155 @@
+{
+  "_ghi_chu": "Bảng sở hữu theo cấu trúc thật của dự án (pnpm monorepo: apps/server, apps/web, packages/shared, e2e, tooling, infra, ops). Hook ownership-guard.mjs và các agent đều dựa vào tệp này. Cú pháp: * khớp trong một cấp, ** khớp nhiều cấp; mẫu không có dấu / khớp theo tên tệp ở mọi cấp. 'exclude' loại trừ khỏi phạm vi ghi. Agent có wins_conflicts=true (qa) thắng khi một đường dẫn khớp cả phạm vi của họ và của agent khác: tệp kiểm thử luôn thuộc qa. Hook hiểu worktree .claude/worktrees/<NNN>/: đường dẫn được tính tương đối so với gốc checkout.",
+  "always_deny": [
+    ".env",
+    ".env.*",
+    "**/*.pem",
+    "**/*.key",
+    ".git/**",
+    "infra/.credentials/**",
+    "infra/envs/*.tfvars"
+  ],
+  "always_deny_except": [
+    ".env.example",
+    "infra/.credentials/.env.example"
+  ],
+  "shared_sequential": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "tsconfig*.json",
+    "eslint.config.mjs",
+    ".dependency-cruiser.cjs",
+    ".prettierrc.json",
+    "modules.manifest.json",
+    "modules.manifest.schema.json",
+    "apps/server/drizzle/meta/_journal.json",
+    "packages/shared/src/index.ts"
+  ],
+  "agents": {
+    "pm": {
+      "write": [
+        ".specify/pm/state/*.md",
+        "specs/*/tasks.md",
+        ".specify/project-context.md",
+        ".specify/ownership.json"
+      ]
+    },
+    "analyst": {
+      "write": [
+        "specs/*/spec.md",
+        "specs/*/checklists/requirements.md",
+        ".specify/feature.json"
+      ]
+    },
+    "ux-designer": {
+      "write": [
+        "specs/*/ux.md",
+        "specs/*/ux/**"
+      ]
+    },
+    "architect": {
+      "write": [
+        "specs/*/plan.md",
+        "specs/*/research.md",
+        "specs/*/data-model.md",
+        "specs/*/contracts/**",
+        "specs/*/quickstart.md",
+        ".specify/memory/architecture.md",
+        ".specify/memory/constitution.md",
+        "docs/adr/**",
+        ".specify/feature.json"
+      ]
+    },
+    "planner": {
+      "write": [
+        "specs/*/tasks.md",
+        ".specify/feature.json"
+      ]
+    },
+    "auditor": {
+      "write": [
+        "specs/*/analysis.md"
+      ]
+    },
+    "reviewer": {
+      "write": [
+        "specs/*/reviews/**"
+      ]
+    },
+    "backend-dev": {
+      "write": [
+        "apps/server/src/**",
+        "apps/server/docs/**",
+        "apps/server/.env.example",
+        ".env.example",
+        "packages/shared/src/**"
+      ],
+      "exclude": [
+        "apps/server/src/core/db/**",
+        "apps/server/src/db/**",
+        "apps/server/src/modules/*/internal/db/**",
+        "apps/server/src/modules/queue/**"
+      ],
+      "may_write_shared": true
+    },
+    "frontend-dev": {
+      "write": [
+        "apps/web/src/**",
+        "apps/web/public/**",
+        "apps/web/docs/**",
+        "apps/web/index.html",
+        "apps/web/vite.config.ts"
+      ],
+      "may_write_shared": true
+    },
+    "data-dev": {
+      "write": [
+        "apps/server/drizzle/**",
+        "apps/server/drizzle*.ts",
+        "apps/server/src/core/db/**",
+        "apps/server/src/db/**",
+        "apps/server/src/modules/*/internal/db/**",
+        "apps/server/src/modules/queue/**",
+        "apps/server/scripts/**"
+      ],
+      "may_write_shared": true
+    },
+    "devops-dev": {
+      "write": [
+        "infra/**",
+        "ops/**",
+        ".github/**",
+        "tooling/**",
+        "Dockerfile",
+        "docker-compose*.yml",
+        ".dockerignore",
+        ".trivyignore",
+        "apps/web/Dockerfile",
+        "apps/web/nginx.conf",
+        "apps/web/docker-entrypoint.d/**",
+        "docs/ci-cd/**"
+      ],
+      "exclude": [
+        "tooling/test/**"
+      ],
+      "may_write_shared": true
+    },
+    "qa": {
+      "write": [
+        "apps/server/test/**",
+        "apps/web/test/**",
+        "apps/web/e2e/**",
+        "e2e/**",
+        "tooling/test/**",
+        "packages/*/test/**",
+        "**/*.spec.*",
+        "**/*.test.*",
+        "specs/*/acceptance-report.md",
+        "specs/*/verify.md",
+        "specs/*/checklists/test-*.md"
+      ],
+      "wins_conflicts": true
+    }
+  }
+}

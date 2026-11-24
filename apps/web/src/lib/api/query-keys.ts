@@ -27,6 +27,8 @@ export const queryKeys = {
     lists: () => ['posts', 'list'] as const,
     list: (filter: PostFilter = {}) => ['posts', 'list', filter] as const,
     detail: (id: string) => ['posts', 'detail', id] as const,
+    /** 012: lịch sử bài – nằm dưới `detail(id)` nên mọi thao tác làm mất hiệu lực bài cũng làm mới lịch sử. */
+    history: (id: string) => ['posts', 'detail', id, 'history'] as const,
   },
   /** 013: Tiến trình đăng của một bài (theo kênh, 5 bước). */
   publishing: {
