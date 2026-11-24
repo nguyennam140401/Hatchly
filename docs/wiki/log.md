@@ -38,3 +38,10 @@ Append-only. Định dạng: `## [YYYY-MM-DD] ingest|query|lint | tiêu đề`.
 - Sửa features/012-manual-compose-approval-calendar.md (`draft` → `current`: 95/95, T059 huy hiệu số bài chờ, T066 tab Lịch sử, dọn lỗi có sẵn; ghi G, H chưa chạy tay)
 - Cập nhật concepts/feature-status.md (dòng 012, mục việc còn lại) và index.md
 - Ghi chú: mock e2e dùng chung ở `apps/web/e2e/helpers.ts`; `ownership.json` cấp `docs/wiki/**` cho pm để chạy ingest
+
+## [2026-11-24] ingest | 015-real-ai-gateway
+
+- Thêm features/015-real-ai-gateway.md (`draft`: 97/101, banner điều kiện ngoài T049a, T073a; quyết định chính, bảng chạm tới, điều kiện trước production)
+- Viết lại modules/ai_gateway.md (`draft` → `current`: bảng thật, việc nền, API công khai, mã lỗi) và concepts/ai-budget.md (`draft` → `current`: hiện thực thật thay vì bản giả)
+- Cập nhật concepts/feature-status.md (FR-11/FR-12, dòng 015, thứ tự làm tiếp), open-questions.md (015-POC-1/4, 015-hợp-đồng, 015-nguồn-ngành, 015-media, 015-bề-mặt-khách, 015-vận-hành) và index.md
+- Ghi chú: merge `dev` `ac19fc1` ngày 2026-11-24, nhánh `impl/015-real-ai-gateway` và worktree được giữ; `pnpm verify` sau khi gộp `dev` đạt 15/18 (web e2e chập chờn, chạy lại riêng 51/51; infra bỏ qua); các trang 009, 011, 013, 014 vẫn `draft`

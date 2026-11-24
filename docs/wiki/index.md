@@ -19,6 +19,7 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 - [007-terraform-infra-environments.md](features/007-terraform-infra-environments.md) — 007 Hạ tầng Terraform – staging và production ( current)
 - [008-cicd-jenkins-pipeline.md](features/008-cicd-jenkins-pipeline.md) — 008 CI/CD Jenkins cho test và release ( current)
 - [009-social-login-members.md](features/009-social-login-members.md) — 009 Đăng nhập Google/Facebook và thành viên ( draft)
+- [015-real-ai-gateway.md](features/015-real-ai-gateway.md) — 015 Cổng AI thật; **còn T049a, T073a (chờ điều kiện ngoài)** ( draft)
 - [014-media-library-basic.md](features/014-media-library-basic.md) — 014 Thư viện media cơ bản; **còn T090, T093** ( draft)
 - [012-manual-compose-approval-calendar.md](features/012-manual-compose-approval-calendar.md) — 012 Soạn bài tay, duyệt, lịch, Chờ duyệt, tab Lịch sử, huy hiệu số bài chờ ( current)
 - [011-ui-architecture-foundation.md](features/011-ui-architecture-foundation.md) — 011 Nền kiến trúc giao diện; **còn T074** ( draft)
@@ -26,7 +27,7 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 ## Module
 
 - [account.md](modules/account.md) — Module account (Tài khoản & Gói) ( current)
-- [ai_gateway.md](modules/ai_gateway.md) — Module ai_gateway (Cổng AI) ( draft)
+- [ai_gateway.md](modules/ai_gateway.md) — Module ai_gateway (Cổng AI) ( current)
 - [approval.md](modules/approval.md) — Module approval (Duyệt & lịch) ( draft)
 - [content.md](modules/content.md) — Module content (Nội dung) ( draft)
 - [context.md](modules/context.md) — Module context (Ngữ cảnh kinh doanh) ( current)
