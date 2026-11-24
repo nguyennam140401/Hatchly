@@ -5,6 +5,9 @@ TaiLieuDacTa/
 # Theo dõi skill dự án (worktree cần chúng); bỏ qua phần còn lại của .claude/
 .claude/*
 !.claude/skills/
+!.claude/agents/
+!.claude/hooks/
+!.claude/settings.json
 .claude/worktrees/
 .claude/settings.local.json
 CLAUDE.md
@@ -82,3 +85,8 @@ verify-report*.json
 .compat-base/
 infra/ci/.terraform/
 *.tfstate*
+
+
+speckit-pm-kit-v2/*
+# Trạng thái PM (cục bộ)
+.specify/pm/state/
