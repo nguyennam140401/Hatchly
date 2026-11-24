@@ -31,6 +31,16 @@ export function notCheckable(): AppError {
   });
 }
 
+/** Khóa việc `publish:{id}` còn việc hiệu lực: từ chối "Đăng lại" (giao dịch hoàn tác), không để lượt treo. */
+export function publishJobBusy(): AppError {
+  return new AppError({
+    code: ERROR_CODES.PUBLISH_VERSION_CONFLICT,
+    httpStatus: 409,
+    message: 'Bài đang được xử lý, thử lại sau ít giây',
+    actions: [{ kind: 'retry', label: 'Thử lại' }],
+  });
+}
+
 export function publishVersionConflict(): AppError {
   return new AppError({
     code: ERROR_CODES.PUBLISH_VERSION_CONFLICT,

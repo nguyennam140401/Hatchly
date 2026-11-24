@@ -294,4 +294,74 @@ describeDb('Tiến trình đăng – HTTP (013)', () => {
     });
     expect(again.status).toBe(409);
   });
+
+  // T090 (M3) – vai trò: cộng tác viên được Đăng lại / Đã đăng (ghi người thao tác), hỗ trợ bị 403 và lượt không đổi.
+  const attemptState = (id: string) =>
+    asOwner(async (c) => {
+      const r = await c.query<{ status: string; version: number }>(
+        'SELECT status, version FROM publishing.publish_attempts WHERE id = $1',
+        [id],
+      );
+      return r.rows[0]!;
+    });
+  const auditOf = (id: string, action: string) =>
+    asOwner(async (c) => {
+      const r = await c.query<{ actor_id: string; actor_type: string }>(
+        `SELECT actor_id, actor_type FROM infra.audit_log
+          WHERE account_id = $1 AND action = $2 AND metadata->>'attemptId' = $3`,
+        [account, action, id],
+      );
+      return r.rows;
+    });
+
+  it('cộng tác viên: Đăng lại → 200, ghi đúng người thao tác trong audit_log', async () => {
+    const { id } = await seed('needs_user', { needs_reason: 'token_expired' });
+    const { version } = await attemptState(id);
+    const res = await actors.collaborator.post(`/api/v1/publish-attempts/${id}/republish`, {
+      version,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ attemptId: id, status: 'scheduled' });
+    expect((await attemptState(id)).status).toBe('scheduled');
+    const audit = await auditOf(id, 'publish.republish');
+    expect(audit).toEqual([{ actor_id: actors.collaboratorId, actor_type: 'user' }]);
+  });
+
+  it('cộng tác viên: Đã đăng → 200, ghi đúng người thao tác trong audit_log', async () => {
+    const { id } = await seed('needs_check', { needs_reason: 'uncertain_result' });
+    const { version } = await attemptState(id);
+    const res = await actors.collaborator.post(`/api/v1/publish-attempts/${id}/mark-published`, {
+      version,
+      permalink: 'https://facebook.com/p/ctv',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ attemptId: id, status: 'published' });
+    expect((await attemptState(id)).status).toBe('succeeded');
+    const audit = await auditOf(id, 'publish.mark_published');
+    expect(audit).toEqual([{ actor_id: actors.collaboratorId, actor_type: 'user' }]);
+  });
+
+  it('vai trò hỗ trợ: Đăng lại và Đã đăng → 403, lượt không đổi, không ghi kiểm toán', async () => {
+    const a = await seed('needs_user', { needs_reason: 'token_expired' });
+    const b = await seed('needs_check', { needs_reason: 'uncertain_result' });
+    const beforeA = await attemptState(a.id);
+    const beforeB = await attemptState(b.id);
+    const r1 = await actors.support.post(`/api/v1/publish-attempts/${a.id}/republish`, {
+      version: beforeA.version,
+    });
+    const r2 = await actors.support.post(`/api/v1/publish-attempts/${b.id}/mark-published`, {
+      version: beforeB.version,
+    });
+    // Phiên nhân viên không hợp lệ ở điểm cuối khách hàng → bị từ chối 401 (AS4 trong access-matrix; 403 chỉ dành
+    // cho người dùng khách thiếu quyền). Cả hai đều là "không được thao tác": chấp nhận 401|403 nhưng KHÔNG 2xx.
+    expect(r1.status).toBe(401);
+    expect(r2.status).toBe(401);
+    expect(await attemptState(a.id)).toEqual(beforeA);
+    expect(await attemptState(b.id)).toEqual(beforeB);
+    expect(await auditOf(a.id, 'publish.republish')).toHaveLength(0);
+    expect(await auditOf(b.id, 'publish.mark_published')).toHaveLength(0);
+    expect(await jobs("name = 'publish' AND singleton_key = $1", [`publish:${a.id}`])).toHaveLength(
+      0,
+    );
+  });
 });

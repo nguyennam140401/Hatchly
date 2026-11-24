@@ -18,6 +18,7 @@ import {
   attemptNotFound,
   notCheckable,
   notRepublishable,
+  publishJobBusy,
   publishVersionConflict,
 } from './publish-errors';
 import { transition } from './state-machine';
@@ -88,11 +89,13 @@ export class AttemptActionsService {
         if (now.status !== 'needs_user' && now.status !== 'needs_check') throw notRepublishable();
         throw publishVersionConflict();
       }
-      await enqueue(
+      const job = await enqueue(
         runAttemptJob,
         { attemptId },
         { runAfter: new Date(), dedupeKey: runAttemptDedupeKey(attemptId) },
       );
+      // Khóa còn việc cũ → không có việc mới; ném lỗi để hoàn tác cả chuyển trạng thái (không để lượt treo).
+      if (job.status === 'exists') throw publishJobBusy();
       await audit(db, actorUserId, 'publish.republish', before);
       return {
         attemptId,
