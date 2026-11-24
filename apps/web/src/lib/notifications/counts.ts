@@ -17,26 +17,32 @@ export function setCountSources(next: CountSources): void {
   sources = next;
 }
 
-export function useNavCounts(): {
+/**
+ * `overrides`: nguồn do màn gọi cấp theo từng lần vẽ (vd 012: chỉ người có `post.approve` mới có `pendingReview`);
+ * khóa có giá trị `undefined` thì rơi về nguồn đã đăng ký bằng `setCountSources`, không xóa nguồn của tính năng khác.
+ */
+export function useNavCounts(overrides: CountSources = {}): {
   pendingReviewCount: number | undefined;
   unreadCount: number | undefined;
   channelAttentionCount: number | undefined;
 } {
   const { permissions } = useSession().me;
+  const pendingSource = overrides.pendingReview ?? sources.pendingReview;
+  const unreadSource = overrides.unread ?? sources.unread;
   const pending = useApiQuery(
     queryKeys.counters.pendingReview(),
-    () => sources.pendingReview?.() ?? Promise.resolve(0),
+    () => pendingSource?.() ?? Promise.resolve(0),
     {
       freshness: 'counter',
-      enabled: sources.pendingReview !== undefined,
+      enabled: pendingSource !== undefined,
     },
   );
   const unread = useApiQuery(
     queryKeys.notifications.unread(),
-    () => sources.unread?.() ?? Promise.resolve(0),
+    () => unreadSource?.() ?? Promise.resolve(0),
     {
       freshness: 'counter',
-      enabled: sources.unread !== undefined,
+      enabled: unreadSource !== undefined,
     },
   );
   // 010 (FR-026): dấu chỉ báo kênh cần chú ý ở mọi màn hình – dùng lại khóa `channels.overview()` của màn hình Kênh kết nối

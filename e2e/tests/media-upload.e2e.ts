@@ -185,15 +185,13 @@ test.describe('Thư viện media ở 360 px', () => {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       'base64',
     );
-    await page
-      .locator('input[type="file"]:not([capture])')
-      .setInputFiles(
-        [1, 2, 3].map((n) => ({
-          name: `anh-${String(n)}.png`,
-          mimeType: 'image/png',
-          buffer: png,
-        })),
-      );
+    await page.locator('input[type="file"]:not([capture])').setInputFiles(
+      [1, 2, 3].map((n) => ({
+        name: `anh-${String(n)}.png`,
+        mimeType: 'image/png',
+        buffer: png,
+      })),
+    );
 
     const grid = page.getByRole('list', { name: 'Ảnh và video' });
     await expect(grid.getByText('Sẵn sàng')).toHaveCount(3, { timeout: 30_000 });
