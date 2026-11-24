@@ -35,12 +35,23 @@ export interface AiRequest {
   /** Khung hình thu nhỏ – chỉ `image_labeling`/`video_labeling`, ≤ 8. */
   images?: { url: string; bytes: number }[];
   traceId?: string;
+  /**
+   * Mã yêu cầu logic (015, FR-037a): 1–128 ký tự `[A-Za-z0-9:_.-]`, sai định dạng → `AI_INVALID_REQUEST`. Cùng mã
+   * trong cùng chu kỳ không bị giữ chỗ/gọi/tính tiền lại (`AI_DUPLICATE_REQUEST`).
+   */
+  requestId?: string;
 }
 
 export interface TranscribeRequest {
   audioUrl: string;
+  /**
+   * Thời lượng THẬT của âm thanh (giây, hữu hạn, > 0; ngược lại `AI_INVALID_REQUEST`). Bên gọi (module media) chịu
+   * trách nhiệm đo đúng (vd ffprobe): Cổng AI ước tính giữ chỗ theo `min(durationSec, 300)` và không tự đo được.
+   */
   durationSec: number;
   language: 'vi';
+  /** Như `AiRequest.requestId`. */
+  requestId?: string;
 }
 
 /** Kết quả – KHÔNG có số tiền. */
@@ -49,6 +60,11 @@ export interface AiResult {
   modelTier: ModelTier;
   usage: { inputTokens: number; outputTokens: number; cachedInputTokens: number };
   traceId: string;
+  /**
+   * Chỉ `generateStream`: `true` = luồng đứt do lỗi nhà cung cấp sau khi ĐÃ có chữ → `text` là bản CHƯA hoàn chỉnh (không
+   * tự chuyển dự phòng); UI phải báo và cho tạo lại (lượt mới, giữ chỗ mới). Vắng = hoàn chỉnh (hoặc người dùng hủy).
+   */
+  interrupted?: boolean;
 }
 
 export interface AiStream extends AsyncIterable<{ delta: string }> {
@@ -77,3 +93,17 @@ export interface AiGatewayPublicApi {
 
 /** Token NestJS của AiGatewayPublicApi. */
 export const AI_GATEWAY = Symbol('AI_GATEWAY');
+
+// Cổng đảo ngược (015, R-11): kiểu + token khai ở đây, hiện thực do module `trends`/`context` đăng ký bằng token Nest;
+// `ai_gateway` không import ngược. Chưa có hiện thực → dùng trần tuần cấu hình tạm + cảnh báo `ai.industry_source_missing`.
+export const ACTIVE_INDUSTRIES_SOURCE = Symbol('ACTIVE_INDUSTRIES_SOURCE');
+export interface ActiveIndustriesSource {
+  /** Số ngành đang có ít nhất một tài khoản hoạt động (loại `unclaimed`). Chạy ở Worker, ngữ cảnh hệ thống. */
+  countActiveIndustries(): Promise<number>;
+}
+
+export const INDUSTRY_ACCOUNTS_SOURCE = Symbol('INDUSTRY_ACCOUNTS_SOURCE');
+export interface IndustryAccountsSource {
+  /** Mã tài khoản hoạt động thuộc một ngành (sắp theo mã tăng dần), phân trang. */
+  listAccountIds(industryId: string, page: { after?: string; limit: number }): Promise<string[]>;
+}

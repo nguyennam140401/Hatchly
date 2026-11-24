@@ -204,6 +204,41 @@
       "when": 1795072233410,
       "tag": "0028_platform_gateway_010_feature_admin_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795488983045,
+      "tag": "0029_ai_gateway_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795489050957,
+      "tag": "0030_ai_gateway_seed_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795498874348,
+      "tag": "0031_ai_gateway_admin_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795516293249,
+      "tag": "0032_ai_gateway_summary_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795518188237,
+      "tag": "0033_ai_gateway_worker_helpers",
+      "breakpoints": true
     }
   ]
 }

@@ -29,8 +29,11 @@ export function UsageMeter({
   className,
 }: UsageMeterProps) {
   const percent = limit > 0 ? Math.min(100, Math.max(0, (value / limit) * 100)) : 0;
+  // Phần trăm làm tròn XUỐNG, khớp server getUsage (FR-029/SC-004); epsilon chặn lỗi số thực (29/100*100).
   const text =
-    unit === 'percent' ? `${Math.round(percent)}%` : `${formatCount(value)}/${formatCount(limit)}`;
+    unit === 'percent'
+      ? `${String(Math.floor(percent + 1e-9))}%`
+      : `${formatCount(value)}/${formatCount(limit)}`;
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex items-center justify-between gap-2 text-body-sm">

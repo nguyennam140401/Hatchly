@@ -20,6 +20,9 @@ export default defineConfig({
       'test/context/**/*.spec.ts',
       // 014: thư viện media (e2e API + hợp đồng công khai) cần CSDL + kho tệp `memory`.
       'test/media/**/*.spec.ts',
+      // 015: Cổng AI thật (sổ chi phí, giữ chỗ ngân sách) cần CSDL; spec thuần (token-estimate) chạy cả hai chế độ.
+      'test/ai_gateway/**/*.spec.ts',
+      'test/contracts/ai/**/*.db.contract.spec.ts',
     ],
     globalSetup: ['./test/db/global-setup.ts'],
     fileParallelism: false,

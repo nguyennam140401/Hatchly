@@ -49,6 +49,9 @@ export const SECRET_VARS = Object.freeze({
     'SMTP_URL',
     'S3_ACCESS_KEY_ID',
     'S3_SECRET_ACCESS_KEY',
+    // 015 T049b: khóa nhà cung cấp AI – TÙY CHỌN, chỉ bắt buộc khi AI_GATEWAY_DRIVER=real (nhập tay bằng `secrets set`).
+    'ANTHROPIC_API_KEY',
+    'OPENAI_API_KEY',
   ]),
   'worker-secrets': Object.freeze([
     'DATABASE_APP_URL',
@@ -56,6 +59,8 @@ export const SECRET_VARS = Object.freeze({
     'SMTP_URL',
     'S3_ACCESS_KEY_ID',
     'S3_SECRET_ACCESS_KEY',
+    'ANTHROPIC_API_KEY',
+    'OPENAI_API_KEY',
   ]),
   'migrate-secrets': Object.freeze([
     'DATABASE_ADMIN_URL',

@@ -45,7 +45,8 @@ describeDb('Nhân viên nội bộ (e2e)', () => {
     expect(me.body).toEqual({
       staff: { id: expect.any(String) as string, displayName: 'Hỗ trợ', email },
       role: 'support',
-      permissions: ['support.lookup'],
+      // 015: support có thêm ai.cost.view (xem sổ chi phí AI nội bộ); ai.pricing.manage chỉ admin.
+      permissions: ['support.lookup', 'ai.cost.view'],
     });
     const again = t.agent();
     const res = await again.post(LOGIN, { email, password: STRONG_PASSWORD });
@@ -61,6 +62,15 @@ describeDb('Nhân viên nội bộ (e2e)', () => {
     expect((await support.agent.get('/api/v1/__test/perm/plan.manage')).status).toBe(403);
     expect((await admin.agent.get('/api/v1/__test/perm/plan.manage')).status).toBe(200);
     expect((await support.agent.get('/api/v1/__test/perm/support.lookup')).status).toBe(200);
+  });
+
+  it('015: ai.cost.view cho support và admin; ai.pricing.manage chỉ admin', async () => {
+    const support = await staffAgent(t, 'support');
+    const admin = await staffAgent(t, 'admin');
+    expect((await support.agent.get('/api/v1/__test/perm/ai.cost.view')).status).toBe(200);
+    expect((await admin.agent.get('/api/v1/__test/perm/ai.cost.view')).status).toBe(200);
+    expect((await support.agent.get('/api/v1/__test/perm/ai.pricing.manage')).status).toBe(403);
+    expect((await admin.agent.get('/api/v1/__test/perm/ai.pricing.manage')).status).toBe(200);
   });
 
   it('AS2: kiểm toán đăng nhập thành công/thất bại có ip, không mật khẩu', async () => {

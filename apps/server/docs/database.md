@@ -59,6 +59,11 @@ Quy tắc:
 - Các lỗi `TenantContextError`/`DbPolicyViolationError` là lỗi lập trình: khách hàng thấy
   `INTERNAL_ERROR`, mã gốc chỉ ở "Chi tiết cho hỗ trợ". Lỗi kết nối → `SERVICE_UNAVAILABLE`.
 - Nhật ký trong giao dịch tự có `account_id` (FR-007).
+- **Không gọi Cổng AI (`generate`, `transcribe`, `generateStream`…) bên trong `tenantTx`/`systemTx` của mình.** Do quy
+  tắc lồng ở trên, giữ chỗ ngân sách sẽ chạy chung giao dịch của bên gọi: khóa dòng ngân sách bị giữ suốt lời gọi nhà
+  cung cấp (tuần tự hóa mọi lời gọi cùng tài khoản), lỗi trùng mã yêu cầu làm giao dịch ngoài abort, và hoàn tác
+  giao dịch ngoài xóa giữ chỗ dù nhà cung cấp đã tính tiền. Kho ngân sách thật ném lỗi lập trình khi phát hiện.
+  Gọi Cổng AI NGOÀI giao dịch, rồi mở `tenantTx` để ghi kết quả.
 
 **Hỗ trợ**: mỗi lần gọi `support*` ghi đúng một dòng `infra.audit_log` TRƯỚC khi chạy `fn`, trong
 cùng giao dịch (lỗi → không có dòng mồ côi). Kiểm toán lưu **loại** từ khóa (`email`, `post_id`…),

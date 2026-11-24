@@ -28,6 +28,16 @@ Người dùng của tính năng (vai trò):
 
 **Ngoài phạm vi**: soạn lời nhắc nghiệp vụ (thuộc module gọi); lưu nội dung bài; mô hình gói/chu kỳ thanh toán của module Tài khoản (xem Giả định); màn hình quản trị chi tiết (WBS 4.7) ngoài các thao tác tối thiểu nêu trong FR; thu thập xu hướng (module Xu hướng); tự động thay đổi giá bán gói.
 
+## Clarifications
+
+### Session 2026-11-19
+
+- Q: Trần ngân sách hệ thống mỗi tuần cho tóm tắt xu hướng dùng chung là bao nhiêu? → A: Theo ngành: trần tuần = số ngành đang có tài khoản × mức USD mỗi ngành mỗi tuần, cấu hình được.
+- Q: Chuyển giọng nói và gán nhãn ảnh/video có được thử nhà cung cấp dự phòng như tạo bài không? → A: Mọi loại việc đều có thể có dự phòng, cấu hình riêng từng loại; loại chưa cấu hình dự phòng thì không thử và trả lỗi ngay.
+- Q: Ai được đổi bảng giá và ngưỡng 2 / 4 USD, có cần người thứ hai duyệt không? → A: Chỉ quản trị nội bộ đổi, có nhật ký kiểm toán (người đổi, giá trị cũ/mới) và kiểm tra tự động chặn giá bất hợp lý; không cần người thứ hai duyệt.
+- Q: "Lời gọi trùng" được nhận ra bằng gì để không trừ tiền hai lần? → A: Module gọi truyền mã yêu cầu logic; cùng mã trong cùng chu kỳ thì không giữ chỗ hay tính tiền lại.
+- Q: Bộ đếm "số bài đã dùng / 100" do tính năng nào sở hữu? → A: Module Tài khoản & Gói sở hữu; Cổng AI chỉ trả % AI + ngày chu kỳ, số bài được ghép ở lớp hiển thị khi module gói có.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Mọi lời gọi AI bị chặn trước khi vượt trần 4 USD (Priority: P1)
@@ -76,7 +86,7 @@ Là đội vận hành, tôi cần mỗi lời gọi AI được ghi sổ đầy
 **Acceptance Scenarios**:
 
 1. **Given** một lời gọi thành công, **When** quyết toán xong, **Then** có đúng một dòng sổ chỉ thêm (không sửa/xóa) với tài khoản, chu kỳ, loại việc, mô hình, nhà cung cấp, token vào/ra/bộ đệm, chi phí thực (micro-USD), mã theo dõi, thời điểm.
-2. **Given** quản trị viên thêm một dòng giá có hiệu lực từ thời điểm T, **When** có lời gọi sau T, **Then** ước tính và chi phí dùng giá mới; lời gọi trước T giữ nguyên chi phí đã ghi.
+2. **Given** quản trị viên thêm một dòng giá hợp lệ có hiệu lực từ thời điểm T (dòng giá bất hợp lý bị từ chối, thay đổi được ghi kiểm toán), **When** có lời gọi sau T, **Then** ước tính và chi phí dùng giá mới; lời gọi trước T giữ nguyên chi phí đã ghi.
 3. **Given** chi phí thực lớn hơn ước tính tối đa (bất thường), **When** quyết toán, **Then** mức đã dùng bị kẹp ở trần, sổ ghi chi phí thật kèm cờ bất thường và số tiền vượt, và có cảnh báo vận hành.
 4. **Given** sổ chi phí, **When** hỗ trợ hoặc quản trị cần số liệu, **Then** có thể tổng hợp chi phí theo tài khoản, theo loại việc, theo mô hình, và chi phí trung bình mỗi bài.
 
@@ -95,7 +105,8 @@ Là chủ doanh nghiệp, khi nhà cung cấp AI chính tạm gián đoạn, tô
 1. **Given** nhà cung cấp chính lỗi hoặc quá thời gian chờ, **When** hệ thống xử lý, **Then** trả giữ chỗ, giữ chỗ lại theo giá của nhà cung cấp dự phòng, gọi dự phòng đúng một lần, và quyết toán theo nhà cung cấp thực sự trả kết quả (sổ ghi đúng nhà cung cấp).
 2. **Given** cả chính lẫn dự phòng đều lỗi, **When** hết lượt, **Then** người dùng nhận thông báo tiếng Việt kèm hành động khắc phục, ngân sách không bị trừ, và việc nền gọi AI không tự thử lại vô hạn.
 3. **Given** dự phòng đắt hơn chính và ngân sách không đủ cho ước tính dự phòng, **When** hệ thống giữ chỗ lại, **Then** lời gọi bị từ chối như hết ngân sách, không gọi dự phòng.
-4. **Given** tỷ lệ lỗi nhà cung cấp > 5% trong 15 phút, **When** cảnh báo vận hành chạy, **Then** đội vận hành nhận cảnh báo.
+4. **Given** một loại việc (ví dụ chuyển giọng nói) chưa cấu hình nhà cung cấp dự phòng và nhà cung cấp chính lỗi, **When** hệ thống xử lý, **Then** trả giữ chỗ, không thử dự phòng, báo lỗi để module gọi quay về chế độ thủ công.
+5. **Given** tỷ lệ lỗi nhà cung cấp > 5% trong 15 phút, **When** cảnh báo vận hành chạy, **Then** đội vận hành nhận cảnh báo.
 
 ---
 
@@ -118,7 +129,7 @@ Là chủ doanh nghiệp tải video có lời nói, tôi muốn hệ thống hi
 
 ### User Story 6 - Khách thấy % sử dụng và cảnh báo 80% / 100%, không thấy tiền (Priority: P2)
 
-Là chủ doanh nghiệp, tôi thấy mức sử dụng AI dạng phần trăm kèm ngày bắt đầu chu kỳ mới, nhận cảnh báo khi đạt 80% và khi hết 100%, và không bao giờ thấy số tiền USD ở màn hình hay email.
+Là chủ doanh nghiệp, tôi thấy mức sử dụng AI dạng phần trăm kèm ngày bắt đầu chu kỳ mới (số bài đã dùng do module gói cung cấp, xem FR-029), nhận cảnh báo khi đạt 80% và khi hết 100%, và không bao giờ thấy số tiền USD ở màn hình hay email.
 
 **Why this priority**: Yêu cầu FR-12 và hiến pháp III; giảm khiếu nại "mua 100 bài nhưng không dùng hết".
 
@@ -145,7 +156,7 @@ Là đội vận hành, tôi cần việc tóm tắt xu hướng theo ngành (d�
 
 1. **Given** ngữ cảnh hệ thống (không có tài khoản), **When** tóm tắt xu hướng, **Then** dùng ngân sách hệ thống theo tuần, không đổi % sử dụng của bất kỳ khách nào.
 2. **Given** ngữ cảnh tài khoản, **When** gọi thao tác hệ thống, **Then** bị từ chối.
-3. **Given** hết trần tuần của hệ thống, **When** có lời gọi, **Then** bị chặn, có cảnh báo vận hành, các tài khoản không bị ảnh hưởng.
+3. **Given** hết trần tuần của hệ thống (= số ngành đang có tài khoản × mức USD mỗi ngành mỗi tuần), **When** có lời gọi, **Then** bị chặn, có cảnh báo vận hành, các tài khoản không bị ảnh hưởng.
 4. **Given** một lần thu thập hằng tuần xong, **When** phân bổ, **Then** chi phí được chia đều cho các tài khoản cùng ngành và hiện trong số liệu nội bộ theo tài khoản.
 
 ---
@@ -178,7 +189,7 @@ Là đội vận hành, tôi nhận cảnh báo khi > 5% tài khoản chạm ng�
 - **Nhà cung cấp trả không đủ thông tin token** (thiếu số token thực): quyết toán theo ước tính, sổ đánh dấu, cảnh báo.
 - **Bảng giá thiếu mô hình/hết hiệu lực**: từ chối lời gọi trước khi gọi (không đoán giá), cảnh báo vận hành, người dùng vẫn làm tay được.
 - **Mô hình rẻ cũng không đủ ngân sách còn lại**: từ chối như hết hạn mức; không gọi.
-- **Lời gọi trùng** (module nền chạy lại bộ xử lý): không trừ hai lần cho cùng một yêu cầu logic; chạy lại hai lần cho cùng kết quả.
+- **Lời gọi trùng** (module nền chạy lại bộ xử lý): nhận ra bằng mã yêu cầu logic (FR-037a); cùng mã thì không trừ hai lần; chạy lại hai lần cho cùng kết quả.
 - **Nội dung lời nhắc/kết quả** không được ghi vào nhật ký kỹ thuật; sổ chỉ có số liệu.
 - **Chuyển giọng nói với tệp không có giọng nói / không đọc được**: không phát sinh chi phí cho phần không chạy; báo module gọi để quay về gắn nhãn tay.
 
@@ -216,6 +227,7 @@ Là đội vận hành, tôi nhận cảnh báo khi > 5% tài khoản chạm ng�
 **Bảng giá & đơn giá theo phút**
 
 - **FR-019**: Hệ thống MUST lưu bảng giá mô hình dưới dạng dữ liệu cấu hình dùng chung gồm: mô hình, đơn vị tính (token hoặc phút âm thanh), giá đầu vào, giá đầu ra, giá đọc bộ đệm, giá theo phút, hiệu lực từ; thay đổi giá MUST không cần phát hành.
+- **FR-019a**: Chỉ vai trò quản trị nội bộ MUST được thêm/đổi dòng giá và đổi ngưỡng 2 / 4 USD (khách, cộng tác viên, hỗ trợ MUST NOT); mỗi thay đổi MUST ghi nhật ký kiểm toán gồm người đổi, giá trị cũ, giá trị mới, thời điểm hiệu lực; hệ thống MUST từ chối dòng giá bất hợp lý (giá ≤ 0, hoặc lệch hơn 10 lần so với dòng giá hiện hành của cùng mô hình và đơn vị tính) và MUST NOT cho đặt ngưỡng mềm ≥ ngưỡng cứng; không yêu cầu người thứ hai duyệt.
 - **FR-020**: Giá áp dụng cho một lời gọi MUST là dòng giá có hiệu lực tại thời điểm giữ chỗ; thay đổi giá MUST NOT tính lại các lời gọi cũ.
 - **FR-021**: Với chuyển giọng nói, ước tính tối đa MUST = min(thời lượng, 5 phút) × đơn giá theo phút, và hệ thống MUST chỉ xử lý 5 phút đầu; chi phí thực MUST = thời lượng thực đã xử lý × đơn giá theo phút (làm tròn theo quy tắc nhà cung cấp đã ghi trong bảng giá).
 - **FR-022**: Nếu không có giá hợp lệ cho mô hình cần dùng, hệ thống MUST từ chối trước khi gọi và phát cảnh báo vận hành, không đoán giá.
@@ -224,6 +236,7 @@ Là đội vận hành, tôi nhận cảnh báo khi > 5% tài khoản chạm ng�
 
 - **FR-023**: Cổng AI MUST truy cập nhà cung cấp chỉ qua một giao diện bộ chuyển đổi nội bộ; thêm/đổi nhà cung cấp là thêm/đổi bộ chuyển đổi và cấu hình, không sửa module gọi.
 - **FR-024**: Khi nhà cung cấp chính lỗi hoặc quá thời gian chờ (mặc định 40 giây; chữ đầu tiên 5 giây khi trả dần), hệ thống MUST trả giữ chỗ, giữ chỗ lại theo giá nhà cung cấp dự phòng, gọi dự phòng **đúng một lần**; cả hai lỗi → trả lỗi `nhà cung cấp không khả dụng` kèm thông điệp tiếng Việt và hành động khắc phục, ngân sách không bị trừ.
+- **FR-024a**: Nhà cung cấp dự phòng MUST được cấu hình riêng cho từng loại việc (kể cả chuyển giọng nói và gán nhãn ảnh/video); loại việc chưa có cấu hình dự phòng MUST NOT thử đường dự phòng và trả ngay lỗi `nhà cung cấp không khả dụng` (module gọi quay về chế độ thủ công, ví dụ gắn nhãn tay); ngân sách không bị trừ. Không bắt buộc mọi loại việc phải có dự phòng trước ra mắt.
 - **FR-025**: Nhà cung cấp AI MUST cam kết không dùng dữ liệu để huấn luyện; dữ liệu gửi ra MUST tối thiểu (không email/số điện thoại chủ tài khoản; chỉ phần hồ sơ kinh doanh cần cho lời gọi; khung hình thu nhỏ); mỗi nhà cung cấp ở nước ngoài MUST được ghi vào danh sách chuyển dữ liệu xuyên biên giới.
 - **FR-026**: Mã truy cập nhà cung cấp MUST là bí mật cấu hình, MUST NOT xuất hiện trong nhật ký, sổ, chỉ số, thông báo lỗi.
 - **FR-027**: Việc chọn mô hình/nhà cung cấp thật MUST bám kết quả POC-1 (chi phí/chất lượng) và POC-4 (chuyển giọng nói/gán nhãn video); trước khi có kết luận, môi trường thật chạy bằng cấu hình đã chốt tạm của SA, còn bản giả lập vẫn dùng được cho phát triển/kiểm thử.
@@ -231,13 +244,14 @@ Là đội vận hành, tôi nhận cảnh báo khi > 5% tài khoản chạm ng�
 
 **Hiển thị cho khách & cảnh báo (FR-12)**
 
-- **FR-029**: Mức sử dụng AI cho khách MUST là phần trăm = làm tròn xuống((đã dùng + đã giữ) ÷ 4 USD × 100), kèm số bài đã dùng / 100 và ngày bắt đầu chu kỳ mới; MUST NOT chứa số tiền, đơn giá hay chi phí, kể cả trong dữ liệu phụ.
+- **FR-029**: Mức sử dụng AI cho khách MUST là phần trăm = làm tròn xuống((đã dùng + đã giữ) ÷ 4 USD × 100), kèm ngày bắt đầu chu kỳ mới; MUST NOT chứa số tiền, đơn giá hay chi phí, kể cả trong dữ liệu phụ. Bộ đếm "số bài đã dùng / 100" do module Tài khoản & Gói sở hữu (Cổng AI không đếm, không trừ); khi module gói có, lớp hiển thị ghép số bài cạnh phần trăm AI, trước đó chỉ hiện phần trăm.
 - **FR-030**: Hệ thống MUST phát đúng một thông báo (trong ứng dụng + email) khi chạm 80% và đúng một khi chạm 100% mỗi chu kỳ; sự kiện được tạo trong cùng giao dịch quyết toán; nội dung không nhắc số tiền.
 - **FR-031**: Trạng thái khóa AI MUST được hiển thị bằng chữ + biểu tượng (không chỉ màu), kèm cách tiếp tục làm việc thủ công.
 
 **Ngân sách hệ thống**
 
 - **FR-032**: Hệ thống MUST có ngân sách hệ thống riêng, theo tuần, cho việc tóm tắt xu hướng theo ngành; thao tác hệ thống MUST chỉ gọi được từ ngữ cảnh không có tài khoản và MUST NOT thay đổi ngân sách hay % sử dụng của bất kỳ tài khoản nào.
+- **FR-032a**: Trần ngân sách hệ thống mỗi tuần MUST được tính = số ngành đang có tài khoản hoạt động × mức USD mỗi ngành mỗi tuần; mức USD mỗi ngành là cấu hình có kiểm soát thay đổi (đổi không cần phát hành), giá trị khởi đầu do SA chốt tạm và điều chỉnh sau POC-3; ngành chưa có tài khoản MUST NOT cộng vào trần.
 - **FR-033**: Sau mỗi lần thu thập xu hướng hằng tuần, chi phí dùng chung MUST được chia đều cho các tài khoản cùng ngành và hiện trong số liệu nội bộ theo tài khoản.
 
 **Vận hành, giám sát, hỗ trợ**
@@ -246,16 +260,17 @@ Là đội vận hành, tôi nhận cảnh báo khi > 5% tài khoản chạm ng�
 - **FR-035**: Hệ thống MUST cung cấp cho hỗ trợ/quản trị xem chi tiết chi phí một tài khoản (USD) qua khung nhìn hạn chế; mỗi lần xem MUST ghi nhật ký kiểm toán; vai trò khách MUST NOT truy cập.
 - **FR-036**: Mỗi lời gọi MUST mang mã theo dõi xuyên suốt module gọi → Cổng AI → nhà cung cấp, và số liệu đo theo chuẩn OpenTelemetry có gắn mã tài khoản.
 - **FR-037**: Bộ xử lý việc nền gọi AI MUST khi gặp "hết hạn mức" thì dừng không thử lại (không đốt hàng chờ), và MUST chạy lại an toàn không trừ hai lần.
+- **FR-037a**: Mỗi lời gọi từ module nền MUST mang một **mã yêu cầu logic** (mỗi bài, mỗi lần tạo lại, mỗi tệp gán nhãn có mã riêng) do module gọi truyền vào. Cùng mã trong cùng chu kỳ MUST NOT giữ chỗ, gọi nhà cung cấp hay tính tiền lần nữa: nếu lần đầu đã quyết toán thì trả lại kết quả/trạng thái đã ghi, nếu đang xử lý thì báo đang xử lý; mỗi mã MUST có tối đa một dòng sổ. Mã là trường bổ sung tùy chọn của giao diện 005 (tương thích ngược); lời gọi tương tác trực tiếp của người dùng không bắt buộc có mã.
 - **FR-038**: Việc dọn giữ chỗ treo, kiểm tra ngưỡng, đối soát hóa đơn MUST chạy qua hàng chờ bền vững của hệ thống, có giới hạn đồng thời riêng.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Ngân sách AI (`ai_budget`)**: một dòng mỗi tài khoản mỗi chu kỳ — khoảng chu kỳ, đã dùng, đã giữ, trạng thái, cờ mốc 80/100; ngân sách hệ thống tương tự theo tuần cho xu hướng.
+- **Ngân sách AI (`ai_budget`)**: một dòng mỗi tài khoản mỗi chu kỳ — khoảng chu kỳ, đã dùng, đã giữ, trạng thái, cờ mốc 80/100; ngân sách hệ thống tương tự theo tuần cho xu hướng, trần tuần = số ngành đang có tài khoản × mức USD mỗi ngành (FR-032a).
 - **Giữ chỗ (`ai_reservation`)**: một lần giữ cho một lời gọi — tài khoản/hệ thống, ước tính, trạng thái (đã giữ / đang gọi / đã quyết toán / đã trả), thời điểm gọi, mã theo dõi.
 - **Sổ chi phí AI (`ai_cost_ledger`)**: dòng chỉ-thêm cho mỗi lời gọi — loại việc, mô hình, nhà cung cấp, token/giây âm thanh, chi phí micro-USD, cờ bất thường, mã theo dõi.
 - **Bảng giá mô hình (`model_price`)**: dữ liệu cấu hình dùng chung — mô hình, đơn vị tính, giá đầu vào/đầu ra/bộ đệm/phút, hiệu lực từ.
 - **Phân bổ chi phí xu hướng**: phần chi phí dùng chung chia đều cho tài khoản cùng ngành, gắn với lần thu thập.
-- **Mức sử dụng AI cho khách (`AiUsage`)**: chỉ phần trăm + ngày bắt đầu chu kỳ mới + số bài; không có tiền.
+- **Mức sử dụng AI cho khách (`AiUsage`)**: chỉ phần trăm + ngày bắt đầu chu kỳ mới; không có tiền; số bài thuộc module Tài khoản & Gói.
 
 (Ánh xạ tên tiếng Việt → tiếng Anh theo `CLAUDE.md`: `ngan_sach_ai` → `ai_budget`, `so_chi_phi_ai` → `ai_cost_ledger`, `bang_gia_mo_hinh` → `model_price`; ghi bổ sung vào `data-model.md` của kế hoạch.)
 
@@ -280,7 +295,7 @@ Là đội vận hành, tôi nhận cảnh báo khi > 5% tài khoản chạm ng�
 
 ## Assumptions
 
-- Giao diện công khai `AiGatewayPublicApi` và kiểu `AI_TASKS`/`MODEL_TIERS`/`AiError`/`AiUsage` của 005 được **giữ nguyên**; chỉ thay phần cài đặt bên trong (kho ngân sách, bảng giá, nhà cung cấp). Module gọi không phải sửa.
+- Giao diện công khai `AiGatewayPublicApi` và kiểu `AI_TASKS`/`MODEL_TIERS`/`AiError`/`AiUsage` của 005 được **giữ nguyên**; chỉ thay phần cài đặt bên trong (kho ngân sách, bảng giá, nhà cung cấp) và thêm duy nhất trường tùy chọn "mã yêu cầu logic" (FR-037a, tương thích ngược). Module gọi hiện có không bắt buộc sửa; module nền nào cần chạy lại an toàn thì truyền mã này.
 - **Chu kỳ ngân sách**: module Tài khoản chưa có mô hình gói/chu kỳ (`subscriptions`, `usage_cycles` chưa có mã). Tính năng này tự quản chu kỳ AI theo ngày kích hoạt gói qua giao diện công khai của `account` khi có; trước khi có, dùng ngày kích hoạt tài khoản làm mốc với quy tắc "tháng không có ngày đó → ngày cuối tháng", và ghi nhận phụ thuộc này ở kế hoạch (liên quan việc mở 012/013/014-gói).
 - Mô hình AI và dịch vụ chuyển giọng nói chưa chốt (POC-1/POC-4): tính năng giao **cơ chế** (ước tính, giữ chỗ, ngưỡng, sổ, bảng giá, dự phòng) độc lập nhà cung cấp, cùng bộ chuyển đổi cho nhà cung cấp được SA chốt tạm; bảng giá ban đầu là giá giả định, được thay bằng giá thật sau POC-1, không cần phát hành lại.
 - Hai nhà cung cấp (chính + dự phòng) là hai bộ chuyển đổi khác nhau cấu hình độc lập; dự phòng được thử đúng một lần mỗi lời gọi (đã chốt trong ADD).

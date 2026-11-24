@@ -55,6 +55,10 @@ export const PERMISSIONS = {
   'plan.manage': { owner: false, collaborator: false, support: false, admin: true },
   /** Quản lý nhân viên nội bộ (FR-016). */
   'staff.manage': { owner: false, collaborator: false, support: false, admin: true },
+  /** Sửa bảng giá mô hình, định tuyến, ngưỡng AI (015, FR-11) – chỉ quản trị nội bộ. */
+  'ai.pricing.manage': { owner: false, collaborator: false, support: false, admin: true },
+  /** Xem sổ chi phí AI dạng tiền (015) – chỉ nội bộ; khách chỉ thấy % qua `status.view`. */
+  'ai.cost.view': { owner: false, collaborator: false, support: true, admin: true },
 } as const satisfies Record<
   string,
   { owner: boolean; collaborator: boolean; support: boolean; admin: boolean }

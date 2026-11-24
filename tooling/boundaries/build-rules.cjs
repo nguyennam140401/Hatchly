@@ -103,8 +103,8 @@ function buildForbiddenRules(manifest) {
       name: 'ai-sdk-only-in-ai-gateway',
       severity: 'error',
       comment:
-        'SDK nhà cung cấp AI chỉ được dùng trong modules/ai_gateway (nguyên tắc III). Gọi qua giao diện công khai của ai_gateway.',
-      from: { pathNot: `${MODULES}ai_gateway/` },
+        'SDK nhà cung cấp AI (@anthropic-ai/sdk, openai…) chỉ được nhập trong modules/ai_gateway/internal/providers/ (nguyên tắc III, IX: SDK bọc sau giao diện nội bộ). Gọi qua giao diện công khai của ai_gateway.',
+      from: { pathNot: `${MODULES}ai_gateway/internal/providers/` },
       to: { path: aiPaths },
     },
     {

@@ -107,6 +107,9 @@ describe('loadConfig', () => {
       PLATFORM_SUBMIT_TIMEOUT_MS: 30_000,
       AI_PROVIDER_TIMEOUT_MS: 40_000,
       AI_FIRST_TOKEN_TIMEOUT_MS: 5_000,
+      // 015: Cổng AI thật.
+      AI_PRICE_CACHE_TTL_MS: 60_000,
+      AI_TOKEN_ESTIMATE_SAFETY_PERCENT: 20,
       LOGIN_WINDOW_MINUTES: 15,
       LOGIN_BLOCK_MINUTES: 15,
       ARGON2_MEMORY_KIB: 19456,
@@ -173,6 +176,111 @@ describe('loadConfig', () => {
       expect(e.message).not.toContain('ngan');
       expect(JSON.stringify(e.issues)).not.toContain(value);
     }
+  });
+});
+
+// T001a (015, FR-019, R-09, contracts/provider-adapter.md mục 5): cấu hình Cổng AI thật.
+describe('cấu hình Cổng AI thật (015)', () => {
+  const base = { ...DB, APP_ENV: 'test' };
+
+  it('AI_GATEWAY_DRIVER nhận fake và real; giá trị khác bị từ chối nêu tên biến', () => {
+    expect(loadConfig({ ...base, AI_GATEWAY_DRIVER: 'fake' }).AI_GATEWAY_DRIVER).toBe('fake');
+    expect(loadConfig({ ...base, AI_GATEWAY_DRIVER: 'real' }).AI_GATEWAY_DRIVER).toBe('real');
+    expect(() => loadConfig({ ...base, AI_GATEWAY_DRIVER: 'openai' })).toThrow(/AI_GATEWAY_DRIVER/);
+  });
+
+  it('mặc định TTL đệm giá 60000 ms, hệ số an toàn ước tính 20%', () => {
+    const c = loadConfig({ ...base });
+    expect(c.AI_PRICE_CACHE_TTL_MS).toBe(60_000);
+    expect(c.AI_TOKEN_ESTIMATE_SAFETY_PERCENT).toBe(20);
+  });
+
+  it('đọc giá trị đặt; không phải số nguyên hoặc ngoài khoảng → nêu tên biến', () => {
+    const c = loadConfig({
+      ...base,
+      AI_PRICE_CACHE_TTL_MS: '30000',
+      AI_TOKEN_ESTIMATE_SAFETY_PERCENT: '35',
+    });
+    expect(c.AI_PRICE_CACHE_TTL_MS).toBe(30_000);
+    expect(c.AI_TOKEN_ESTIMATE_SAFETY_PERCENT).toBe(35);
+    expect(() => loadConfig({ ...base, AI_PRICE_CACHE_TTL_MS: 'abc' })).toThrow(
+      /AI_PRICE_CACHE_TTL_MS/,
+    );
+    expect(() => loadConfig({ ...base, AI_PRICE_CACHE_TTL_MS: '-1' })).toThrow(
+      /AI_PRICE_CACHE_TTL_MS/,
+    );
+    expect(() => loadConfig({ ...base, AI_TOKEN_ESTIMATE_SAFETY_PERCENT: '-5' })).toThrow(
+      /AI_TOKEN_ESTIMATE_SAFETY_PERCENT/,
+    );
+    expect(() => loadConfig({ ...base, AI_TOKEN_ESTIMATE_SAFETY_PERCENT: '12.5' })).toThrow(
+      /AI_TOKEN_ESTIMATE_SAFETY_PERCENT/,
+    );
+    expect(() => loadConfig({ ...base, AI_TOKEN_ESTIMATE_SAFETY_PERCENT: '100000' })).toThrow(
+      /AI_TOKEN_ESTIMATE_SAFETY_PERCENT/,
+    );
+  });
+
+  it('AI_PRICE_CACHE_TTL_MS > 60000 bị từ chối (quy tắc effectiveFrom >= now + TTL cần TTL <= 60 s)', () => {
+    expect(loadConfig({ ...base, AI_PRICE_CACHE_TTL_MS: '60000' }).AI_PRICE_CACHE_TTL_MS).toBe(
+      60_000,
+    );
+    expect(() => loadConfig({ ...base, AI_PRICE_CACHE_TTL_MS: '60001' })).toThrow(
+      /AI_PRICE_CACHE_TTL_MS/,
+    );
+    expect(() => loadConfig({ ...base, AI_PRICE_CACHE_TTL_MS: '3600000' })).toThrow(
+      /AI_PRICE_CACHE_TTL_MS/,
+    );
+  });
+
+  it('khóa nhà cung cấp là tùy chọn ở lược đồ: fake không cần, real cũng nạp được (tuyến nằm trong CSDL)', () => {
+    const fake = loadConfig({ ...base, AI_GATEWAY_DRIVER: 'fake' });
+    expect(fake.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(fake.OPENAI_API_KEY).toBeUndefined();
+    const real = loadConfig({
+      ...base,
+      AI_GATEWAY_DRIVER: 'real',
+      ANTHROPIC_API_KEY: 'sk-ant-marker-1',
+    });
+    expect(real.ANTHROPIC_API_KEY).toBe('sk-ant-marker-1');
+    expect(real.OPENAI_API_KEY).toBeUndefined();
+  });
+
+  it('khóa rỗng bị từ chối nhưng thông điệp không bao giờ chứa giá trị khóa', () => {
+    const anthropic = 'sk-ant-bi-mat-marker-xyz';
+    const openai = 'sk-openai-bi-mat-marker-xyz';
+    try {
+      loadConfig({
+        ...base,
+        AI_GATEWAY_DRIVER: 'real',
+        ANTHROPIC_API_KEY: anthropic,
+        OPENAI_API_KEY: '',
+        AI_PRICE_CACHE_TTL_MS: 'abc',
+      });
+      expect.unreachable();
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConfigError);
+      const e = err as ConfigError;
+      expect(e.message).toContain('AI_PRICE_CACHE_TTL_MS');
+      expect(e.message).not.toContain(anthropic);
+      expect(e.message).not.toContain('marker');
+      expect(JSON.stringify(e.issues)).not.toContain(anthropic);
+    }
+    // Khóa sai quy tắc cũng không lộ giá trị.
+    try {
+      loadConfig({ ...base, OPENAI_API_KEY: openai, API_PORT: 'abc' });
+      expect.unreachable();
+    } catch (err) {
+      const e = err as ConfigError;
+      expect(e.message).not.toContain(openai);
+      expect(JSON.stringify(e.issues)).not.toContain('marker');
+    }
+  });
+
+  it('khóa nhà cung cấp là biến bí mật theo lược đồ (không xuất hiện trong cấu hình in ra)', () => {
+    const shape = AppConfigSchema.shape as Record<string, unknown>;
+    expect(Object.keys(shape)).toEqual(
+      expect.arrayContaining(['ANTHROPIC_API_KEY', 'OPENAI_API_KEY']),
+    );
   });
 });
 

@@ -19,7 +19,8 @@ export interface AiGatewayPublicApi {
   };
 }
 export class AiError extends Error { readonly code: 'AI_BUDGET_EXHAUSTED' | 'AI_PROVIDER_UNAVAILABLE'
-  | 'AI_INVALID_REQUEST' | 'AI_SYSTEM_BUDGET_EXHAUSTED'; readonly messageVi: string; readonly retryable: boolean }
+  | 'AI_INVALID_REQUEST' | 'AI_SYSTEM_BUDGET_EXHAUSTED'
+  | 'AI_DUPLICATE_REQUEST' | 'AI_NOT_CONFIGURED'; /* 2 mã cuối thêm bởi 015, xem specs/015-real-ai-gateway/contracts/ai-gateway-delta.md */ readonly messageVi: string; readonly retryable: boolean }
 export const AI_TASKS: readonly AiTask[];
 ```
 

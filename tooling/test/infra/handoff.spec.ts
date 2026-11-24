@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -113,6 +114,34 @@ describe('bất biến FR-014 của Secret', () => {
     expect(secrets['migrate-secrets']).toEqual(
       expect.arrayContaining(['DATABASE_OWNER_URL', 'DATABASE_ADMIN_URL']),
     );
+  });
+
+  // 015 T049c: khóa nhà cung cấp AI là bí mật (Secret K8s), không bao giờ nằm trong ConfigMap/config.env.
+  const AI_KEYS = ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
+
+  it('015: khóa AI nằm ở api-secrets và worker-secrets, không nằm trong danh sách không bí mật (ConfigMap)', () => {
+    for (const key of AI_KEYS) {
+      expect(secrets['api-secrets'], key).toContain(key);
+      expect(secrets['worker-secrets'], key).toContain(key);
+      expect(secrets['migrate-secrets'], key).not.toContain(key);
+      expect(Object.keys(nonSecret), key).not.toContain(key);
+    }
+  });
+
+  it('015: base/configmap.yaml và config.env của mọi overlay không đặt khóa AI (chú thích nhắc tên thì được)', () => {
+    const root = join(__dirname, '..', '..', '..', 'infra', 'smoke-deploy');
+    const files = [
+      join(root, 'base', 'configmap.yaml'),
+      join(root, 'overlays', 'staging', 'config.env'),
+      join(root, 'overlays', 'production', 'config.env'),
+    ];
+    for (const file of files) {
+      const active = readFileSync(file, 'utf8')
+        .split(/\r?\n/)
+        .filter((line) => !line.trim().startsWith('#'))
+        .join('\n');
+      for (const key of AI_KEYS) expect(active, `${file}: ${key}`).not.toContain(key);
+    }
   });
 
   it('không biến bí mật nào nằm trong danh sách không bí mật', () => {

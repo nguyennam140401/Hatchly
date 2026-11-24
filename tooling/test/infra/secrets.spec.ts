@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allowedKeys,
   assertKeyAllowed,
   dbUrl,
   secretsInit,
@@ -218,6 +219,61 @@ describe('secrets set / list', () => {
         if (value.length > 6) expect(printed).not.toContain(value);
       }
     }
+  });
+});
+
+describe('015 T049c: khóa nhà cung cấp AI', () => {
+  const AI_KEYS = ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
+
+  it('allowedKeys của api-secrets và worker-secrets chứa cả hai khóa; migrate-secrets thì không', () => {
+    for (const key of AI_KEYS) {
+      expect(allowedKeys('api-secrets'), key).toContain(key);
+      expect(allowedKeys('worker-secrets'), key).toContain(key);
+      expect(allowedKeys('migrate-secrets'), key).not.toContain(key);
+      expect(() => {
+        assertKeyAllowed('api-secrets', key);
+        assertKeyAllowed('worker-secrets', key);
+      }).not.toThrow();
+    }
+  });
+
+  it('secrets init KHÔNG tự tạo khóa AI (nhập tay bằng `secrets set`), kể cả khi chạy lại', async () => {
+    const kube = fakeKube({ 'pg-superuser': { username: 'postgres', password: 'su-pass' } });
+    await secretsInit('staging', { kube, rng: counter(), log: capture().log });
+    await secretsInit('staging', { kube, rng: counter(100), log: capture().log });
+    for (const secret of ['api-secrets', 'worker-secrets']) {
+      const keys = Object.keys(kube.store.get(secret)?.data ?? {});
+      for (const key of AI_KEYS) expect(keys, `${secret}/${key}`).not.toContain(key);
+    }
+  });
+
+  it('secrets set ghi được khóa AI vào cả hai Secret, đánh dấu external, không in giá trị', async () => {
+    const kube = fakeKube();
+    const out = capture();
+    for (const secret of ['api-secrets', 'worker-secrets']) {
+      for (const key of AI_KEYS) {
+        await secretsSet('staging', secret, key, {
+          kube,
+          askHidden: () => Promise.resolve('sk-ai-test-value-987654321'),
+          log: out.log,
+        });
+        expect(kube.store.get(secret)?.data[key]).toBe('sk-ai-test-value-987654321');
+        expect(kube.store.get(secret)?.annotations['infra/source']).toBe('external');
+      }
+    }
+    expect(out.lines.join('\n')).not.toContain('sk-ai-test-value-987654321');
+  });
+
+  it('khóa AI bị từ chối ở migrate-secrets (thoát 3, không ghi gì)', async () => {
+    const kube = fakeKube();
+    await expect(
+      secretsSet('staging', 'migrate-secrets', 'ANTHROPIC_API_KEY', {
+        kube,
+        askHidden: () => Promise.resolve('x'),
+        log: capture().log,
+      }),
+    ).rejects.toMatchObject({ exit: 3 });
+    expect(kube.store.size).toBe(0);
   });
 });
 

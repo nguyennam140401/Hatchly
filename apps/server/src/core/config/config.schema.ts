@@ -139,7 +139,8 @@ export const AppConfigSchema = z.object({
   // thiếu thì `resolveGatewayDefaults` (load-config.ts) đặt bản giả lập / bộ nhớ.
   /** `fake` (dev/test) | `real` (010: bảng `channel_connections` thật + bộ chuyển đổi thật). */
   PLATFORM_GATEWAY_DRIVER: z.enum(['fake', 'real']).optional(),
-  AI_GATEWAY_DRIVER: z.enum(['fake']).optional(),
+  /** `fake` (dev/test) | `real` (015: Cổng AI thật, định tuyến theo `model_routes`). */
+  AI_GATEWAY_DRIVER: z.enum(['fake', 'real']).optional(),
   NOTIFICATIONS_DRIVER: z.enum(['fake']).optional(),
   STORAGE_DRIVER: z.enum(['memory', 's3']).optional(),
   /** Nơi bản giả lập giữ trạng thái; bắt buộc khi có driver `fake` (mặc định `memory` ở dev/test). */
@@ -284,6 +285,23 @@ export const AppConfigSchema = z.object({
   PLATFORM_SUBMIT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(120_000).default(30_000),
   AI_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(40_000),
   AI_FIRST_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5_000),
+  // ----- Cổng AI thật (015) -----
+  /** Thời gian giữ bảng giá trong bộ nhớ tiến trình (ms). */
+  AI_PRICE_CACHE_TTL_MS: z.coerce.number().int().min(0).max(60_000).default(60_000),
+  /** Biên an toàn cộng vào ước tính token khi giữ chỗ ngân sách (%). */
+  AI_TOKEN_ESTIMATE_SAFETY_PERCENT: z.coerce.number().int().min(0).max(500).default(20),
+  /**
+   * Host được phép tải âm thanh cho chuyển giọng nói (chống SSRF), phân cách bằng dấu phẩy, vd `media.example.vn`.
+   * Cộng thêm host của `S3_PUBLIC_ENDPOINT`/`S3_ENDPOINT` (và tên miền con của chúng). Rỗng + không có S3 = từ chối mọi URL.
+   */
+  AI_STT_ALLOWED_HOSTS: z.string().max(1000).optional(),
+  /**
+   * Khóa nhà cung cấp AI – bí mật, không bao giờ vào nhật ký/lỗi. Bắt buộc chỉ khi `AI_GATEWAY_DRIVER=real`
+   * và có tuyến bật dùng nhà cung cấp đó (tuyến nằm trong CSDL nên kiểm ở module `ai_gateway` lúc dựng
+   * bộ chuyển đổi, không kiểm ở lược đồ).
+   */
+  ANTHROPIC_API_KEY: secret(z.string().min(1).optional()),
+  OPENAI_API_KEY: secret(z.string().min(1).optional()),
 });
 
 /** Cú pháp CIDR IPv4/IPv6 (`địa chỉ/độ dài tiền tố`). */

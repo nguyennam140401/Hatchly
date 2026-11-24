@@ -9,8 +9,10 @@
 | --------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------- |
 | `api-secrets` (`app`)       | `DATABASE_APP_URL`, `DATABASE_SUPPORT_URL`, `AUTH_THROTTLE_SECRET`                      | ServiceAccount `api`                | tự sinh (`secrets init`)      |
 |                             | `SMTP_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`                                  | `api`                               | nhập tay (`secrets set`)      |
+|                             | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (tùy chọn, xem mục 3)                             | `api`                               | nhập tay (`secrets set`)      |
 | `worker-secrets` (`app`)    | `DATABASE_APP_URL`, `DATABASE_SYSTEM_URL`                                               | `worker`                            | tự sinh                       |
 |                             | `SMTP_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`                                  | `worker`                            | nhập tay                      |
+|                             | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (tùy chọn, xem mục 3)                             | `worker`                            | nhập tay                      |
 | `migrate-secrets` (`app`)   | `DATABASE_ADMIN_URL`, `DATABASE_OWNER_URL`, `DB_ROLE_PASSWORD_OWNER/APP/SYSTEM/SUPPORT` | Job migration                       | tự sinh                       |
 | `registry-pull` (`app`)     | `.dockerconfigjson` (robot **chỉ kéo**)                                                 | kéo ảnh                             | nhập tay                      |
 | `pg-backup-s3` (`database`) | `ACCESS_KEY_ID`, `ACCESS_SECRET_KEY` (tài khoản `dbbackup-<env>`)                       | CloudNativePG                       | nhập tay                      |
@@ -33,13 +35,20 @@ pnpm infra secrets rotate staging db-app                # xoay mật khẩu vai 
 
 ## 3. Nhập bí mật do bên ngoài cấp
 
-| Giá trị                         | Lấy ở đâu                                                                         | Lệnh                                                                    |
-| ------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Khóa S3 của `app-<env>`         | Bảng điều khiển IAM (C4/C6)                                                       | `set <env> api-secrets S3_ACCESS_KEY_ID` … và `worker-secrets`          |
-| `SMTP_URL`                      | Thử nghiệm: `smtp://mailpit.mail-capture.svc:1025`; production: Amazon SES (SMTP) | `set <env> api-secrets SMTP_URL`, `worker-secrets`                      |
-| Khóa sao lưu `dbbackup-<env>`   | IAM (C5)                                                                          | `set <env> pg-backup-s3 ACCESS_KEY_ID` / `ACCESS_SECRET_KEY`            |
-| Robot kéo ảnh                   | vCR (B3)                                                                          | `set <env> registry-pull .dockerconfigjson`                             |
-| Về sau: mã quyền AI, Meta, Zalo | Nhà cung cấp tương ứng                                                            | thêm khóa vào bảng ở `tooling/infra/lib/handoff-map.mjs` rồi dùng `set` |
+| Giá trị                               | Lấy ở đâu                                                                             | Lệnh                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Khóa S3 của `app-<env>`               | Bảng điều khiển IAM (C4/C6)                                                           | `set <env> api-secrets S3_ACCESS_KEY_ID` … và `worker-secrets`                  |
+| `SMTP_URL`                            | Thử nghiệm: `smtp://mailpit.mail-capture.svc:1025`; production: Amazon SES (SMTP)     | `set <env> api-secrets SMTP_URL`, `worker-secrets`                              |
+| Khóa sao lưu `dbbackup-<env>`         | IAM (C5)                                                                              | `set <env> pg-backup-s3 ACCESS_KEY_ID` / `ACCESS_SECRET_KEY`                    |
+| Robot kéo ảnh                         | vCR (B3)                                                                              | `set <env> registry-pull .dockerconfigjson`                                     |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Bảng điều khiển nhà cung cấp AI (chỉ cần khóa của nhà cung cấp mà tuyến AI đang dùng) | `set <env> api-secrets ANTHROPIC_API_KEY` … và `worker-secrets` (cả hai Secret) |
+| Về sau: mã quyền Meta, Zalo           | Nhà cung cấp tương ứng                                                                | thêm khóa vào bảng ở `tooling/infra/lib/handoff-map.mjs` rồi dùng `set`         |
+
+**Khóa nhà cung cấp AI (015):** là bí mật TÙY CHỌN – không có thì ứng dụng vẫn khởi động khi `AI_GATEWAY_DRIVER=fake`
+(mặc định thử nghiệm, `overlays/staging/config.env`); chỉ bắt buộc khi chuyển `AI_GATEWAY_DRIVER=real` và tuyến bật dùng
+nhà cung cấp đó. Khóa KHÔNG đặt trong ConfigMap/`config.env`, không `secrets init` tự sinh (do bên ngoài cấp). Cả `api` và
+`worker` đều cần (Cổng AI chạy ở cả hai). Đặt xong: `kubectl rollout restart deploy/api deploy/worker -n app`. Ghi cổng
+chuyển `real` ở `overlays/production/config.env` khi đã có khóa (chưa đặt `AI_GATEWAY_DRIVER` ở đó thì chỉ chạy `--infra-only`).
 
 ## 4. Xoay (đổi định kỳ)
 

@@ -483,6 +483,15 @@ Thuật ngữ mới phải được thêm vào bảng này trong cùng thay đ�
   `oauth_flow`; xác nhận lại danh tính → `reauth`; nhận tài khoản → `claim`; gỡ thành viên →
   `member_detach`; thành viên đã gỡ → `former_member`; nhà cung cấp đăng nhập → `identity provider`.
 
+### 11.w Bổ sung – tính năng 015 (Cổng AI thật): bên nhận dữ liệu ở nước ngoài mới
+
+| Bên nhận | Mục đích | Dữ liệu gửi đi (tối thiểu) | Trạng thái |
+|---|---|---|---|
+| Anthropic | Mô hình văn bản/ảnh qua Cổng AI | Hồ sơ kinh doanh cần cho lời gọi, khung hình thu nhỏ; không email/số điện thoại | Giả định chờ POC-1 |
+| OpenAI | Mô hình dự phòng, chuyển giọng nói (5 phút đầu) | Như trên, kèm đoạn âm thanh cần chuyển chữ | Giả định chờ POC-1/POC-4 |
+
+Cả hai phải có trong danh sách chuyển dữ liệu xuyên biên giới (Kiến trúc dữ liệu mục 9) và cam kết không huấn luyện bằng dữ liệu.
+
 ### 11.y Bổ sung v1.6 – tính năng 012 (soạn bài tay, duyệt, lịch, Chờ duyệt)
 
 - **Bảng mới**: tenant – `content.posts` (khóa lạc quan cấp bài `version`), `content.channel_variants`,

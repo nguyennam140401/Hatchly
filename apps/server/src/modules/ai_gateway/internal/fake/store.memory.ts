@@ -1,6 +1,6 @@
 import { currentAccountId } from '../../../../core/db';
 import { uuidV7 } from '../../../../core/ids/uuid-v7';
-import { gatewayEvent } from '../../../../core/gateways/op-log';
+import { gatewayEvent } from '../events';
 import { requireFakeAccount } from '../../../../dev/fake-components';
 import { memoryTx } from '../../../../dev/memory-tx';
 import { syncPromise } from '../../../../dev/scenarios';
@@ -39,6 +39,7 @@ interface Budget {
 interface Res extends Reservation {
   accountId: string | null;
   industryId: string | undefined;
+  requestId: string | undefined;
 }
 
 interface AccountBudgets {
@@ -139,6 +140,23 @@ export class MemoryBudgetStore implements FakeBudgetStore {
       const { accountId, period } = this.resolveKey(key);
       const b = this.budget(accountId, period);
       // Đọc và ghi trong cùng một lượt đồng bộ – không lời gọi nào chen giữa.
+      if (meta.requestId !== undefined) {
+        for (const r of this.reservationsById.values()) {
+          if (
+            r.accountId === accountId &&
+            r.key === period &&
+            r.requestId === meta.requestId &&
+            r.state !== 'released'
+          ) {
+            return {
+              ok: false as const,
+              duplicate: true as const,
+              status: r.state === 'settled' ? ('settled' as const) : ('in_progress' as const),
+              snapshot: this.snap(b),
+            };
+          }
+        }
+      }
       if (b.used + b.reserved + est > b.cap) return { ok: false as const, snapshot: this.snap(b) };
       b.reserved += est;
       const id = uuidV7();
@@ -154,6 +172,7 @@ export class MemoryBudgetStore implements FakeBudgetStore {
         state: 'held',
         accountId,
         industryId: meta.industryId,
+        requestId: meta.requestId,
       });
       return { ok: true as const, reservationId: id, snapshot: this.snap(b) };
     });
@@ -208,7 +227,7 @@ export class MemoryBudgetStore implements FakeBudgetStore {
       r.accountId === null ? [] : crossedMarks(preview, b.cap, { n80: b.n80, n100: b.n100 });
     // Sự kiện thông báo "trong giao dịch": ném → chưa ghi gì.
     if (crossed.length > 0 && hooks?.onCrossed !== undefined)
-      await hooks.onCrossed(memoryTx(), crossed);
+      await hooks.onCrossed(memoryTx(), crossed, r.key);
     // Trạng thái có thể đã đổi trong lúc chờ onCrossed – đọc lại.
     if (!isOpen(r)) return [];
     // Ghi ĐỒNG BỘ lên giá trị hiện tại (không dùng bản sao).
@@ -230,7 +249,7 @@ export class MemoryBudgetStore implements FakeBudgetStore {
       industryId: r.industryId ?? ledger.industryId,
       costMicroUsd: actual,
       estimateMicroUsd: r.estimateMicroUsd,
-      anomaly: anomaly ?? (actual > r.estimateMicroUsd ? 'over_estimate' : null),
+      anomaly: anomaly ?? ledger.anomaly ?? (actual > r.estimateMicroUsd ? 'over_estimate' : null),
       overCapMicroUsd: overCap,
       createdAt: new Date(),
     });

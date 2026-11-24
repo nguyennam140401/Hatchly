@@ -32,6 +32,15 @@ export const SAFE_ATTR_KEYS = new Set([
   'job_id',
   'event_type',
   'recipients',
+  // 015 (Cổng AI thật): định danh cấu hình/tuyến, không nhạy cảm.
+  'provider',
+  'tier',
+  'status',
+  'week_start',
+  'cycle_start',
+  // 015 US8 (đối soát hóa đơn): ngày hóa đơn (YYYY-MM-DD) và mức lệch % – số tổng theo nhà cung cấp, không theo tài khoản.
+  'invoice_date',
+  'deviation_pct',
 ]);
 
 export type GatewayLogLevel = 'info' | 'warn' | 'error';

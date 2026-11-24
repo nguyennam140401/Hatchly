@@ -61,6 +61,8 @@ describe('Bộ mẫu ranh giới module', () => {
         'e-shared-imports-node',
         'f-not-in-allowed-deps',
         'g-ai-sdk-outside-gateway',
+        'g-ai-sdk-in-gateway-not-providers',
+        'g-ai-sdk-in-providers-ok',
         'h-infra-imports-business',
         'i-bind-account-outside-queue',
         'j-pgboss-outside-queue',
