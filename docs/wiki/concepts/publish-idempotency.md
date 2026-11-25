@@ -10,7 +10,7 @@ sources:
     apps/server/docs/gateways.md,
     apps/server/src/modules/publishing/public-api.ts,
   ]
-updated: 2026-11-14
+updated: 2026-11-25
 status: draft
 related:
   [modules/publishing.md, modules/platform_gateway.md, concepts/queues.md, decisions/index.md]

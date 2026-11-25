@@ -45,3 +45,10 @@ Append-only. Định dạng: `## [YYYY-MM-DD] ingest|query|lint | tiêu đề`.
 - Viết lại modules/ai_gateway.md (`draft` → `current`: bảng thật, việc nền, API công khai, mã lỗi) và concepts/ai-budget.md (`draft` → `current`: hiện thực thật thay vì bản giả)
 - Cập nhật concepts/feature-status.md (FR-11/FR-12, dòng 015, thứ tự làm tiếp), open-questions.md (015-POC-1/4, 015-hợp-đồng, 015-nguồn-ngành, 015-media, 015-bề-mặt-khách, 015-vận-hành) và index.md
 - Ghi chú: merge `dev` `ac19fc1` ngày 2026-11-24, nhánh `impl/015-real-ai-gateway` và worktree được giữ; `pnpm verify` sau khi gộp `dev` đạt 15/18 (web e2e chập chờn, chạy lại riêng 51/51; infra bỏ qua); các trang 009, 011, 013, 014 vẫn `draft`
+
+## [2026-11-25] ingest | 013-publish-five-steps
+
+- Thêm features/013-publish-five-steps.md (`draft`: 91/92, banner còn T085 – chưa kiểm chứng với Meta thật; quyết định chính, bảng chạm tới, điểm cần biết khi sửa tiếp)
+- Viết lại modules/publishing.md (bảng thật, giao diện công khai và điểm cuối HTTP, thay mô tả "chưa có bảng nào"); cập nhật `updated` của concepts/publish-idempotency.md
+- Cập nhật concepts/feature-status.md (dòng 013) và index.md
+- Ghi chú: sửa sau converge T088 ("Đăng lại" hoàn tác khi `enqueue` trả `exists`); hỗ trợ gọi API khách hàng nhận 401 (AS4); `pnpm verify` chạy `test:db`/`test:queue`/`test:e2e` đồng thời trên một Postgres gây lỗi 57P01 giả, chạy tuần tự từng bước; merge `dev` `e9277e6`

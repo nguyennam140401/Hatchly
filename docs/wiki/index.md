@@ -19,6 +19,7 @@ Schema, quy trình ingest/query/lint: [`AGENTS.md`](../../AGENTS.md). Bắt đ�
 - [007-terraform-infra-environments.md](features/007-terraform-infra-environments.md) — 007 Hạ tầng Terraform – staging và production ( current)
 - [008-cicd-jenkins-pipeline.md](features/008-cicd-jenkins-pipeline.md) — 008 CI/CD Jenkins cho test và release ( current)
 - [009-social-login-members.md](features/009-social-login-members.md) — 009 Đăng nhập Google/Facebook và thành viên ( draft)
+- [013-publish-five-steps.md](features/013-publish-five-steps.md) — 013 Đăng bài 5 bước, Đăng lại, Tiến trình đăng; **còn T085 (Meta thật)** ( draft)
 - [015-real-ai-gateway.md](features/015-real-ai-gateway.md) — 015 Cổng AI thật; **còn T049a, T073a (chờ điều kiện ngoài)** ( draft)
 - [014-media-library-basic.md](features/014-media-library-basic.md) — 014 Thư viện media cơ bản; **còn T090, T093** ( draft)
 - [012-manual-compose-approval-calendar.md](features/012-manual-compose-approval-calendar.md) — 012 Soạn bài tay, duyệt, lịch, Chờ duyệt, tab Lịch sử, huy hiệu số bài chờ ( current)
